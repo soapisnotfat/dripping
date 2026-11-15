@@ -4,8 +4,9 @@ import {act} from 'react';
 import {createRoot,type Root} from 'react-dom/client';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {Timeline} from '../src/components/Timeline';
+import {TrimHandles} from '../src/components/TrimHandles';
 import {newProject} from '../src/lib/storage';
-import {editSelection} from '../src/lib/project';
+import {editSelection,trimRegion} from '../src/lib/project';
 import {clipSelection} from '../src/lib/timeline';
 import type {Clip,Selection,Track} from '../src/lib/types';
 
@@ -22,7 +23,7 @@ afterEach(()=>{act(()=>root.unmount());document.body.replaceChildren();vi.restor
 const pointer=(lane:HTMLElement,type:string,seconds:number)=>act(()=>lane.dispatchEvent(new MouseEvent(type,{bubbles:true,button:0,clientX:seconds*100})));
 function render(clips:Clip[],offset=0,selection:Selection|null=null,locked=false){
   const project=newProject('Regions'),onSelect=vi.fn(),onSeek=vi.fn();project.tracks=[track(clips,offset)];project.selection=selection;
-  act(()=>root.render(<Timeline project={project} locale="en" position={0} scale={100} snap follow={false} waveforms={new Map()} recording={locked} playing={false} counting={false} locked={locked} activeRecording={null} onArm={()=>{}} onSeek={onSeek} onSelect={onSelect} onTrack={()=>{}} onContext={()=>{}} onFollow={()=>{}} onTrackSettings={()=>{}}/>));
+  act(()=>root.render(<Timeline project={project} locale="en" position={0} scale={100} snap follow={false} waveforms={new Map()} recording={locked} playing={false} counting={false} locked={locked} activeRecording={null} onArm={()=>{}} onSeek={onSeek} onSelect={onSelect} onTrack={()=>{}} onTrim={()=>{}} onContext={()=>{}} onFollow={()=>{}} onTrackSettings={()=>{}}/>));
   const lane=document.querySelector<HTMLElement>('.track-lane')!;
   lane.setPointerCapture=vi.fn();lane.hasPointerCapture=()=>false;
   vi.spyOn(lane,'getBoundingClientRect').mockReturnValue({left:0} as DOMRect);
@@ -60,4 +61,25 @@ it('rejects an out-of-region edit before changing another region',()=>{
   const project=newProject('Boundaries');project.tracks=[track([clip('Take 1',1,5),clip('Take 2',5,9)])];
   project.selection={start:2,end:7,trackId:'recording',clipId:'Take 1'};
   expect(()=>editSelection(project,'clear','recording')).toThrow('within this region');
+});
+
+it('trims and restores source audio with offsets/rate while preserving neighbors and undo state',()=>{
+  const first={...clip('Take 1',2,6),sourceStart:2,rate:2},second=clip('Take 2',8,10),project=newProject('Edge trim');project.tracks=[track([first,second],.5)];project.selection=clipSelection(project.tracks[0],first);
+  const edited=trimRegion(project,'recording',first.id,3.5,5.5,14);
+  expect(edited.tracks[0].clips[0]).toMatchObject({id:first.id,start:3,end:5,sourceStart:4,rate:2});expect(edited.tracks[0].clips[1]).toEqual(second);
+  expect(edited.undo.at(-1)!.before.tracks).toEqual(project.tracks);expect(edited.selection).toMatchObject({start:3.5,end:5.5,clipId:first.id});
+  const restored=trimRegion(edited,'recording',first.id,2.5,6.5,14);expect(restored.tracks[0].clips[0]).toMatchObject({start:2,end:6,sourceStart:2});
+  expect(()=>trimRegion(edited,'recording',first.id,3.5,9,14)).toThrow('neighboring regions');
+  expect(()=>trimRegion(edited,'recording',first.id,0,5.5,14)).toThrow('neighboring regions');
+});
+
+it('previews an edge drag, commits once on release, and cancels without an edit',()=>{
+  const project=newProject('Handles'),region={...clip('Take 1',2,6),sourceStart:2,rate:2},target=track([region],.5),onPreview=vi.fn(),onTrim=vi.fn();
+  act(()=>root.render(<TrimHandles project={project} track={target} clip={region} sourceDuration={14} scale={100} snap={false} locale="en" onPreview={onPreview} onTrim={onTrim}/>));
+  const handle=document.querySelector<HTMLElement>('.trim-start')!;handle.setPointerCapture=vi.fn();handle.hasPointerCapture=()=>false;
+  pointer(handle,'pointerdown',2.5);pointer(handle,'pointermove',3.5);
+  expect(onPreview).toHaveBeenLastCalledWith(expect.objectContaining({start:3,end:6,sourceStart:4}));expect(onTrim).not.toHaveBeenCalled();
+  pointer(handle,'pointerup',3.5);expect(onTrim).toHaveBeenCalledExactlyOnceWith(3.5,6.5);
+  onTrim.mockClear();pointer(handle,'pointerdown',2.5);pointer(handle,'pointermove',3.5);pointer(handle,'pointercancel',3.5);pointer(handle,'pointerup',3.5);
+  expect(onTrim).not.toHaveBeenCalled();expect(onPreview).toHaveBeenLastCalledWith(null);
 });

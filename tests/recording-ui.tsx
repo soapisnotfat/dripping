@@ -5,7 +5,7 @@ import {transport} from '../src/lib/transport';
 import '../src/styles.css';
 Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>{
   await transport.ctx.resume();const input=transport.ctx.createOscillator(),gain=transport.ctx.createGain(),stream=transport.ctx.createMediaStreamDestination();
-  input.frequency.value=440;gain.gain.value=.1;input.connect(gain).connect(stream);input.start();
+  input.frequency.value=440;const requestedPeak=Number(new URLSearchParams(location.search).get('peak')??.1);gain.gain.value=Number.isFinite(requestedPeak)?Math.max(0,Math.min(1.2,requestedPeak)):.1;input.connect(gain).connect(stream);input.start();
   const track=stream.stream.getAudioTracks()[0],stop=track.stop.bind(track);track.stop=()=>{input.stop();input.disconnect();gain.disconnect();stop();};
   return stream.stream;
 }});

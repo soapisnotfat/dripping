@@ -48,7 +48,7 @@ function LayoutChecks(){
     <label>Timeline scale <select aria-label="Timeline scale" value={scale} onChange={e=>setScale(Number(e.target.value))}>{[12,42,84].map(value=><option key={value}>{value}</option>)}</select></label>
     <label>Timing <select aria-label="Timing" value={scoreMode?'score':'audio'} onChange={e=>setScoreMode(e.target.value==='score')}><option value="score">Aligned score</option><option value="audio">Audio only</option></select></label>
     <button id="check" onClick={check}>Check row and bar alignment</button>
-    <Timeline project={{...project,score:scoreMode?project.score:undefined}} locale="en" position={0} scale={scale} snap={false} follow={false} waveforms={waves} recording={false} playing={false} counting={false} locked={false} activeRecording={null} onArm={()=>{}} onSeek={()=>{}} onSelect={selection=>setProject({...project,selection})} onTrack={(id,patch)=>setProject({...project,tracks:project.tracks.map(track=>track.id===id?{...track,...patch}:track)})} onContext={()=>{}} onFollow={()=>{}} onTrackSettings={()=>{}}/>
+    <Timeline project={{...project,score:scoreMode?project.score:undefined}} locale="en" position={0} scale={scale} snap={false} follow={false} waveforms={waves} recording={false} playing={false} counting={false} locked={false} activeRecording={null} onArm={()=>{}} onSeek={()=>{}} onSelect={selection=>setProject({...project,selection})} onTrack={(id,patch)=>setProject({...project,tracks:project.tracks.map(track=>track.id===id?{...track,...patch}:track)})} onTrim={()=>{}} onContext={()=>{}} onFollow={()=>{}} onTrackSettings={()=>{}}/>
     <pre id="results" data-result={passed} style={{whiteSpace:'pre-wrap',fontSize:11}}>{result}</pre>
   </main>;
 }

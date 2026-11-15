@@ -3,7 +3,7 @@ import {addFiles,guessRole,newRecordingSession,finishTake,editSelection,renderEx
 import {demoFiles} from '../src/lib/demo';
 import {transport} from '../src/lib/transport';
 import {audioJobs} from '../src/lib/jobs';
-import {mono,encodeWav} from '../src/lib/audio';
+import {mono,encodeWav,resamplePCM} from '../src/lib/audio';
 import type {Alignment} from '../src/lib/types';
 import type {Features} from '../src/lib/alignment';
 import {PCMRecorder} from '../src/lib/recorder';
@@ -14,6 +14,11 @@ const log=(text:string)=>{output.textContent+='\n'+text;};
 button.onclick=async()=>{
   button.disabled=true;output.textContent='Running…';const ids:string[]=[];let recorder:PCMRecorder|undefined;
   try{
+    const sourceRate=44100,frequency=18000,samples=Float32Array.from({length:sourceRate},(_,i)=>.2*Math.sin(2*Math.PI*frequency*i/sourceRate)),source={sampleRate:sourceRate,channels:[samples]};
+    const resampled=await resamplePCM(source,48000),amplitude=(samples:Float32Array,rate:number)=>{let re=0,im=0;const from=Math.round(.2*rate),to=Math.round(.8*rate);for(let i=from;i<to;i++){re+=samples[i]*Math.cos(2*Math.PI*frequency*i/rate);im+=samples[i]*Math.sin(2*Math.PI*frequency*i/rate);}return 2*Math.hypot(re,im)/(to-from);};
+    const resampledAmplitude=amplitude(resampled.channels[0],48000);
+    assert(resampled.channels[0].length===48000&&Math.abs(resampledAmplitude-.2)<.01,`Resampling failed: amplitude ${resampledAmplitude}, frames ${resampled.channels[0].length}`);
+    log(`PASS: 44.1 → 48 kHz band-limited resampling retains 18 kHz amplitude ${resampledAmplitude.toFixed(6)} (source 0.2), exactly 48,000 frames`);
     await transport.ctx.resume();let p=newProject('Temporary browser verification');ids.push(p.id);
     p=await addFiles(p,demoFiles().map(file=>({file,role:guessRole(file.name)})),()=>{});
     assert(p.score?.measures.length===16&&p.tracks.length===2,'Import did not preserve score and audio');

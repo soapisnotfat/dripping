@@ -15,7 +15,7 @@ export class PCMRecorder {
   private session?:RecordingSession;
   private failed=false;
   private started=false;
-  onMeter:(peak:number,peaks?:number[])=>void=()=>{};
+  onMeter:(peak:number,peaks?:number[],clipped?:boolean)=>void=()=>{};
   onError:(message:string)=>void=()=>{};
   onEnded:()=>void=()=>{};
   constructor(readonly ctx:AudioContext){}
@@ -30,7 +30,7 @@ export class PCMRecorder {
     this.node.port.onmessage=({data})=>{
       if(data.type==='chunk'&&this.session){
         this.queue=this.queue.then(()=>saveChunk(this.session!.id,data.sequence,data.data)).catch(error=>{this.fail(error);});
-      }else if(data.type==='meter')this.onMeter(data.peak,data.peaks);
+      }else if(data.type==='meter')this.onMeter(data.peak,data.peaks,data.clipped);
       else if(data.type==='error')this.fail(Error(data.message));
       else if(data.type==='done'){
         this.queue.then(()=>{if(this.failed)return;this.close();this.doneResolve?.();this.onEnded();});

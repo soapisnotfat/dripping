@@ -47,6 +47,7 @@ export type Project = {
   scoreXml?: string; scoreAssetId?: string; score?: Score; referenceTrackId?: string;
   scoreMap: Anchor[]; tracks: Track[]; takes: Take[]; assetIds: string[];
   speed: number; position: number; selection: Selection | null; loop: boolean;
+  masterGainDb?: number;
   undo: EditCommand[]; redo: EditCommand[]; revision: number;
 };
 export type Asset = {

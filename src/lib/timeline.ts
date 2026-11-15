@@ -11,3 +11,9 @@ export function clipSelection(track:Track,clip:Clip):Selection{
   const from=Math.max(0,clip.start+track.offset),to=Math.max(from,clip.end+track.offset);
   return {start:from,end:to,trackId:track.id,clipId:clip.id};
 }
+
+export function clipTrimBounds(track:Track,clip:Clip,sourceDuration?:number){
+  const previous=Math.max(-Infinity,...track.clips.filter(c=>c.id!==clip.id&&c.end<=clip.start+1e-7).map(c=>c.end));
+  const next=Math.min(Infinity,...track.clips.filter(c=>c.id!==clip.id&&c.start>=clip.end-1e-7).map(c=>c.start));
+  return {start:Math.max(-track.offset,clip.start-clip.sourceStart/clip.rate,previous),end:Math.min(next,sourceDuration===undefined?clip.end:clip.start+(sourceDuration-clip.sourceStart)/clip.rate)};
+}

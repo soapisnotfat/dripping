@@ -15,6 +15,8 @@ export class Transport {
   private gains=new Map<string,GainNode>();
   private pans=new Map<string,StereoPannerNode>();
   private destination?:GainNode;
+  private meters:AnalyserNode[]=[];
+  private meterData:Float32Array<ArrayBuffer>[]=[];
   private startTime=0;
   private origin=0;
   private speed=1;
@@ -25,7 +27,13 @@ export class Transport {
   metronome=false;
   referenceInstrument:'flute'|'piano'='flute';
   referenceVolume=.65;
-  get ctx(){if(!this.context){this.context=new AudioContext({latencyHint:'interactive'});this.destination=this.context.createGain();this.destination.connect(this.context.destination);}return this.context;}
+  get ctx(){if(!this.context){this.context=new AudioContext({latencyHint:'interactive'});this.destination=this.context.createGain();this.destination.connect(this.context.destination);const split=this.context.createChannelSplitter(2);this.destination.connect(split);this.meters=[0,1].map(channel=>{const meter=this.context!.createAnalyser();meter.fftSize=4096;split.connect(meter,channel);return meter;});this.meterData=this.meters.map(meter=>new Float32Array(meter.fftSize));}return this.context;}
+  setOutputGain(db:number){if(this.context)this.destination?.gain.setTargetAtTime(10**(Math.max(-36,Math.min(6,db))/20),this.context.currentTime,.01);}
+  outputLevels(){
+    let peak=0,power=0,count=0;
+    this.meters.forEach((meter,index)=>{const data=this.meterData[index];meter.getFloatTimeDomainData(data);for(const value of data){peak=Math.max(peak,Math.abs(value));power+=value*value;count++;}});
+    return {peak,rms:count?Math.sqrt(power/count):0};
+  }
   async asset(id:string):Promise<PCM>{
     if(this.pcm.has(id))return this.pcm.get(id)!;
     const asset=await getAsset(id),buffer=await this.ctx.decodeAudioData(await asset.blob.arrayBuffer());
@@ -82,6 +90,7 @@ export class Transport {
     this.clicks.push(oscillator);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.clicks=this.clicks.filter(n=>n!==oscillator);};
   }
   updateMix(project:Project,recordingTrackId?:string){
+    this.setOutputGain(project.masterGainDb??0);
     const audible=new Set(audibleTrackIds(project.tracks));
     for(const track of project.tracks){this.gains.get(track.id)?.gain.setTargetAtTime(audible.has(track.id)&&track.id!==recordingTrackId?track.volume:0,this.ctx.currentTime,.012);this.pans.get(track.id)?.pan.setTargetAtTime(track.pan,this.ctx.currentTime,.012);}
     this.gains.get('reference')?.gain.setTargetAtTime(this.reference?this.referenceVolume:0,this.ctx.currentTime,.01);
