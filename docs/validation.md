@@ -45,6 +45,14 @@ macOS identified the Roland AE-20 as a USB audio device with two input and two o
 - Imported a separately generated browser MusicXML into a new project: all 106 measures render. The application reports its incomplete measure and missing initial tempo instead of treating the score as fully verified. PDF conversion remains separate from the app.
 - The real-accompaniment slow-playback quality report in Issue #3 remains open; these checks do not establish that its listening-quality problem is fixed.
 
+## Timeline grid and mobile rows, 2026-11-15
+
+- Removed the fixed 84 px background divisions. At the example's 96 BPM in 4/4 and 42 px/s, bars are 105 px apart. The ruler and every lane now use the same score-to-seconds positions, including alignment offsets, tempo changes and meter changes. Audio-only projects use the ruler's five-second positions.
+- Reproduced the row-height failure with mobile text enlargement: label columns grew to 93.59375 px while the old lanes stayed at 83 px. Lanes now stretch with their row, and clips stay vertically centered.
+- `/tests/timeline-layout.html` renders the real Timeline with three tracks, a muted Demo, an empty recording lane, a 4/4 → 2/4 score and a nonlinear timing map. All 24 combinations of score/audio-only timing, 12/42/84 px/s zoom and 100/125/150/200% text size passed in a 393 px mobile viewport. Numbered ruler lines and grid lines had 0 px measured horizontal deviation; label/lane top and bottom bounds matched.
+- The geometry checks also passed after a 393 px horizontal scroll. The complete example workbench was inspected at 440 px: its first three ruler/grid positions were 201, 306 and 411 px in all three tracks.
+- The 40 existing tests and production build pass. Browser checks used Chromium mobile emulation; physical iPhone Safari remains unverified.
+
 ## Limits to keep visible
 
 - Physical audio capture, channel routing, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware. AE-20 device discovery was verified as described above.

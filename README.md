@@ -121,6 +121,8 @@ npm run build  # Production build, dependency notices, and offline cache
 
 With the development server running, `/tests/browser.html` exercises audio processing, recording, storage, backup/restore, and WAV rendering using generated audio. `/tests/recording-ui.html` opens the complete app with a generated 440 Hz input for recording checks. Neither page requests a physical microphone; both use the local development project library and are excluded from production builds.
 
+`/tests/timeline-layout.html` checks ruler/grid positions and track-row geometry with variable meter, nonlinear alignment, timeline zoom and enlarged mobile text. It also covers audio-only timing and a muted demonstration track.
+
 | Directory | Purpose |
 | --- | --- |
 | `src/components/` | Score, timeline, and workflow dialogs |
