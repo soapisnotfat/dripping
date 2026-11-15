@@ -17,7 +17,7 @@ button.onclick=async()=>{
     await transport.ctx.resume();let p=newProject('Temporary browser verification');ids.push(p.id);
     p=await addFiles(p,demoFiles().map(file=>({file,role:guessRole(file.name)})),()=>{});
     assert(p.score?.measures.length===16&&p.tracks.length===2,'Import did not preserve score and audio');
-    const demo=await transport.asset(p.tracks[1].sourceAssetId),features=await audioJobs.run<Features>('features',{samples:mono(demo),sampleRate:11025,hop:.12});
+    const demo=await transport.asset(p.tracks[1].sourceAssetId!),features=await audioJobs.run<Features>('features',{samples:mono(demo),sampleRate:11025,hop:.12});
     const alignment=await audioJobs.run<Alignment>('align',{score:p.score,features});
     const expected=tempoMap(p.score!),errors=[0,4,8,12,24,28,32,34,38,42,46,50,54,58].map(q=>Math.abs(qToSeconds(q,alignment.anchors)-qToSeconds(q,expected)-.55)).sort((a,b)=>a-b);
     assert(errors[Math.floor(errors.length/2)]<.15,'Alignment median error exceeds 150 ms');log(`PASS: MusicXML + 2 audio files; actual worker alignment median error ${Math.round(errors[Math.floor(errors.length/2)]*1000)} ms`);

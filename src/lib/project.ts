@@ -42,6 +42,11 @@ export function editProject(project:Project,label:string,mutate:(p:Project)=>voi
   const p=clone(project),snapshot=()=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),referenceTrackId:p.referenceTrackId}),before=snapshot();mutate(p);
   p.undo.push({label,before,after:snapshot()});if(p.undo.length>60)p.undo.shift();p.redo=[];return p;
 }
+export function addRecordingTrack(project:Project,name:string):Project{
+  return editProject(project,'add recording track',p=>{
+    p.tracks.push({id:uid(),name,role:'recording',volume:.85,pan:0,mute:false,solo:false,offset:0,color:2,clips:[]});
+  });
+}
 export function editSelection(project:Project,action:'split'|'clear'|'trim'|'fade',trackId:string):Project{
   if(!project.selection)throw Error('先选择一个片段 / Select a passage first');
   const selection=project.selection;
@@ -61,6 +66,7 @@ export async function finishTake(project:Project,sessionId:string,interrupted=fa
   const p=editProject(project,'record',p=>{
     let track=p.tracks.find(t=>t.id===session.trackId);
     if(!track){track={id:session.trackId,name:session.name,role:'recording',sourceAssetId:asset.id,volume:.85,pan:0,mute:false,solo:false,offset:0,color:2,clips:[]};p.tracks.push(track);}
+    track.sourceAssetId ??= asset.id;
     // Punch replacement is non-destructive. Every original take remains in p.takes.
     if(end>start){
       track.clips=clearClips(track.clips,start-track.offset,end-track.offset);
