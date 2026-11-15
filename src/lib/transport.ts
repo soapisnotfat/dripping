@@ -10,6 +10,7 @@ export class Transport {
   readonly pcm=new Map<string,PCM>();
   private rendered=new Map<string,{key:string;buffer:AudioBuffer}>();
   private nodes:AudioBufferSourceNode[]=[];
+  private clicks:OscillatorNode[]=[];
   private gains=new Map<string,GainNode>();
   private pans=new Map<string,StereoPannerNode>();
   private destination?:GainNode;
@@ -52,11 +53,12 @@ export class Transport {
       }
     }
   }
-  async start(project:Project,from:number,onProgress?:(text:string)=>void,countIn=0):Promise<number>{
+  async start(project:Project,from:number,onProgress?:(text:string)=>void,countIn=0,durationOverride?:number):Promise<number>{
     this.pause();await this.ctx.resume();await this.prepare(project,onProgress);
-    this.origin=from;this.speed=project.speed;this.end=projectDuration(project);
+    this.origin=from;this.speed=project.speed;this.end=durationOverride??projectDuration(project);
     this.loopRange=project.loop&&project.selection?{start:project.selection.start,end:project.selection.end}:undefined;
-    const q=secondsToQ(from,project.scoreMap),beatSeconds=project.score?qToSeconds(q+1,project.scoreMap)-qToSeconds(q,project.scoreMap):.625;
+    const q=secondsToQ(from,project.scoreMap),occurrence=project.score?[...project.score.route].reverse().find(m=>m.q<=q):undefined,beatQ=4/(occurrence?project.score!.measures[occurrence.measure].beatType:4);
+    const beatSeconds=project.score?qToSeconds(q+beatQ,project.scoreMap)-qToSeconds(q,project.scoreMap):.625;
     const delay=countIn*beatSeconds/project.speed;
     this.startTime=this.ctx.currentTime+.18+delay;
     for(let i=0;i<countIn;i++)this.click(this.startTime-delay+i*beatSeconds/project.speed,i===0);
@@ -75,6 +77,7 @@ export class Transport {
   private click(at:number,accent:boolean){
     const oscillator=this.ctx.createOscillator(),gain=this.ctx.createGain();oscillator.frequency.value=accent?1600:1100;
     gain.gain.setValueAtTime(.2,at);gain.gain.exponentialRampToValueAtTime(.001,at+.04);oscillator.connect(gain).connect(this.destination!);oscillator.start(at);oscillator.stop(at+.05);
+    this.clicks.push(oscillator);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.clicks=this.clicks.filter(n=>n!==oscillator);};
   }
   updateMix(project:Project){
     const solo=project.tracks.some(t=>t.solo);
@@ -91,7 +94,7 @@ export class Transport {
   get finished(){return this.playing&&!this.loopRange&&this.position()>=this.end;}
   get countingIn(){return this.playing&&this.ctx.currentTime<this.startTime;}
   pause():number{
-    const position=this.position();for(const n of this.nodes){try{n.stop();}catch{}n.disconnect();}this.nodes=[];this.gains.clear();this.pans.clear();this.playing=false;this.origin=position;return position;
+    const position=this.position();for(const n of [...this.nodes,...this.clicks]){try{n.stop();}catch{}n.disconnect();}this.nodes=[];this.clicks=[];this.gains.clear();this.pans.clear();this.playing=false;this.origin=position;return position;
   }
   seek(seconds:number){this.origin=seconds;}
   reset(){this.pause();this.pcm.clear();this.rendered.clear();this.origin=0;}

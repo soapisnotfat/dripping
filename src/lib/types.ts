@@ -39,7 +39,7 @@ export type Take = {
   speed: number; sampleRate: number; channels: number; createdAt: string;
   inputLabel: string; latencyMs: number; interrupted: boolean;
 };
-export type EditState = {tracks: Track[]; selection: Selection | null};
+export type EditState = {tracks: Track[]; selection: Selection | null; scoreMap?: Anchor[]; referenceTrackId?: string};
 export type EditCommand = {label: string; before: EditState; after: EditState};
 export type Selection = {start: number; end: number; trackId?: string};
 export type Project = {
