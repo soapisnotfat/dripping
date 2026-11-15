@@ -1,0 +1,14 @@
+import {readFile,readdir,writeFile} from 'node:fs/promises';
+const lock=JSON.parse(await readFile('package-lock.json','utf8'));
+const sections=['Dripping runtime third-party notices\nOriginal application code and generated exercise are separate from these components.'];
+for(const [path,metadata] of Object.entries(lock.packages)){
+  if(!path||metadata.dev||path.includes('/@types/'))continue;
+  const pkg=JSON.parse(await readFile(path+'/package.json','utf8'));
+  const names=(await readdir(path)).filter(n=>/^(license|licence|copying|notice)([.-]|$)/i.test(n));
+  const texts=[];
+  for(const name of names){try{texts.push(await readFile(path+'/'+name,'utf8'));}catch{}}
+  const repository=typeof pkg.repository==='string'?pkg.repository:pkg.repository?.url;
+  sections.push(`${pkg.name} ${pkg.version}\nLicense: ${pkg.license||'See component source'}\nSource: ${repository||metadata.resolved||''}\nDistribution: ${metadata.resolved||''}\n\n${texts.join('\n\n')||'See the source distribution for license terms.'}`);
+}
+await writeFile('dist/third-party-notices.txt',sections.join('\n\n'+'='.repeat(72)+'\n\n'));
+console.log('Runtime notices:',sections.length-1,'components');
