@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {zip,strToU8} from 'fflate';
-import type {Project,Locale,Asset,Anchor,Alignment,PCM} from '../lib/types';
+import type {Project,Locale,Asset,Anchor,Alignment,PCM,Track} from '../lib/types';
 import {clone,uid} from '../lib/types';
 import {addFiles,guessRole,type ImportItem,audioAsset,editProject,renderExport,originalTake} from '../lib/project';
 import {newProject,importProject,exportProject,download} from '../lib/storage';
@@ -39,15 +39,15 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles
 
 export function AlignmentDialog({project,locale,onClose,onError,onCommit,initialTrack}:Common&{project:Project;onCommit:(p:Project,assets?:Asset[])=>Promise<void>;initialTrack?:string}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
-  const available=project.tracks.filter(t=>t.role!=='recording');
-  const [id,setId]=useState(initialTrack||available.find(t=>t.role==='demo')?.id||available[0]?.id||'');
-  const track=project.tracks.find(t=>t.id===id),[candidate,setCandidate]=useState<Alignment|undefined>(track?.alignment),[busy,setBusy]=useState(''),[status,setStatus]=useState('');
+  const available=project.tracks.filter((t):t is Track & {sourceAssetId:string}=>t.role!=='recording'&&!!t.sourceAssetId);
+  const [id,setId]=useState(available.find(t=>t.id===initialTrack)?.id||available.find(t=>t.role==='demo')?.id||available[0]?.id||'');
+  const track=available.find(t=>t.id===id),[candidate,setCandidate]=useState<Alignment|undefined>(track?.alignment),[busy,setBusy]=useState(''),[status,setStatus]=useState('');
   const [q,setQ]=useState('0'),[seconds,setSeconds]=useState('0');
   const choose=(trackId:string)=>{setId(trackId);setCandidate(project.tracks.find(t=>t.id===trackId)?.alignment);setStatus('');};
   const features=async(assetId:string)=>audioJobs.run<Features>('features',{samples:mono(await transport.asset(assetId)),sampleRate:11025,hop:.12});
   const analyze=async()=>{if(!track||!project.score)return;try{
     setBusy(t('分析音频中的音高与节奏…','Analyzing pitch and timing…'));
-    const audio=await features(track.sourceAssetId),demo=project.tracks.find(t=>t.role==='demo'&&t.id!==id&&t.alignment?.status==='accepted');
+    const audio=await features(track.sourceAssetId),demo=available.find(t=>t.role==='demo'&&t.id!==id&&t.alignment?.status==='accepted');
     const result=demo?await audioJobs.run<Alignment>('align-demo',{score:project.score,demo:await features(demo.sourceAssetId),demoMap:demo.alignment!.anchors,features:audio}):await audioJobs.run<Alignment>('align',{score:project.score,features:audio});
     setCandidate(result);setStatus(t('自动匹配已完成。试听并校正后，再确认。','Candidate ready. Listen and adjust anchors before accepting.'));
   }catch(e){onError(String(e));}finally{setBusy('');}};
@@ -68,7 +68,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
     const p=editProject(project,'align',p=>{const tr=p.tracks.find(t=>t.id===id)!;tr.offset=0;tr.clips=[{id:uid(),assetId:asset.id,label:track.name,start:0,end:duration,sourceStart:0,rate:1,gain:1,fadeIn:.005,fadeOut:.005}];tr.alignment={...candidate,status:'accepted'};});
     p.assetIds.push(asset.id);await onCommit(p,[asset]);transport.pcm.set(asset.id,rendered);setStatus(t('音轨已校正到项目时间线。原始素材保留，可撤销。','Track conformed to the project timeline. Original audio is preserved; undo is available.'));
   }catch(e){onError(String(e));}finally{setBusy('');}};
-  const preview=async()=>{if(!candidate||!track||!project.score)return;try{setBusy(t('准备试听…','Preparing audition…'));const p=clone(project);p.tracks=p.tracks.map(tr=>({...tr,mute:tr.id!==id,solo:false,offset:0,clips:tr.id===id?[{id:'audition',assetId:tr.sourceAssetId,label:tr.name,start:0,end:(transport.pcm.get(tr.sourceAssetId)?.channels[0].length||0)/(transport.pcm.get(tr.sourceAssetId)?.sampleRate||1),sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0}]:tr.clips}));p.scoreMap=candidate.anchors;p.loop=false;transport.reference=true;await transport.start(p,Math.max(0,Number(seconds)));setStatus(t('正在试听原音轨＋乐谱音。关闭窗口停止。','Auditioning original audio with score tones. Close to stop.'));}catch(e){onError(String(e));}finally{setBusy('');}};
+  const preview=async()=>{if(!candidate||!track||!project.score)return;try{setBusy(t('准备试听…','Preparing audition…'));const p=clone(project);p.tracks=p.tracks.map(tr=>({...tr,mute:tr.id!==id,solo:false,offset:0,clips:tr.id===id?[{id:'audition',assetId:track.sourceAssetId,label:tr.name,start:0,end:(transport.pcm.get(track.sourceAssetId)?.channels[0].length||0)/(transport.pcm.get(track.sourceAssetId)?.sampleRate||1),sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0}]:tr.clips}));p.scoreMap=candidate.anchors;p.loop=false;transport.reference=true;await transport.start(p,Math.max(0,Number(seconds)));setStatus(t('正在试听原音轨＋乐谱音。关闭窗口停止。','Auditioning original audio with score tones. Close to stop.'));}catch(e){onError(String(e));}finally{setBusy('');}};
   return <Modal title={t('乐谱与音频对齐','Score & audio alignment')} onClose={()=>{if(!busy){transport.pause();transport.reference=false;onClose();}}} wide>
     <div className="alignment-top"><label className="field">{t('音轨','Track')}<select value={id} onChange={e=>choose(e.target.value)}>{available.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label><button disabled={!!busy||!track||!project.score} onClick={analyze}>{t('自动匹配','Analyze audio')}</button><button disabled={!!busy||!project.score} onClick={manual}>{t('按谱速手动设置','Set anchors manually')}</button></div>
     <p className="muted">{t('先将示范与乐谱匹配并确认，再匹配伴奏，通常更容易找到共同的音乐内容。基准决定谱面在项目时间轴上的位置。','Accept a demonstration track first to help match the backing. The reference defines the score position on the project timeline.')}</p>
@@ -86,7 +86,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
 
 export function ExportDialog({project,locale,onClose,onError}:Common&{project:Project}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
-  const [busy,setBusy]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(project.tracks.map(t=>t.id)),[normalize,setNormalize]=useState(true);
+  const [busy,setBusy]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(project.tracks.filter(t=>t.clips.length).map(t=>t.id)),[normalize,setNormalize]=useState(true);
   const a=range&&project.selection?project.selection.start:0,b=range&&project.selection?project.selection.end:projectDuration(project);
   const safe=(s:string)=>s.replace(/[\\/:*?"<>|]/g,'_').slice(0,100);
   const perform=async(kind:'stems'|'mix'|'project')=>{try{setBusy(t('正在准备导出…','Preparing export…'));

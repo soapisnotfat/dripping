@@ -30,7 +30,7 @@ export type Clip = {
   sourceStart: number; rate: number; gain: number; fadeIn: number; fadeOut: number;
 };
 export type Track = {
-  id: string; name: string; role: TrackRole; sourceAssetId: string;
+  id: string; name: string; role: TrackRole; sourceAssetId?: string;
   volume: number; pan: number; mute: boolean; solo: boolean; offset: number;
   clips: Clip[]; alignment?: Alignment; color: number;
 };

@@ -37,7 +37,7 @@ Recording requires microphone permission and an HTTPS or localhost address. Use 
 2. **Set the timing reference.** Open **Alignment**, analyze the demonstration track, and listen to it alongside the score tones. Adjust the timing anchors as needed, then choose **Use as reference**. Automatic alignment is a starting point that needs listening and review.
 3. **Align the backing.** Analyze the backing track and review its anchors. Use **Conform to reference** if you want to adjust its timing to match the reference. The original audio is preserved. Changing the reference later does not automatically reconform other tracks.
 4. **Practice a passage.** Click a note to seek, or drag across notes or the timeline to select a range. Loop the selection or slow down playback. Use **Edit selection** for splitting, trimming, fades, or punch-in recording.
-5. **Record a take.** In **Audio input**, choose your device and channels, then select **Test connection**. Set the count-in and timing correction before recording. Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage.
+5. **Record a take.** Choose **+ Recording track** to create and arm a track, or use an existing recording track’s **R** button to make it the recording target. The target appears below the playback time; only one track can be armed. In **Audio input**, choose your device and channels, then select **Test connection**. Set the count-in and timing correction before recording. Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage.
 6. **Export your work.** Open **Export** to download stems, a mix, original takes, or a project backup.
 
 ## Saving and exporting
@@ -63,7 +63,7 @@ Dripping is in early development. Desktop browser workflows have been tested wit
 
 - **Alignment:** sparse or repetitive accompaniment, or a different arrangement, may require manual timing anchors or a matching demonstration track. Until a timing reference is chosen, the score follows its written tempo.
 - **Inputs:** up to 160 MB per file, 15 minutes per audio track, and 512 MB per project backup. Large sessions can reach device memory limits before these limits. Alignment may request a shorter input when its comparison limit is reached.
-- **Reference tones:** the flute and piano options are simple synthesized cues for checking notes and timing.
+- **Reference tones:** the flute and piano options are synthesized cues for checking notes and timing. Use **Preview tone** to compare their sound without the backing; choosing an instrument enables **Score tones** and does not change imported demonstration audio.
 - **Mobile use:** the layout supports touch and tablet screens. On iPad, a deployed HTTPS site can be added to the Home Screen.
 
 ## Deployment

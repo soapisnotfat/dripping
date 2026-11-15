@@ -3,7 +3,7 @@ import {copyBuffer,toAudioBuffer} from './audio';
 import {getAsset} from './storage';
 import {audioJobs} from './jobs';
 import {projectDuration,qToSeconds,secondsToQ} from './time';
-import {referencePCM,metronomePCM} from './reference';
+import {referencePCM,referencePreviewPCM,metronomePCM} from './reference';
 
 export class Transport {
   private context?:AudioContext;
@@ -35,6 +35,7 @@ export class Transport {
   async prepare(project:Project,onProgress?:(text:string)=>void){
     const duration=projectDuration(project),sr=this.ctx.sampleRate;
     for(const track of project.tracks){
+      if(!track.clips.length){this.rendered.delete(track.id);continue;}
       const key=JSON.stringify([track.clips,track.offset,project.speed,duration]);
       if(this.rendered.get(track.id)?.key===key)continue;
       onProgress?.(track.name);
@@ -73,6 +74,12 @@ export class Transport {
     };
     project.tracks.forEach(t=>add(t.id,t));if(project.score){add('reference');add('metronome');}
     this.playing=true;this.updateMix(project);return this.startTime;
+  }
+  async previewInstrument(instrument:'flute'|'piano'){
+    this.pause();await this.ctx.resume();
+    const node=this.ctx.createBufferSource();node.buffer=toAudioBuffer(referencePreviewPCM(instrument),this.ctx);
+    node.connect(this.ctx.destination);this.nodes.push(node);
+    node.onended=()=>{node.disconnect();this.nodes=this.nodes.filter(n=>n!==node);};node.start();
   }
   private click(at:number,accent:boolean){
     const oscillator=this.ctx.createOscillator(),gain=this.ctx.createGain();oscillator.frequency.value=accent?1600:1100;

@@ -77,7 +77,8 @@ function checkProject(p:Project,assetIds:Set<string>){
   if(p.schemaVersion!==1||!Array.isArray(p.tracks)||!Array.isArray(p.takes)||!Array.isArray(p.assetIds))throw Error('不支持的项目格式 / Unsupported project format');
   for(const id of p.assetIds)if(!assetIds.has(id))throw Error('项目缺少素材 / Incomplete project assets');
   const checkTrack=(t:Project['tracks'][number])=>{
-    if(!Array.isArray(t.clips)||!Number.isFinite(t.offset)||!Number.isFinite(t.volume)||!Number.isFinite(t.pan)||!assetIds.has(t.sourceAssetId))throw Error('无效音轨 / Invalid track');
+    const sourceValid=t.sourceAssetId!==undefined?assetIds.has(t.sourceAssetId):t.role==='recording'&&Array.isArray(t.clips)&&t.clips.length===0;
+    if(!Array.isArray(t.clips)||!Number.isFinite(t.offset)||!Number.isFinite(t.volume)||!Number.isFinite(t.pan)||!sourceValid)throw Error('无效音轨 / Invalid track');
     for(const c of t.clips)if(!assetIds.has(c.assetId)||![c.start,c.end,c.sourceStart,c.rate,c.gain,c.fadeIn,c.fadeOut].every(Number.isFinite)||c.end<=c.start||c.sourceStart<0||c.rate<.25||c.rate>4)throw Error('无效片段 / Invalid clip');
     if(t.alignment)validateAnchors(t.alignment.anchors);
   };
@@ -106,7 +107,7 @@ export async function importProject(file:Blob):Promise<Project>{
     const id=uid();oldToNew.set(item.id,id);
     assets.push({id,projectId:project.id,name:item.name,type:item.type,blob:new Blob([bytes as Uint8Array<ArrayBuffer>],{type:item.type}),sampleRate:item.sampleRate,frames:item.frames,channels:item.channels});
   }
-  const remap=(tracks:Project['tracks'])=>tracks.forEach(t=>{t.sourceAssetId=oldToNew.get(t.sourceAssetId)!;t.clips.forEach(c=>c.assetId=oldToNew.get(c.assetId)!);});
+  const remap=(tracks:Project['tracks'])=>tracks.forEach(t=>{if(t.sourceAssetId!==undefined)t.sourceAssetId=oldToNew.get(t.sourceAssetId)!;t.clips.forEach(c=>c.assetId=oldToNew.get(c.assetId)!);});
   project.assetIds=project.assetIds.map(id=>oldToNew.get(id)!);remap(project.tracks);
   for(const command of [...project.undo,...project.redo]){remap(command.before.tracks);remap(command.after.tracks);}
   project.takes.forEach(t=>t.assetId=oldToNew.get(t.assetId)!);
