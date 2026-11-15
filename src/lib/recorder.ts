@@ -1,6 +1,7 @@
 import recorderURL from '../workers/recorder.worklet.js?url';
 import type {RecordingSession} from './types';
 import {createSession,saveChunk} from './storage';
+import {inputConstraints} from './input';
 
 export class PCMRecorder {
   private stream?:MediaStream;
@@ -20,7 +21,7 @@ export class PCMRecorder {
   constructor(readonly ctx:AudioContext){}
   async open(deviceId:string,channels:number[],streamOverride?:MediaStream){
     if(!isSecureContext)throw Error('录音需要 HTTPS 或 localhost / Recording requires HTTPS or localhost');
-    this.stream=streamOverride || await navigator.mediaDevices.getUserMedia({audio:{deviceId:deviceId?{exact:deviceId}:undefined,echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:{ideal:Math.max(...channels)+1}},video:false});
+    this.stream=streamOverride || await navigator.mediaDevices.getUserMedia(inputConstraints(deviceId,channels));
     await this.ctx.audioWorklet.addModule(recorderURL);
     this.source=this.ctx.createMediaStreamSource(this.stream);
     this.node=new AudioWorkletNode(this.ctx,'dripping-pcm-recorder',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1],processorOptions:{channels}});

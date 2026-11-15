@@ -4,7 +4,7 @@ Validated locally on 2026-11-14. This is a first usable release, not a claim of 
 
 ## Automated checks
 
-- 20 unit tests pass across MusicXML interpretation, tempo mapping, alignment, audio rendering, and storage.
+- 22 unit tests pass across MusicXML interpretation, tempo mapping, alignment, audio rendering, storage, and audio-input connection cleanup.
 - MusicXML fixtures cover meter changes, pickup duration, multi-measure rests, ties, grace notes, tuplets, polyphonic backup, first/second endings, transposition, MXL input, and rejection of XML entities.
 - Audio tests cover original PCM preservation, clip boundaries, resampling, fades, pitch-preserving stretching, and WAV headers.
 - Alignment uses score/audio content. Synthetic melody and backing tracks have different leading silence; test expectations are independent of the matching result. Silent audio is not marked accepted.
@@ -29,9 +29,13 @@ The complete UI was also exercised: example import, alignment analysis and refer
 
 The production build was loaded over localhost, controlled by its service worker, reloaded with networking disabled, and played its saved project offline. Networking was restored after the check. Production console errors: none observed. At 768 × 1024, the score reflows within its viewport and the document has no horizontal overflow; the timeline scrolls separately.
 
+## AE-20 device discovery
+
+macOS identified the Roland AE-20 as a USB audio device with two input and two output channels, at 44.1 kHz. Chrome's microphone permission selector and Dripping's audio-input selector both listed AE-20. MIDI was not used. Opening this device through the new connection test, capturing an actual performance, and measuring latency remain unverified; the browser connection ended before that test completed.
+
 ## Limits to keep visible
 
-- Physical microphone/USB interfaces, channel enumeration, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware.
+- Physical audio capture, channel routing, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware. AE-20 device discovery was verified as described above.
 - A score-only tempo map is an estimate until aligned to a recording. Automatic alignment always produces a candidate. Sparse/repetitive accompaniment and a different arrangement may require manual anchors or a matching demonstration.
 - The reference audio must retain its original timing. Conforming another track creates a new asset; original sources and takes remain in the project. Reference changes are undoable but do not implicitly reconform other tracks.
 - IndexedDB is device/browser/origin specific. Export project backups independently of browser storage.
