@@ -13,7 +13,7 @@ Audio, scores, and projects stay in your browser. No account or backend is requi
 - Score-to-audio alignment with editable timing anchors.
 - Mono or stereo recording from a selected audio input, with count-in and optional monitoring.
 - Non-destructive clip editing, fades, track volume and pan, and undo/redo.
-- Click an audio region to select the whole region; drag inside it to select a smaller range. Split regions can be selected and edited independently.
+- Click an audio region to select it, drag inside for a smaller range, or drag its left/right handles to trim. Trims can be pulled back to the available source and undone; neighboring regions stay in place.
 - WAV stem and mix exports, original take downloads, and portable project backups.
 - Offline use after the production app has loaded and cached successfully.
 
@@ -37,7 +37,7 @@ Recording requires microphone permission and an HTTPS or localhost address. Use 
 1. **Import your music.** Add a `.musicxml`, `.xml`, or `.mxl` score and audio files. Assign each file its role: Score, Backing, or Demo recording. You can also start with just a score or audio. PDF scores must be converted to MusicXML before import.
 2. **Set the timing reference.** Open **Alignment**, analyze the demonstration track, and listen to it alongside the score synth. Adjust the timing anchors as needed, then choose **Set score reference**. **Save track anchors** stores the selected track's timing map without changing the score reference. Automatic alignment is a starting point that needs listening and review.
 3. **Align the backing.** Analyze the backing track and review its anchors. Use **Conform this track** if you want to adjust its timing to match the reference. The original audio is preserved. Changing the reference later does not automatically reconform other tracks.
-4. **Practice a passage.** Click a note to seek, drag across notes or the timeline, or enter start/end seconds above the tracks and choose **Create range**. The range editor shows the corresponding score positions and the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording. Use **Edit selection** for splitting, trimming, fades, or punch-in recording.
+4. **Practice a passage.** Click a note to seek, drag across notes or the timeline, or enter start/end seconds above the tracks and choose **Create range**. The range editor shows the corresponding score positions and the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording. Drag the selected region’s left/right handles to trim it without changing the source. Snap applies to edge drags; hold Alt to bypass it. Arrow keys adjust a focused handle by 0.1 seconds, or 0.01 seconds with Shift. Use **Edit selection** for splitting, fades, or punch-in recording.
 5. **Record a take.** Choose **+ Recording track** to create and arm a track, or use an existing recording track’s **R** button to make it the recording target. The target appears below the playback time; only one track can be armed. In **Audio input**, choose your device and channels. **Test connection** reports device settings; **Check input levels** displays the selected channels while you play, without saving a take or monitoring input. Set the count-in and timing correction before recording. Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage.
 6. **Export your work.** Open **Export** to download stems, a mix, original takes, or a project backup.
 
@@ -50,13 +50,19 @@ Export a **Project backup** regularly. Browser storage can be cleared or evicted
 | Export | Contents |
 | --- | --- |
 | WAV stems | One 48 kHz, 32-bit float WAV per selected track, with a shared start and length. Clip edits and fades are included; track volume and pan are excluded. |
-| Mix WAV | The selected tracks combined with their volume and pan settings. Optional headroom reduction lowers gain when needed. |
+| Mix WAV | 48 kHz / 24-bit PCM by default, with optional 32-bit float. Includes faders, pan and main output gain, with constant-gain peak protection. Optional integrated-loudness matching preserves dynamics. |
 | Original dry takes | Unedited input recordings at their original capture sample rate and practice speed. |
 | Project backup | A `.drippingproj` file containing source assets, recordings, edits, and undo history. |
 
 Export initially selects tracks that are audible under the current mute/solo settings. You can change each checkbox, including adding a muted track, or choose **Select currently audible tracks** to reset the selection. Score synth and metronome are excluded from audio exports.
 
 Stems and mixes default to the project's original tempo; **Export speed** also offers the current practice speed. A take recorded at 75% is fitted to the original tempo in the arrangement, while its original dry take download always retains the captured recording.
+
+The input and main-output meters show sample peaks in dBFS; the output peak hold remains visible after pausing. Input peaks near full scale are latched so brief overloads are not missed. Adjust input gain on your audio device; the main output gain changes playback and mixes, not the dry capture.
+
+**Analyze mix** reports estimated true peak (dBTP), integrated loudness (LUFS-I) and the planned final gain. Loudness matching is off by default. When enabled, the selected target replaces main output gain; peak headroom takes priority if both targets cannot be met. Peak protection applies one gain to the whole mix and adds 0.7 dB of safety margin for the four-times true-peak estimate. Stems and original dry takes retain their separate export rules.
+
+Export sample-rate conversion uses a band-limited resampler in the audio worker. Raw captures retain the AudioContext capture rate and float32 samples. Writing a higher-resolution output does not restore information lost at the microphone or audio interface.
 
 After an interrupted recording, Dripping can recover audio chunks that were saved before the interruption.
 

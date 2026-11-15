@@ -35,6 +35,15 @@ it('rejects an unavailable input channel during the level check',()=>{
   expect(messages.some(m=>m.type==='chunk')).toBe(false);
 });
 
+it('retains an overload between meter updates instead of missing a short peak',()=>{
+  const {processor,messages,scope}=worklet([0]);
+  processor.process([[new Float32Array(128)]],[[]]);
+  scope.currentFrame=128;const impulse=new Float32Array(128);impulse[64]=1;
+  processor.process([[impulse]],[[]]);scope.currentFrame=128*12;
+  processor.process([[new Float32Array(128)]],[[]]);
+  expect(messages.at(-1)).toMatchObject({type:'meter',peak:1,clipped:true});
+});
+
 it('still captures only the armed interval and selected channel',()=>{
   const {processor,messages}=worklet([1]);
   processor.port.onmessage({data:{type:'arm',startFrame:10,endFrame:20}});

@@ -8,13 +8,14 @@ export function InputMeter({device,channels,locale,onError}:{device:string;chann
   const selected=channels.split(',').map(Number);
   const probe=useRef<PCMRecorder|null>(null),generation=useRef(0);
   const [running,setRunning]=useState(false),[starting,setStarting]=useState(false),[levels,setLevels]=useState<number[]>([]);
-  const stop=()=>{generation.current++;probe.current?.close();probe.current=null;setRunning(false);setStarting(false);setLevels([]);};
+  const [clipped,setClipped]=useState(false);
+  const stop=()=>{generation.current++;probe.current?.close();probe.current=null;setRunning(false);setStarting(false);setLevels([]);setClipped(false);};
   useEffect(()=>{stop();return()=>{generation.current++;probe.current?.close();probe.current=null;};},[device,channels]);
   const start=async()=>{
     const token=++generation.current;
     setStarting(true);
     const input=new PCMRecorder(transport.ctx);probe.current=input;
-    input.onMeter=(peak,peaks)=>{if(token===generation.current)setLevels(peaks||[peak]);};
+    input.onMeter=(peak,peaks,clipped)=>{if(token===generation.current){setLevels(peaks||[peak]);if(clipped)setClipped(true);}};
     input.onError=message=>{if(token===generation.current){stop();onError(message);}};
     input.onEnded=()=>{if(token===generation.current)stop();};
     try{
@@ -32,6 +33,7 @@ export function InputMeter({device,channels,locale,onError}:{device:string;chann
         <span>{t('通道','Channel')} {channel+1}</span><meter aria-label={`${t('通道','Channel')} ${channel+1}`} min="0" max="1" value={peak}/><i aria-hidden="true"><b style={{width:`${level}%`}}/></i><output>{running?(Number.isFinite(db)?`${db.toFixed(1)} dBFS`:t('无信号','No signal')):'—'}</output>
       </div>;
     })}
+    {clipped&&<strong className="input-clip-warning" role="status">{t('峰值接近 0 dBFS，请降低设备的输入增益后重测。','Peak approached 0 dBFS. Lower the device input gain and check again.')}</strong>}
     <small>{running?t('演奏几秒，检查通道与电平。此检测不录音、不播放输入声。','Play a few notes to check channels and levels. This check does not record or monitor your input.'):t('点检测后才打开输入；关闭窗口或更换设备会停止。','Input opens only when you start the check. Closing this window or changing inputs stops it.')}</small>
   </div>;
 }

@@ -6,6 +6,7 @@ import {saveProject,getAsset,readSession,deleteSession} from './storage';
 import {transport} from './transport';
 import {encodeWav,clearClips,splitClips,trimClips} from './audio';
 import {audioJobs} from './jobs';
+import {clipSelection,clipTrimBounds} from './timeline';
 
 export type ImportItem={file:File;role:TrackRole|'score'};
 export function guessRole(name:string):ImportItem['role']{
@@ -65,6 +66,19 @@ export function editSelection(project:Project,action:'split'|'clear'|'trim'|'fad
     }
   });
 }
+export function trimRegion(project:Project,trackId:string,clipId:string,from:number,to:number,sourceDuration?:number):Project{
+  return editProject(project,'trim region',p=>{
+    const track=p.tracks.find(track=>track.id===trackId),clip=track?.clips.find(clip=>clip.id===clipId);
+    if(!track||!clip)throw Error('找不到片段 / Region is missing');
+    const a=from-track.offset,b=to-track.offset,bounds=clipTrimBounds(track,clip,sourceDuration);
+    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||a<bounds.start-1e-7||b>bounds.end+1e-7)throw Error('裁剪不可超出原音频或覆盖相邻片段 / Keep trims within the source and neighboring regions');
+    const leftChanged=Math.abs(a-clip.start)>1e-7,rightChanged=Math.abs(b-clip.end)>1e-7;
+    clip.sourceStart=Math.max(0,clip.sourceStart+(a-clip.start)*clip.rate);clip.start=a;clip.end=b;
+    clip.fadeIn=Math.min(leftChanged?Math.max(.003,clip.fadeIn):clip.fadeIn,(b-a)/4);
+    clip.fadeOut=Math.min(rightChanged?Math.max(.003,clip.fadeOut):clip.fadeOut,(b-a)/4);
+    p.selection=clipSelection(track,clip);
+  });
+}
 export async function finishTake(project:Project,sessionId:string,interrupted=false):Promise<Project>{
   if(project.takes.some(t=>t.id===sessionId)){await deleteSession(sessionId);return clone(project);}
   const {session,channels}=await readSession(sessionId),pcm={sampleRate:session.sampleRate,channels};
@@ -91,6 +105,8 @@ export function newRecordingSession(project:Project,trackId:string,start:number,
 }
 export async function renderExport(project:Project,track:Track,from=0,to=projectDuration(project),mixed=false,speed=1):Promise<PCM>{
   const buffers=await Promise.all([...new Set(track.clips.map(c=>c.assetId))].map(async id=>[id,await transport.asset(id)]));
-  return audioJobs.run<PCM>('render',{track,buffers,from,to,sampleRate:48000,speed,mixed});
+  const pcm=await audioJobs.run<PCM>('render',{track,buffers,from,to,sampleRate:transport.ctx.sampleRate,speed,mixed});
+  const frames=Math.max(1,Math.round((to-from)/speed*48000));
+  return pcm.sampleRate===48000&&pcm.channels[0].length===frames?pcm:audioJobs.run<PCM>('resample',{pcm,sampleRate:48000,frames});
 }
 export async function originalTake(assetId:string){return (await getAsset(assetId)).blob;}

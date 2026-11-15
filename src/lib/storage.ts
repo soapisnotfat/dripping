@@ -75,6 +75,7 @@ export async function exportProject(project:Project):Promise<Blob>{
 
 function checkProject(p:Project,assetIds:Set<string>){
   if(p.schemaVersion!==1||!Array.isArray(p.tracks)||!Array.isArray(p.takes)||!Array.isArray(p.assetIds))throw Error('不支持的项目格式 / Unsupported project format');
+  if(p.masterGainDb!==undefined&&(!Number.isFinite(p.masterGainDb)||p.masterGainDb< -36||p.masterGainDb>6))throw Error('无效输出增益 / Invalid output gain');
   for(const id of p.assetIds)if(!assetIds.has(id))throw Error('项目缺少素材 / Incomplete project assets');
   const checkTrack=(t:Project['tracks'][number])=>{
     const sourceValid=t.sourceAssetId!==undefined?assetIds.has(t.sourceAssetId):t.role==='recording'&&Array.isArray(t.clips)&&t.clips.length===0;

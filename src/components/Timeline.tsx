@@ -1,13 +1,15 @@
-import {useEffect,useRef,useState} from 'react';
+import {Fragment,useEffect,useRef,useState} from 'react';
 import type {Project,Locale,Track,Selection,Clip,RecordingSession} from '../lib/types';
 import {formatTime,projectDuration,qToSeconds,nearestBeat} from '../lib/time';
 import {clipSelection,timelineFollowLeft} from '../lib/timeline';
 import {clamp} from '../lib/types';
+import {TrimHandles} from './TrimHandles';
 
 export type Waveform={peaks:Float32Array;duration:number};
 const LABEL=190;
 type Props={project:Project;position:number;locale:Locale;scale:number;snap:boolean;follow:boolean;waveforms:Map<string,Waveform>;recording:boolean;playing:boolean;counting:boolean;locked:boolean;armedTrackId?:string;activeRecording:Pick<RecordingSession,'trackId'|'start'>|null;onArm:(id:string)=>void;
   onSeek:(seconds:number)=>void;onSelect:(selection:Selection|null)=>void;onTrack:(trackId:string,patch:Partial<Track>)=>void;
+  onTrim:(trackId:string,clipId:string,start:number,end:number)=>void;
   onContext:(x:number,y:number)=>void;onFollow:(value:boolean)=>void;onTrackSettings:(id:string)=>void};
 
 function Wave({clip,wave,color,width}:{clip:Clip;wave?:Waveform;color:number;width:number}){
@@ -28,9 +30,11 @@ function Wave({clip,wave,color,width}:{clip:Clip;wave?:Waveform;color:number;wid
   },[wave,clip,width,color]);
   return <canvas ref={canvas} className="wave-canvas" aria-hidden="true"/>;
 }
-export function Timeline({project,position,locale,scale,snap,follow,waveforms,recording,playing,counting,locked,armedTrackId,activeRecording,onArm,onSeek,onSelect,onTrack,onContext,onFollow,onTrackSettings}:Props){
+export function Timeline({project,position,locale,scale,snap,follow,waveforms,recording,playing,counting,locked,armedTrackId,activeRecording,onArm,onSeek,onSelect,onTrack,onTrim,onContext,onFollow,onTrackSettings}:Props){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en,scroller=useRef<HTMLDivElement>(null),drag=useRef<{start:number;section:Selection|null;downX:number;moved:boolean}|null>(null);
   const [hover,setHover]=useState<number|null>(null),[viewportWidth,setViewportWidth]=useState(0),followLeft=useRef<number|null>(null);
+  const [trimPreview,setTrimPreview]=useState<{trackId:string;clip:Clip}|null>(null),previewTrack=project.tracks.find(track=>track.id===trimPreview?.trackId);
+  const selection=trimPreview&&previewTrack&&project.selection?.clipId===trimPreview.clip.id?clipSelection(previewTrack,trimPreview.clip):project.selection;
   const duration=Math.max(projectDuration(project),recording?position+5:0),width=Math.max(640,duration*scale+40);
   useEffect(()=>{
     const el=scroller.current;if(!el)return;
@@ -74,10 +78,10 @@ export function Timeline({project,position,locale,scale,snap,follow,waveforms,re
           onContextMenu={e=>{e.preventDefault();if(locked)return;const p=point(e,e.currentTarget,false),clip=at(track,p);if(!clip)return;if(project.selection?.clipId!==clip.id||p<project.selection.start||p>project.selection.end)onSelect(clipSelection(track,clip));onContext(e.clientX,e.clientY);}}
           onKeyDown={e=>{if(locked)return;if(e.shiftKey&&e.key==='F10'){e.preventDefault();const clip=at(track,position);if(project.selection?.trackId!==track.id){if(!clip)return;onSelect(clipSelection(track,clip));}const r=e.currentTarget.getBoundingClientRect();onContext(r.left+40,r.top+20);}if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();onSeek(Math.max(0,Math.min(duration,position+(e.key==='ArrowRight'?1:-1)*.25)));}}}>
           <div className="lane-grid" aria-hidden="true">{labels.map((label,index)=><i key={index} style={{left:label.seconds*scale}}/>)}</div>
-          {track.clips.map(clip=><div className={`audio-clip ${project.selection?.clipId===clip.id&&project.selection.trackId===track.id?'is-selected':''}`} key={clip.id} data-clip-id={clip.id} role="button" tabIndex={locked?-1:0} aria-disabled={locked} aria-label={`${t('选择片段','Select region')} ${clip.label}`} aria-pressed={project.selection?.clipId===clip.id&&project.selection.trackId===track.id} style={{left:(clip.start+track.offset)*scale,width:(clip.end-clip.start)*scale}} title={`${clip.label} · ${formatTime(clip.end-clip.start,true)}`} onKeyDown={e=>{if(!locked&&(e.key==='Enter'||e.key===' '||e.shiftKey&&e.key==='F10')){e.preventDefault();e.stopPropagation();onSelect(clipSelection(track,clip));if(e.key==='F10'){const r=e.currentTarget.getBoundingClientRect();onContext(r.left+20,r.top+20);}}}}><span>{clip.label}</span><Wave clip={clip} wave={waveforms.get(clip.assetId)} color={track.color} width={(clip.end-clip.start)*scale}/>{clip.fadeIn>0&&<i className="fade-in" style={{width:clip.fadeIn*scale}}/>}{clip.fadeOut>0&&<i className="fade-out" style={{width:clip.fadeOut*scale}}/>}</div>)}
+          {track.clips.map(original=>{const clip=trimPreview?.trackId===track.id&&trimPreview.clip.id===original.id?trimPreview.clip:original;return <Fragment key={original.id}><div className={`audio-clip ${project.selection?.clipId===clip.id&&project.selection.trackId===track.id?'is-selected':''}`} key={clip.id} data-clip-id={clip.id} role="button" tabIndex={locked?-1:0} aria-disabled={locked} aria-label={`${t('选择片段','Select region')} ${clip.label}`} aria-pressed={project.selection?.clipId===clip.id&&project.selection.trackId===track.id} style={{left:(clip.start+track.offset)*scale,width:(clip.end-clip.start)*scale}} title={`${clip.label} · ${formatTime(clip.end-clip.start,true)}`} onKeyDown={e=>{if(!locked&&(e.key==='Enter'||e.key===' '||e.shiftKey&&e.key==='F10')){e.preventDefault();e.stopPropagation();onSelect(clipSelection(track,clip));if(e.key==='F10'){const r=e.currentTarget.getBoundingClientRect();onContext(r.left+20,r.top+20);}}}}><span>{clip.label}</span><Wave clip={clip} wave={waveforms.get(clip.assetId)} color={track.color} width={(clip.end-clip.start)*scale}/>{clip.fadeIn>0&&<i className="fade-in" style={{width:clip.fadeIn*scale}}/>}{clip.fadeOut>0&&<i className="fade-out" style={{width:clip.fadeOut*scale}}/>}</div>{!locked&&project.selection?.clipId===clip.id&&project.selection.trackId===track.id&&<TrimHandles project={project} track={track} clip={original} preview={clip} sourceDuration={waveforms.get(clip.assetId)?.duration} scale={scale} snap={snap} locale={locale} onPreview={next=>setTrimPreview(next?{trackId:track.id,clip:next}:null)} onTrim={(start,end)=>onTrim(track.id,clip.id,start,end)}/>}</Fragment>;})}
           {!track.clips.length&&activeRecording?.trackId!==track.id&&<span className="lane-placeholder">{armedTrackId===track.id?t('已待命 · 按录音开始','Ready · press Record to begin'):t('点击 R 设为录音目标','Press R on this track to arm')}</span>}
           {activeRecording?.trackId===track.id&&<div className="recording-region" style={{left:activeRecording.start*scale,width:Math.max(4,(position-activeRecording.start)*scale)}}><span>{counting?t('预备拍','Count-in'):t('正在录音','Recording')}</span></div>}
-          {project.selection&&(!project.selection.trackId||project.selection.trackId===track.id)&&<div className="lane-selection" style={{left:project.selection.start*scale,width:(project.selection.end-project.selection.start)*scale}}/>}
+          {selection&&(!selection.trackId||selection.trackId===track.id)&&!(trimPreview?.trackId===track.id&&selection.clipId===trimPreview.clip.id)&&!track.clips.some(clip=>clip.id===selection.clipId&&Math.abs(selection.start-clip.start-track.offset)<1e-7&&Math.abs(selection.end-clip.end-track.offset)<1e-7)&&<div className="lane-selection" style={{left:selection.start*scale,width:(selection.end-selection.start)*scale}}/>}
         </div>
       </div>)}
       {!project.tracks.length&&<div className="timeline-empty">{t('添加音频，或点击「＋ 录音轨」准备录音。','Add audio or choose + Recording track to prepare a take.')}</div>}

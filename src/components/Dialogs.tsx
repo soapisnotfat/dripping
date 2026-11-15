@@ -10,6 +10,7 @@ import type {Features} from '../lib/alignment';
 import {mono,encodeWav,mixTracks} from '../lib/audio';
 import {tempoMap,validateAnchors,qToSeconds,projectDuration,formatTime,scorePositionLabel} from '../lib/time';
 import {audibleTrackIds} from '../lib/mix';
+import {amplitudeDb,planMaster,type AudioStats,type MasterPlan} from '../lib/master';
 
 export function Modal({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}){
   const closeRef=useRef(onClose);closeRef.current=onClose;
@@ -87,32 +88,55 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
 
 export function ExportDialog({project,locale,onClose,onError}:Common&{project:Project}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
-  const [busy,setBusy]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[normalize,setNormalize]=useState(true),[speed,setSpeed]=useState(1);
+  const [busy,setBusy]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[speed,setSpeed]=useState(1);
+  const [bitDepth,setBitDepth]=useState<24|32>(24),[ceiling,setCeiling]=useState(-1),[matchLoudness,setMatchLoudness]=useState(false),[target,setTarget]=useState(-18);
+  const [analysis,setAnalysis]=useState<{key:string;stats:AudioStats}|null>(null),cache=useRef<{key:string;pcm:PCM;stats:AudioStats}|null>(null);
   const audible=new Set(audibleTrackIds(project.tracks)),solo=project.tracks.some(track=>track.solo);
   const a=range&&project.selection?project.selection.start:0,b=range&&project.selection?project.selection.end:projectDuration(project);
-  const safe=(s:string)=>s.replace(/[\\/:*?"<>|]/g,'_').slice(0,100);
+  const key=JSON.stringify([project.revision,selected,a,b,speed]),stats=analysis?.key===key?analysis.stats:null;
+  const settings={gainDb:project.masterGainDb??0,ceilingDb:ceiling,targetLufs:matchLoudness?target:undefined},plan=stats?planMaster(stats,settings):null;
+  const safe=(s:string)=>s.replace(/[\\/:*?"<>|]/g,'_').slice(0,100),db=(value:number)=>value>0?amplitudeDb(value).toFixed(1):'−∞';
+  const getMix=async()=>{
+    if(cache.current?.key===key)return cache.current;
+    const tracks=project.tracks.filter(track=>selected.includes(track.id));if(!tracks.length)throw Error(t('至少选择一条音轨','Choose at least one track'));
+    const rendered:PCM[]=[];
+    for(const track of tracks){setBusy(track.name);rendered.push(await renderExport(project,track,a,b,true,speed));}
+    setBusy(t('分析响度与真峰值…','Analyzing loudness and true peak…'));
+    const pcm=mixTracks(rendered),stats=await audioJobs.run<AudioStats>('measure-export',{pcm});
+    const result={key,pcm,stats};cache.current=result;setAnalysis({key,stats});return result;
+  };
+  const analyze=async()=>{try{setBusy(t('准备分析…','Preparing analysis…'));await getMix();}catch(error){onError(String(error));}finally{setBusy('');}};
   const perform=async(kind:'stems'|'mix'|'project')=>{try{setBusy(t('正在准备导出…','Preparing export…'));
     if(kind==='project'){download(await exportProject(project),`${safe(project.name)}.drippingproj`);return;}
-    const tracks=project.tracks.filter(t=>selected.includes(t.id));if(!tracks.length)throw Error(t('至少选择一条音轨','Choose at least one track'));
-    const rendered:PCM[]=[],files:Record<string,Uint8Array>={};
-    for(let i=0;i<tracks.length;i++){setBusy(tracks[i].name);const pcm=await renderExport(project,tracks[i],a,b,kind==='mix',speed);if(kind==='mix')rendered.push(pcm);else files[`${String(i+1).padStart(2,'0')} ${safe(tracks[i].name)}.wav`]=new Uint8Array(encodeWav(pcm,32));}
+    const tracks=project.tracks.filter(track=>selected.includes(track.id));if(!tracks.length)throw Error(t('至少选择一条音轨','Choose at least one track'));
     if(kind==='mix'){
-      const pcm=mixTracks(rendered);let peak=0;for(const ch of pcm.channels)for(const v of ch)peak=Math.max(peak,Math.abs(v));if(normalize&&peak>.97)for(const ch of pcm.channels)for(let i=0;i<ch.length;i++)ch[i]*=.97/peak;
-      download(new Blob([encodeWav(pcm,normalize?16:32)],{type:'audio/wav'}),`${safe(project.name)} — mix.wav`);
+      const {pcm,stats}=await getMix();setBusy(t('生成高品质 WAV…','Encoding WAV…'));
+      const result=await audioJobs.run<{wav:ArrayBuffer;plan:MasterPlan}>('master-wav',{pcm,stats,settings,bitDepth});
+      download(new Blob([result.wav],{type:'audio/wav'}),`${safe(project.name)} — mix.wav`);
     }else{
-      files['session.json']=strToU8(JSON.stringify({project:project.name,range:{start:a,end:b},sampleRate:48000,bitDepth:32,format:'IEEE float WAV',speed,alignment:'All files share the same zero and length',tracks:tracks.map(t=>({name:t.name,role:t.role,volume:t.volume,pan:t.pan}))},null,2));
-      const data=await new Promise<Uint8Array>((resolve,reject)=>zip(files,{level:0},(e,out)=>e?reject(e):resolve(out)));download(new Blob([data as Uint8Array<ArrayBuffer>],{type:'application/zip'}),`${safe(project.name)} — stems.zip`);
+      const files:Record<string,Uint8Array>={};
+      for(let i=0;i<tracks.length;i++){setBusy(tracks[i].name);const pcm=await renderExport(project,tracks[i],a,b,false,speed);files[`${String(i+1).padStart(2,'0')} ${safe(tracks[i].name)}.wav`]=new Uint8Array(encodeWav(pcm,32));}
+      files['session.json']=strToU8(JSON.stringify({project:project.name,range:{start:a,end:b},sampleRate:48000,bitDepth:32,format:'IEEE float WAV',speed,masterGainDb:project.masterGainDb??0,alignment:'All files share the same zero and length',tracks:tracks.map(track=>({name:track.name,role:track.role,volume:track.volume,pan:track.pan}))},null,2));
+      const data=await new Promise<Uint8Array>((resolve,reject)=>zip(files,{level:0},(error,out)=>error?reject(error):resolve(out)));download(new Blob([data as Uint8Array<ArrayBuffer>],{type:'application/zip'}),`${safe(project.name)} — stems.zip`);
     }
-  }catch(e){onError(String(e));}finally{setBusy('');}};
+  }catch(error){onError(String(error));}finally{setBusy('');}};
   return <Modal title={t('带走你的练习','Export your practice')} onClose={()=>{if(!busy)onClose();}}>
-    <p className="muted">{t('分轨为 48 kHz／32-bit float WAV，共同起点和长度。逐轨勾选决定导出内容；可手动加入静音轨。','Stems use 48 kHz / 32-bit float WAV with a shared start and length. Checked tracks determine the export; muted tracks can be added explicitly.')}</p>
+    <p className="muted">{t('混音默认 48 kHz／24-bit WAV；分轨为 48 kHz／32-bit float WAV，共同起点和长度。','Mixes default to 48 kHz / 24-bit WAV. Stems use 48 kHz / 32-bit float WAV with a shared start and length.')}</p>
     <button className="export-reset" disabled={!!busy} onClick={()=>setSelected(audibleTrackIds(project.tracks))}>{t('按当前播放音轨选择','Select currently audible tracks')}</button>
-    <div className="check-list">{project.tracks.map(track=><label key={track.id}><input type="checkbox" disabled={!!busy} checked={selected.includes(track.id)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,track.id]:ids.filter(id=>id!==track.id))}/><span>{track.name}<small className="export-track-state">{!track.clips.length?t('无片段','No clips'):track.mute?t('已静音','Muted'):solo&&!track.solo?t('被其他轨独奏排除','Excluded by solo'):track.solo?t('独奏','Solo'):t('播放','Audible')}{selected.includes(track.id)&&!audible.has(track.id)?t(' · 已手动加入导出',' · explicitly included'):''}</small></span></label>)}</div>
-    <label className="field">{t('导出速度','Export speed')}<select disabled={!!busy} aria-label={t('导出速度','Export speed')} value={speed} onChange={e=>setSpeed(Number(e.target.value))}><option value="1">{t('原速 · 100%','Original · 100%')}</option>{project.speed!==1&&<option value={project.speed}>{t('当前练习速度','Current practice speed')} · {Math.round(project.speed*100)}%</option>}</select></label>
-    <label className="check"><input type="checkbox" checked={range} disabled={!project.selection||!!busy} onChange={e=>setRange(e.target.checked)}/>{t('只导出选区','Export selection only')} · {formatTime(a)}–{formatTime(b)}</label>
-    <label className="check"><input type="checkbox" checked={normalize} disabled={!!busy} onChange={e=>setNormalize(e.target.checked)}/>{t('混音超出峰值时降低增益','Reduce mix gain if peaks exceed headroom')}</label>
-    <p className="muted compact">{t('仅导出勾选的音轨，不包含谱面合成音和节拍器。分轨保留编辑，不套用推子／声像；混音套用推子和声像。','Only checked audio tracks are exported; score synth and click are excluded. Stems retain edits without fader/pan; mixes apply fader and pan.')}</p>
+    <div className="check-list">{project.tracks.map(track=><label key={track.id}><input type="checkbox" disabled={!!busy} checked={selected.includes(track.id)} onChange={event=>setSelected(ids=>event.target.checked?[...ids,track.id]:ids.filter(id=>id!==track.id))}/><span>{track.name}<small className="export-track-state">{!track.clips.length?t('无片段','No clips'):track.mute?t('已静音','Muted'):solo&&!track.solo?t('被其他轨独奏排除','Excluded by solo'):track.solo?t('独奏','Solo'):t('播放','Audible')}{selected.includes(track.id)&&!audible.has(track.id)?t(' · 已手动加入导出',' · explicitly included'):''}</small></span></label>)}</div>
+    <label className="field">{t('导出速度','Export speed')}<select disabled={!!busy} aria-label={t('导出速度','Export speed')} value={speed} onChange={event=>setSpeed(Number(event.target.value))}><option value="1">{t('原速 · 100%','Original · 100%')}</option>{project.speed!==1&&<option value={project.speed}>{t('当前练习速度','Current practice speed')} · {Math.round(project.speed*100)}%</option>}</select></label>
+    <label className="check"><input type="checkbox" checked={range} disabled={!project.selection||!!busy} onChange={event=>setRange(event.target.checked)}/>{t('只导出选区','Export selection only')} · {formatTime(a)}–{formatTime(b)}</label>
+    <div className="mix-quality">
+      <label>{t('混音格式','Mix format')}<select aria-label={t('混音格式','Mix format')} disabled={!!busy} value={bitDepth} onChange={event=>setBitDepth(Number(event.target.value) as 24|32)}><option value="24">24-bit PCM WAV</option><option value="32">32-bit float WAV</option></select></label>
+      <label>{t('混音峰值上限','Mix peak ceiling')}<select aria-label={t('混音峰值上限','Mix peak ceiling')} disabled={!!busy} value={ceiling} onChange={event=>setCeiling(Number(event.target.value))}>{[-1,-2,-3,-6].map(value=><option key={value} value={value}>{value} dBTP</option>)}</select></label>
+      <label className="check"><input type="checkbox" disabled={!!busy} checked={matchLoudness} onChange={event=>setMatchLoudness(event.target.checked)}/>{t('匹配整体响度','Match integrated loudness')}</label>
+      {matchLoudness&&<label>{t('目标响度','Target loudness')}<select aria-label={t('目标响度','Target loudness')} disabled={!!busy} value={target} onChange={event=>setTarget(Number(event.target.value))}>{[-23,-20,-18,-16,-14].map(value=><option key={value} value={value}>{value} LUFS</option>)}</select></label>}
+      {matchLoudness&&<small>{t('以目标响度为准，替代主输出增益。','The loudness target replaces main output gain.')}</small>}
+    </div>
+    <button disabled={!!busy||!selected.length} onClick={()=>void analyze()}>{t('分析混音','Analyze mix')}</button>
+    {plan&&<div className="mix-analysis" aria-label={t('预计导出电平','Planned export levels')}><dl><dt>{t('整体响度','Integrated loudness')}</dt><dd>{plan.lufs===null?'—':`${plan.lufs.toFixed(1)} LUFS-I`}</dd><dt>{t('真峰值估计','Estimated true peak')}</dt><dd>{db(plan.truePeak)} dBTP</dd><dt>{t('采样峰值','Sample peak')}</dt><dd>{db(plan.samplePeak)} dBFS</dd><dt>{t('最终混音增益','Final mix gain')}</dt><dd>{plan.gainDb>0?'+':''}{plan.gainDb.toFixed(1)} dB</dd></dl>{plan.reductionDb>.01&&<p>{t('为保留峰值余量，整体降低','Overall reduction for peak headroom: ')} {plan.reductionDb.toFixed(1)} dB{locale==='zh'?'。':'.'}</p>}{plan.targetLimited&&<p>{t('峰值上限优先，响度低于所选目标。','The peak ceiling takes priority; loudness stays below the selected target.')}</p>}{matchLoudness&&plan.lufs===null&&<p>{t('片段过短或无有效信号，未匹配响度。','Too short or no gated signal; loudness matching is unavailable.')}</p>}</div>}
+    <p className="muted compact">{t('混音套用推子、声像与主输出增益；峰值保护及响度匹配只改变整体增益，保留演奏动态。分轨不套用这些增益。仅导出勾选音轨，不包含谱面合成音和节拍器。','Mixes apply faders, pan and main output gain. Peak protection and loudness matching use constant gain to preserve dynamics. Stems exclude these gains. Only checked tracks are exported; score synth and click are excluded.')}</p>
     <footer className="wrap"><button disabled={!!busy||!selected.length} onClick={()=>perform('stems')}>{t('分轨 WAV','WAV stems')}</button><button disabled={!!busy||!selected.length} onClick={()=>perform('mix')}>{t('混音 WAV','Mix WAV')}</button><button className="primary" disabled={!!busy} onClick={()=>perform('project')}>{t('完整项目备份','Project backup')}</button></footer><p className="busy-text">{busy}</p>
-    {!!project.takes.length&&<details><summary>{t('每次录音的原始干声','Original dry takes')} ({project.takes.length})</summary>{project.takes.map(take=><div className="take-row" key={take.id}><span>{take.name} · {take.speed}× · {take.interrupted?t('已恢复','Recovered'):formatTime((take.end-take.start)/take.speed)}</span><button onClick={async()=>{try{download(await originalTake(take.assetId),`${safe(take.name)} — dry.wav`);}catch(e){onError(String(e));}}}>{t('下载原声','Download dry')}</button></div>)}</details>}
+    {!!project.takes.length&&<details><summary>{t('每次录音的原始干声','Original dry takes')} ({project.takes.length})</summary>{project.takes.map(take=><div className="take-row" key={take.id}><span>{take.name} · {take.speed}× · {take.sampleRate/1000} kHz · {take.channels} ch · {take.interrupted?t('已恢复','Recovered'):formatTime((take.end-take.start)/take.speed)}</span><button onClick={async()=>{try{download(await originalTake(take.assetId),`${safe(take.name)} — dry.wav`);}catch(error){onError(String(error));}}}>{t('下载原声','Download dry')}</button></div>)}</details>}
   </Modal>;
 }

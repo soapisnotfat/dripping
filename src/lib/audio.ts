@@ -2,9 +2,9 @@ import {Stretch} from '@soundtouchjs/core';
 import type {PCM, Clip, Track} from './types';
 import {clamp} from './types';
 
-export function encodeWav(pcm:PCM, bitDepth:16|32=16):ArrayBuffer {
-  // 32-bit IEEE float for source preservation; PCM16 for broad player compatibility.
-  const depth=bitDepth===32?32:16, bytes=depth/8, channels=pcm.channels.length, frames=pcm.channels[0]?.length || 0;
+export function encodeWav(pcm:PCM, bitDepth:16|24|32=16,gain=1):ArrayBuffer {
+  // Float preserves sources; integer PCM is used for finished listening files.
+  const depth=bitDepth, bytes=depth/8, channels=pcm.channels.length, frames=pcm.channels[0]?.length || 0;
   if(!channels||channels>8||pcm.channels.some(c=>c.length!==frames))throw Error('Invalid PCM channels');
   const dataBytes=frames*channels*bytes;
   if(dataBytes>0xffffffff-44)throw Error('WAV exceeds RIFF size limit');
@@ -15,8 +15,9 @@ export function encodeWav(pcm:PCM, bitDepth:16|32=16):ArrayBuffer {
   view.setUint32(24,pcm.sampleRate,true);view.setUint32(28,pcm.sampleRate*channels*bytes,true);
   view.setUint16(32,channels*bytes,true);view.setUint16(34,depth,true);ascii(36,'data');view.setUint32(40,dataBytes,true);
   for(let i=0;i<frames;i++)for(let c=0;c<channels;c++) {
-    const value=pcm.channels[c][i],position=44+(i*channels+c)*bytes;
-    if(depth===32)view.setFloat32(position,Number.isFinite(value)?value:0,true);
+    const raw=pcm.channels[c][i]*gain,value=Number.isFinite(raw)?raw:0,position=44+(i*channels+c)*bytes;
+    if(depth===32)view.setFloat32(position,value,true);
+    else if(depth===24){const s=clamp(value,-1,1),n=Math.round(s*(s<0?8388608:8388607));view.setUint8(position,n&255);view.setUint8(position+1,(n>>8)&255);view.setUint8(position+2,(n>>16)&255);}
     else {const s=clamp(value,-1,1);view.setInt16(position,Math.round(s*(s<0?32768:32767)),true);}
   }
   return out;
@@ -28,6 +29,27 @@ export function copyBuffer(buffer:AudioBuffer):PCM {
 export function toAudioBuffer(pcm:PCM,ctx:BaseAudioContext):AudioBuffer {
   const buffer=ctx.createBuffer(pcm.channels.length,pcm.channels[0].length,pcm.sampleRate);
   pcm.channels.forEach((c,i)=>buffer.copyToChannel(c as Float32Array<ArrayBuffer>,i));return buffer;
+}
+export function resamplePCM(pcm:PCM,sampleRate:number,frames=Math.round(pcm.channels[0].length/pcm.sampleRate*sampleRate)):PCM{
+  if(pcm.sampleRate===sampleRate&&pcm.channels[0].length===frames)return pcm;
+  if(!Number.isInteger(sampleRate)||!Number.isInteger(pcm.sampleRate)||sampleRate<3000||pcm.sampleRate<3000||!Number.isInteger(frames)||frames<1||frames*pcm.channels.length>150_000_000)throw Error('Invalid resampling size or rate');
+  // Exact rational phases, windowed-sinc low-pass filtering and zero padding.
+  // The 128-tap base kernel grows for downsampling to reject aliased content.
+  const gcd=(a:number,b:number):number=>b?gcd(b,a%b):a,divisor=gcd(pcm.sampleRate,sampleRate),phases=sampleRate/divisor,step=pcm.sampleRate/divisor;
+  const ratio=Math.min(1,sampleRate/pcm.sampleRate),cutoff=.96*ratio,half=Math.ceil(64/ratio),taps=2*half;
+  const kernels=Array.from({length:phases},(_,phase)=>{
+    const weights=new Float64Array(taps);let sum=0;
+    for(let tap=0;tap<taps;tap++){
+      const distance=phase/phases-(tap-half+1),angle=Math.PI*distance/half,window=.42+.5*Math.cos(angle)+.08*Math.cos(2*angle);
+      const value=(Math.abs(distance)<1e-12?cutoff:Math.sin(Math.PI*cutoff*distance)/(Math.PI*distance))*window;weights[tap]=value;sum+=value;
+    }
+    for(let tap=0;tap<taps;tap++)weights[tap]/=sum;return weights;
+  });
+  return {sampleRate,channels:pcm.channels.map(source=>{
+    const out=new Float32Array(frames);
+    for(let i=0;i<frames;i++){const position=i*step,base=Math.floor(position/phases)-half+1,weights=kernels[position%phases];let value=0;for(let tap=0;tap<taps;tap++){const at=base+tap;if(at>=0&&at<source.length)value+=source[at]*weights[tap];}out[i]=value;}
+    return out;
+  })};
 }
 export function mono(pcm:PCM,targetRate=11025):Float32Array {
   const length=Math.ceil(pcm.channels[0].length*targetRate/pcm.sampleRate),out=new Float32Array(length);
