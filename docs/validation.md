@@ -53,6 +53,15 @@ macOS identified the Roland AE-20 as a USB audio device with two input and two o
 - The geometry checks also passed after a 393 px horizontal scroll. The complete example workbench was inspected at 440 px: its first three ruler/grid positions were 201, 306 and 411 px in all three tracks.
 - The 40 existing tests and production build pass. Browser checks used Chromium mobile emulation; physical iPhone Safari remains unverified.
 
+## Audio regions and recording cues, 2026-11-15
+
+- Audio-region selection follows GarageBand's tap-to-select-region convention ([Apple guide](https://support.apple.com/guide/garageband-ipad/edit-regions-chsec12c15d/ipados)). Dripping keeps drag gestures for selecting a range inside that region. Clicking an uncut example backing selected its full 0–40.250 second span. After two split operations produced five regions, each region could be selected independently. A drag from 1.875 seconds into the next region stopped at the original region's 8 second boundary.
+- Region-scoped split, clear, trim and fades preserve other regions in the track. Tests cover offsets, snapping at region edges, reverse drags, keyboard selection, typed bounds and restoring whole-region selection. Split/trim update the selected region identity; clearing an interior range or overwriting the selected region clears the obsolete selection.
+- Waveforms fill the row vertically. Region backgrounds and selected-region shading distinguish the active region without an inset card or vertical gap. Track labels and lanes retain their shared row heights and score-based grid.
+- Removed the standalone instrument-preview control. Score synth and Click remain independently available during recording. On a second recording into a track with an existing take, the actual Web Audio gain for that track stayed at zero while reference/click gains changed to 0.65/0.6 and back to zero. The backing stayed at 0.8 and the recording clock continued.
+- Two synthetic 440 Hz input takes contained 392,190 and 269,565 frames at 44.1 kHz (8.893 and 6.113 seconds). All 72 inspected interior 200 ms windows retained RMS 0.07071066; no silent gaps appeared while toggling cues. Residual RMS after fitting the 440 Hz tone stayed below 0.000000374. This verifies the synthetic input path; physical capture and acoustic bleed remain outside this check.
+- 50 unit/component tests and the production build pass. Browser verification used Chromium, not physical iPad/iPhone hardware.
+
 ## Limits to keep visible
 
 - Physical audio capture, channel routing, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware. AE-20 device discovery was verified as described above.
