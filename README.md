@@ -77,10 +77,10 @@ Dripping builds to a static site and can run on GitHub Pages, Cloudflare Pages, 
 The repository includes a [deployment workflow](.github/workflows/deploy-pages.yml).
 
 1. In the repository's **Settings → Pages**, set **Source** to **GitHub Actions**.
-2. Open **Actions → Deploy to GitHub Pages → Run workflow** and select `main`.
+2. Merge a pull request into `main` or push an update to `main`. To deploy manually, open **Actions → Deploy to GitHub Pages → Run workflow** and select `main`.
 3. Wait for the workflow to finish, then open the published URL shown in **Settings → Pages**.
 
-This workflow tests, builds, and deploys the app when run manually. Pushes and pull requests run the separate **Check** workflow; they do not trigger a Pages deployment.
+Updates to `main` automatically run the deployment workflow: tests must pass and the production build must succeed before Pages deploys. Pull requests and other branches run the separate **Check** workflow. The manual deployment entry point remains available.
 
 To use a custom domain, add it in GitHub's Pages settings before configuring DNS. For a subdomain, create a CNAME pointing to the repository owner's `<username>.github.io` hostname, without a repository path. If Cloudflare manages your DNS, use **DNS only** when GitHub serves the site directly. Enable **Enforce HTTPS** in GitHub once its certificate is ready. See [GitHub's custom domain guide](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
 
