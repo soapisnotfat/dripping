@@ -29,11 +29,6 @@ function referenceNote(frequency:number,duration:number,instrument:'flute'|'pian
   }
   return out;
 }
-export function referencePreviewPCM(instrument:'flute'|'piano'):PCM{
-  const sampleRate=22050,out=new Float32Array(Math.round(1.85*sampleRate));
-  [523.251,659.255,783.991].forEach((frequency,i)=>out.set(referenceNote(frequency,.5,instrument,sampleRate),Math.round((.05+i*.6)*sampleRate)));
-  return {sampleRate,channels:[out]};
-}
 export function referencePCM(project:Project,instrument:'flute'|'piano'='flute'):PCM {
   const sr=22050,out=new Float32Array(Math.ceil(projectDuration(project)*sr));
   if(project.score)for(const event of soundingEvents(project.score)) {

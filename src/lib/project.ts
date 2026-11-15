@@ -52,9 +52,17 @@ export function editSelection(project:Project,action:'split'|'clear'|'trim'|'fad
   const selection=project.selection;
   return editProject(project,action,p=>{
     const t=p.tracks.find(t=>t.id===trackId);if(!t)throw Error('选择要编辑的音轨 / Choose a track');
+    const selected=selection.clipId?t.clips.find(clip=>clip.id===selection.clipId):undefined;
+    if(selection.clipId&&!selected)throw Error('请重新选择音频片段 / Select the audio region again');
     const a=selection.start-t.offset,b=selection.end-t.offset;
-    t.clips=action==='clear'?clearClips(t.clips,a,b):action==='trim'?trimClips(t.clips,a,b):splitClips(t.clips,a,b);
-    if(action==='fade')for(const c of t.clips)if(c.start>=a-1e-7&&c.end<=b+1e-7){c.fadeIn=Math.min(.08,(c.end-c.start)/4);c.fadeOut=c.fadeIn;}
+    if(selected&&(a<selected.start-1e-7||b>selected.end+1e-7))throw Error('选区需在当前片段内 / Keep the range within this region');
+    const clips=selected?[selected]:t.clips,edited=action==='clear'?clearClips(clips,a,b):action==='trim'?trimClips(clips,a,b):splitClips(clips,a,b);
+    if(action==='fade')for(const c of edited)if(c.start>=a-1e-7&&c.end<=b+1e-7){c.fadeIn=Math.min(.08,(c.end-c.start)/4);c.fadeOut=c.fadeIn;}
+    t.clips=selected?t.clips.flatMap(clip=>clip.id===selected.id?edited:[clip]):edited;
+    if(selected){
+      const inside=edited.find(clip=>clip.start>=a-1e-7&&clip.end<=b+1e-7);
+      p.selection=inside?{...selection,clipId:inside.id}:null;if(!p.selection)p.loop=false;
+    }
   });
 }
 export async function finishTake(project:Project,sessionId:string,interrupted=false):Promise<Project>{
@@ -73,6 +81,7 @@ export async function finishTake(project:Project,sessionId:string,interrupted=fa
       track.clips.push({id:uid(),assetId:asset.id,label:session.name,start:start-track.offset,end:end-track.offset,sourceStart,rate:1/session.speed,gain:1,fadeIn:.005,fadeOut:.005});
     }
     track.clips.sort((a,b)=>a.start-b.start);
+    if(p.selection?.clipId&&p.selection.trackId===track.id&&!track.clips.some(clip=>clip.id===p.selection!.clipId)){p.selection=null;p.loop=false;}
   });
   p.assetIds.push(asset.id);p.takes.push({id:session.id,name:session.name,assetId:asset.id,trackId:session.trackId,start:rawStart,end,speed:session.speed,sampleRate:session.sampleRate,channels:session.channels,createdAt:session.createdAt,inputLabel:session.inputLabel,latencyMs:session.latencyMs,interrupted});
   p.updatedAt=new Date().toISOString();p.revision++;await saveProject(p,[asset]);await deleteSession(sessionId);transport.pcm.set(asset.id,pcm);return p;

@@ -3,7 +3,7 @@ import {copyBuffer,toAudioBuffer} from './audio';
 import {getAsset} from './storage';
 import {audioJobs} from './jobs';
 import {projectDuration,qToSeconds,secondsToQ} from './time';
-import {referencePCM,referencePreviewPCM,metronomePCM} from './reference';
+import {referencePCM,metronomePCM} from './reference';
 import {audibleTrackIds} from './mix';
 
 export class Transport {
@@ -76,20 +76,14 @@ export class Transport {
     project.tracks.forEach(t=>add(t.id,t));if(project.score){add('reference');add('metronome');}
     this.playing=true;this.updateMix(project);return this.startTime;
   }
-  async previewInstrument(instrument:'flute'|'piano'){
-    this.pause();await this.ctx.resume();
-    const node=this.ctx.createBufferSource();node.buffer=toAudioBuffer(referencePreviewPCM(instrument),this.ctx);
-    node.connect(this.ctx.destination);this.nodes.push(node);
-    node.onended=()=>{node.disconnect();this.nodes=this.nodes.filter(n=>n!==node);};node.start();
-  }
   private click(at:number,accent:boolean){
     const oscillator=this.ctx.createOscillator(),gain=this.ctx.createGain();oscillator.frequency.value=accent?1600:1100;
     gain.gain.setValueAtTime(.2,at);gain.gain.exponentialRampToValueAtTime(.001,at+.04);oscillator.connect(gain).connect(this.destination!);oscillator.start(at);oscillator.stop(at+.05);
     this.clicks.push(oscillator);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.clicks=this.clicks.filter(n=>n!==oscillator);};
   }
-  updateMix(project:Project){
+  updateMix(project:Project,recordingTrackId?:string){
     const audible=new Set(audibleTrackIds(project.tracks));
-    for(const track of project.tracks){this.gains.get(track.id)?.gain.setTargetAtTime(audible.has(track.id)?track.volume:0,this.ctx.currentTime,.012);this.pans.get(track.id)?.pan.setTargetAtTime(track.pan,this.ctx.currentTime,.012);}
+    for(const track of project.tracks){this.gains.get(track.id)?.gain.setTargetAtTime(audible.has(track.id)&&track.id!==recordingTrackId?track.volume:0,this.ctx.currentTime,.012);this.pans.get(track.id)?.pan.setTargetAtTime(track.pan,this.ctx.currentTime,.012);}
     this.gains.get('reference')?.gain.setTargetAtTime(this.reference?this.referenceVolume:0,this.ctx.currentTime,.01);
     this.gains.get('metronome')?.gain.setTargetAtTime(this.metronome?.6:0,this.ctx.currentTime,.01);
   }

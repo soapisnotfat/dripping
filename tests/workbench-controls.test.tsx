@@ -54,6 +54,17 @@ it('keeps the current range when a typed range is invalid',()=>{
   expect(onSelect).not.toHaveBeenCalled();expect(document.querySelector('[role=alert]')).not.toBeNull();
 });
 
+it('bounds typed ranges to the selected region and can restore the whole region',()=>{
+  const project=newProject('Take range');project.tracks=[track('take')];project.tracks[0].offset=.5;
+  project.selection={start:1,end:2,trackId:'take',clipId:'clip'};const onSelect=vi.fn();
+  act(()=>root.render(<SelectionEditor project={project} locale="en" trackId="take" disabled={false} onSelect={onSelect}/>));
+  act(()=>fill(document.querySelectorAll<HTMLInputElement>('input')[1],'5'));
+  act(()=>document.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+  expect(onSelect).not.toHaveBeenCalled();expect(document.querySelector('[role=alert]')!.textContent).toContain('within this region');
+  act(()=>[...document.querySelectorAll('button')].find(button=>button.textContent==='Select whole region')!.click());
+  expect(onSelect).toHaveBeenLastCalledWith({start:.5,end:4.5,trackId:'take',clipId:'clip'});
+});
+
 it('creates a typed range without a drag gesture or arming a different recording track',()=>{
   const project=newProject('Range');project.tracks=[track('take')];
   const onSelect=vi.fn();

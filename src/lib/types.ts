@@ -41,7 +41,7 @@ export type Take = {
 };
 export type EditState = {tracks: Track[]; selection: Selection | null; scoreMap?: Anchor[]; referenceTrackId?: string};
 export type EditCommand = {label: string; before: EditState; after: EditState};
-export type Selection = {start: number; end: number; trackId?: string};
+export type Selection = {start: number; end: number; trackId?: string; clipId?: string};
 export type Project = {
   id: string; schemaVersion: 1; name: string; createdAt: string; updatedAt: string;
   scoreXml?: string; scoreAssetId?: string; score?: Score; referenceTrackId?: string;

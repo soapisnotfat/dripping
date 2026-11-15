@@ -13,6 +13,7 @@ Audio, scores, and projects stay in your browser. No account or backend is requi
 - Score-to-audio alignment with editable timing anchors.
 - Mono or stereo recording from a selected audio input, with count-in and optional monitoring.
 - Non-destructive clip editing, fades, track volume and pan, and undo/redo.
+- Click an audio region to select the whole region; drag inside it to select a smaller range. Split regions can be selected and edited independently.
 - WAV stem and mix exports, original take downloads, and portable project backups.
 - Offline use after the production app has loaded and cached successfully.
 
@@ -65,7 +66,7 @@ Dripping is in early development. Desktop browser workflows have been tested wit
 
 - **Alignment:** sparse or repetitive accompaniment, or a different arrangement, may require manual timing anchors or a matching demonstration track. Until a timing reference is chosen, the score follows its written tempo.
 - **Inputs:** up to 160 MB per file, 15 minutes per audio track, and 512 MB per project backup. Large sessions can reach device memory limits before these limits. Alignment may request a shorter input when its comparison limit is reached.
-- **Score synth:** the flute and piano options are synthesized cues for checking notes and timing. Use **Preview tone** to compare their sound without the backing, and enable **Score synth** separately. Choosing an instrument does not change imported recordings.
+- **Score synth:** the flute and piano options are synthesized cues for checking notes and timing. Choose the instrument before playback. **Score synth** and **Click** can be toggled independently during playback and recording. Choosing an instrument does not change imported recordings.
 - **Mobile use:** the layout supports touch and tablet screens. On iPad, a deployed HTTPS site can be added to the Home Screen.
 
 ## Deployment

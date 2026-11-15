@@ -10,3 +10,10 @@ Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:async()=>{
   return stream.stream;
 }});
 createRoot(document.querySelector('#root')!).render(<App/>);
+
+// Inspect the live Web Audio gains while operating the real recording controls.
+const status=document.createElement('output');status.id='recording-test-status';status.style.cssText='display:block;font:11px monospace;padding:12px;white-space:pre-wrap';document.body.append(status);
+setInterval(()=>{
+  const gains=(transport as unknown as {gains:Map<string,GainNode>}).gains;
+  status.textContent=JSON.stringify({playing:transport.playing,position:transport.position(),gains:Object.fromEntries([...gains].map(([id,node])=>[id,node.gain.value]))});
+},100);
