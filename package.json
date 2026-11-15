@@ -16,6 +16,7 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
+    "@soundtouchjs/core": "2.1.1",
     "fflate": "0.8.3",
     "idb": "8.0.4",
     "opensheetmusicdisplay": "2.3.1",
