@@ -20,7 +20,13 @@ export function ScoreView({project,position,locale,zoom,follow,onFollow,mode,onS
   const selectionQ=project.selection?[secondsToQ(project.selection.start,project.scoreMap),secondsToQ(project.selection.end,project.scoreMap)]:null;
   const selectedIds=useMemo(()=>new Set(score&&selectionQ?score.events.filter(e=>e.q<selectionQ[1]-1e-7&&e.q+Math.max(e.duration,.001)>selectionQ[0]+1e-7).map(e=>e.id):[]),[score,selectionQ?.[0],selectionQ?.[1]]);
 
-  useEffect(()=>{if(!viewport.current)return;let timer:ReturnType<typeof setTimeout>;const resize=new ResizeObserver(entries=>{clearTimeout(timer);timer=setTimeout(()=>setWidth(Math.floor(entries[0].contentRect.width)),150);});resize.observe(viewport.current);return()=>{resize.disconnect();clearTimeout(timer);};},[]);
+  useEffect(()=>{
+    const view=viewport.current;if(!view)return;
+    let timer:ReturnType<typeof setTimeout>;
+    const measure=()=>{clearTimeout(timer);timer=setTimeout(()=>{if(host.current)setWidth(Math.floor(host.current.getBoundingClientRect().width));},100);};
+    const resize=new ResizeObserver(measure);resize.observe(view);window.addEventListener('resize',measure);measure();
+    return()=>{resize.disconnect();window.removeEventListener('resize',measure);clearTimeout(timer);};
+  },[!!score]);
   useEffect(()=>{
     if(!host.current||!project.scoreXml||!score)return;
     let stopped=false;setLoading(true);

@@ -80,8 +80,8 @@ export async function finishTake(project:Project,sessionId:string,interrupted=fa
 export function newRecordingSession(project:Project,trackId:string,start:number,sampleRate:number,channels:number,inputLabel:string,latencyMs:number):RecordingSession{
   return {id:uid(),projectId:project.id,trackId,name:`Take ${project.takes.length+1}`,start,speed:project.speed,sampleRate,channels,createdAt:new Date().toISOString(),inputLabel,latencyMs,chunks:0,frames:0};
 }
-export async function renderExport(project:Project,track:Track,from=0,to=projectDuration(project),mixed=false):Promise<PCM>{
+export async function renderExport(project:Project,track:Track,from=0,to=projectDuration(project),mixed=false,speed=1):Promise<PCM>{
   const buffers=await Promise.all([...new Set(track.clips.map(c=>c.assetId))].map(async id=>[id,await transport.asset(id)]));
-  return audioJobs.run<PCM>('render',{track,buffers,from,to,sampleRate:48000,speed:1,mixed});
+  return audioJobs.run<PCM>('render',{track,buffers,from,to,sampleRate:48000,speed,mixed});
 }
 export async function originalTake(assetId:string){return (await getAsset(assetId)).blob;}

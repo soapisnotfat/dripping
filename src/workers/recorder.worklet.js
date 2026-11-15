@@ -18,18 +18,19 @@ class DrippingPCMRecorder extends AudioWorkletProcessor {
   process(inputs,outputs){
     // Outputs deliberately remain zero: input is never mixed with the backing bus.
     for(const output of outputs)for(const channel of output)channel.fill(0);
-    if(!this.active)return true;
+    if(this.finished)return true;
     const input=inputs[0];if(!input?.length)return true;
     if(this.channels.some(c=>c>=input.length)){this.port.postMessage({type:'error',message:'所选输入通道不可用 / Selected input channel unavailable'});this.finish();return true;}
-    let peak=0;
+    const peaks=this.channels.map(channel=>{let peak=0;for(const value of input[channel])peak=Math.max(peak,Math.abs(value));return peak;});
+    if(currentFrame%(128*12)===0)this.port.postMessage({type:'meter',peak:Math.max(...peaks),peaks});
+    if(!this.active)return true;
     for(let i=0;i<input[0].length;i++){
       const frame=currentFrame+i;
       if(frame>=this.endFrame){this.finish();break;}
       if(frame<this.startFrame)continue;
-      for(let c=0;c<this.channels.length;c++){const value=input[this.channels[c]][i];this.buffers[c][this.offset]=value;peak=Math.max(peak,Math.abs(value));}
+      for(let c=0;c<this.channels.length;c++)this.buffers[c][this.offset]=input[this.channels[c]][i];
       if(++this.offset===this.capacity)this.flush();
     }
-    if(peak>0&&currentFrame%(128*12)===0)this.port.postMessage({type:'meter',peak});
     return true;
   }
 }

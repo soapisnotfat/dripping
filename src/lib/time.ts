@@ -52,6 +52,14 @@ export function positionLabel(seconds:number, project:Project):string {
   const meter=project.score.measures[occurrence.measure];
   return `${occurrence.number}.${Math.floor(clamp(q-occurrence.q,0,occurrence.duration-1e-6)/(4/meter.beatType))+1}`;
 }
+export function scorePositionLabel(q:number,score:Score,locale:'zh'|'en'='en'):string{
+  if(!Number.isFinite(q)||q<0||!score.route.length)return '—';
+  if(q>=score.totalQ-1e-7)return locale==='zh'?'结束':'End';
+  const occurrence=[...score.route].reverse().find(m=>m.q<=q+1e-7)||score.route[0];
+  const measure=score.measures[occurrence.measure],beat=(q-occurrence.q)/(4/measure.beatType);
+  const whole=Math.floor(beat+1e-7),fraction=Number((beat-whole).toFixed(3));
+  return `${occurrence.number}.${whole+1}${fraction>0?`+${fraction}`:''}${occurrence.pass>1?(locale==='zh'?`（第 ${occurrence.pass} 遍）`:` (pass ${occurrence.pass})`):''}`;
+}
 export function projectDuration(p:Project):number {
   return Math.max(1,p.score?qToSeconds(p.score.totalQ,p.scoreMap):0,...p.tracks.flatMap(t=>t.clips.map(c=>c.end+t.offset)));
 }

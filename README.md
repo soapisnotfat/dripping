@@ -33,11 +33,11 @@ Recording requires microphone permission and an HTTPS or localhost address. Use 
 
 ## Your first session
 
-1. **Import your music.** Add a `.musicxml`, `.xml`, or `.mxl` score and audio files. Assign each file its role: Score, Backing, or Demo. You can also start with just a score or audio. PDF scores must be converted to MusicXML before import.
-2. **Set the timing reference.** Open **Alignment**, analyze the demonstration track, and listen to it alongside the score tones. Adjust the timing anchors as needed, then choose **Use as reference**. Automatic alignment is a starting point that needs listening and review.
-3. **Align the backing.** Analyze the backing track and review its anchors. Use **Conform to reference** if you want to adjust its timing to match the reference. The original audio is preserved. Changing the reference later does not automatically reconform other tracks.
-4. **Practice a passage.** Click a note to seek, or drag across notes or the timeline to select a range. Loop the selection or slow down playback. Use **Edit selection** for splitting, trimming, fades, or punch-in recording.
-5. **Record a take.** Choose **+ Recording track** to create and arm a track, or use an existing recording track’s **R** button to make it the recording target. The target appears below the playback time; only one track can be armed. In **Audio input**, choose your device and channels, then select **Test connection**. Set the count-in and timing correction before recording. Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage.
+1. **Import your music.** Add a `.musicxml`, `.xml`, or `.mxl` score and audio files. Assign each file its role: Score, Backing, or Demo recording. You can also start with just a score or audio. PDF scores must be converted to MusicXML before import.
+2. **Set the timing reference.** Open **Alignment**, analyze the demonstration track, and listen to it alongside the score synth. Adjust the timing anchors as needed, then choose **Set score reference**. **Save track anchors** stores the selected track's timing map without changing the score reference. Automatic alignment is a starting point that needs listening and review.
+3. **Align the backing.** Analyze the backing track and review its anchors. Use **Conform this track** if you want to adjust its timing to match the reference. The original audio is preserved. Changing the reference later does not automatically reconform other tracks.
+4. **Practice a passage.** Click a note to seek, drag across notes or the timeline, or enter start/end seconds above the tracks and choose **Create range**. The range editor shows the corresponding score positions and the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording. Use **Edit selection** for splitting, trimming, fades, or punch-in recording.
+5. **Record a take.** Choose **+ Recording track** to create and arm a track, or use an existing recording track’s **R** button to make it the recording target. The target appears below the playback time; only one track can be armed. In **Audio input**, choose your device and channels. **Test connection** reports device settings; **Check input levels** displays the selected channels while you play, without saving a take or monitoring input. Set the count-in and timing correction before recording. Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage.
 6. **Export your work.** Open **Export** to download stems, a mix, original takes, or a project backup.
 
 ## Saving and exporting
@@ -53,7 +53,9 @@ Export a **Project backup** regularly. Browser storage can be cleared or evicted
 | Original dry takes | Unedited input recordings at their original capture sample rate and practice speed. |
 | Project backup | A `.drippingproj` file containing source assets, recordings, edits, and undo history. |
 
-Stems and mixes use the project's original tempo. For example, a take recorded at 75% practice speed is fitted to that tempo in the arrangement, while its original take download retains the slower recording.
+Export initially selects tracks that are audible under the current mute/solo settings. You can change each checkbox, including adding a muted track, or choose **Select currently audible tracks** to reset the selection. Score synth and metronome are excluded from audio exports.
+
+Stems and mixes default to the project's original tempo; **Export speed** also offers the current practice speed. A take recorded at 75% is fitted to the original tempo in the arrangement, while its original dry take download always retains the captured recording.
 
 After an interrupted recording, Dripping can recover audio chunks that were saved before the interruption.
 
@@ -63,7 +65,7 @@ Dripping is in early development. Desktop browser workflows have been tested wit
 
 - **Alignment:** sparse or repetitive accompaniment, or a different arrangement, may require manual timing anchors or a matching demonstration track. Until a timing reference is chosen, the score follows its written tempo.
 - **Inputs:** up to 160 MB per file, 15 minutes per audio track, and 512 MB per project backup. Large sessions can reach device memory limits before these limits. Alignment may request a shorter input when its comparison limit is reached.
-- **Reference tones:** the flute and piano options are synthesized cues for checking notes and timing. Use **Preview tone** to compare their sound without the backing; choosing an instrument enables **Score tones** and does not change imported demonstration audio.
+- **Score synth:** the flute and piano options are synthesized cues for checking notes and timing. Use **Preview tone** to compare their sound without the backing, and enable **Score synth** separately. Choosing an instrument does not change imported recordings.
 - **Mobile use:** the layout supports touch and tablet screens. On iPad, a deployed HTTPS site can be added to the Home Screen.
 
 ## Deployment

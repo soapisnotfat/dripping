@@ -15,7 +15,7 @@ export class PCMRecorder {
   private session?:RecordingSession;
   private failed=false;
   private started=false;
-  onMeter:(peak:number)=>void=()=>{};
+  onMeter:(peak:number,peaks?:number[])=>void=()=>{};
   onError:(message:string)=>void=()=>{};
   onEnded:()=>void=()=>{};
   constructor(readonly ctx:AudioContext){}
@@ -30,14 +30,14 @@ export class PCMRecorder {
     this.node.port.onmessage=({data})=>{
       if(data.type==='chunk'&&this.session){
         this.queue=this.queue.then(()=>saveChunk(this.session!.id,data.sequence,data.data)).catch(error=>{this.fail(error);});
-      }else if(data.type==='meter')this.onMeter(data.peak);
+      }else if(data.type==='meter')this.onMeter(data.peak,data.peaks);
       else if(data.type==='error')this.fail(Error(data.message));
       else if(data.type==='done'){
         this.queue.then(()=>{if(this.failed)return;this.close();this.doneResolve?.();this.onEnded();});
       }
     };
     this.node.onprocessorerror=()=>this.fail(Error('录音处理器中断，已写入的录音块可恢复 / Recorder interrupted; committed chunks can be recovered'));
-    for(const track of this.stream.getTracks())track.onended=()=>{if(this.started)this.stop().catch(()=>{});};
+    for(const track of this.stream.getTracks())track.onended=()=>{if(this.started)this.stop().catch(()=>{});else{this.close();this.onEnded();}};
     return this.stream.getAudioTracks()[0];
   }
   setMonitoring(enabled:boolean){this.monitor?.gain.setTargetAtTime(enabled?.6:0,this.ctx.currentTime,.02);}

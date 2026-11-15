@@ -104,11 +104,20 @@ export function renderTrack(track:Track,buffers:Map<string,PCM>,from:number,to:n
     const dest=Math.round((a-from)/speed*sampleRate),count=Math.min(length-dest,Math.round((b-a)/speed*sampleRate));
     for(let c=0;c<channels;c++) {
       const source=segment.channels[Math.min(c,segment.channels.length-1)];
-      let mixGain=mixed?track.volume:1;
-      if(mixed){if(segment.channels.length===1)mixGain*=c===0?Math.cos((track.pan+1)*Math.PI/4):Math.sin((track.pan+1)*Math.PI/4);else mixGain*=c===0?Math.min(1,1-track.pan):Math.min(1,1+track.pan);}
+      const mixGain=mixed?track.volume:1,pan=clamp(track.pan,-1,1);
+      const angle=(pan<=0?pan+1:pan)*Math.PI/2;
       for(let i=0;i<count;i++) {
         const position=i*segment.sampleRate/sampleRate,j=Math.floor(position),f=position-j;
-        const value=(source[j]||0)*(1-f)+(source[j+1]||0)*f;
+        let value=(source[j]||0)*(1-f)+(source[j+1]||0)*f;
+        if(mixed){
+          if(segment.channels.length===1)value*=c===0?Math.cos((pan+1)*Math.PI/4):Math.sin((pan+1)*Math.PI/4);
+          else {
+            // Match the StereoPannerNode used during playback, including crossfeed.
+            const other=segment.channels[1-c],v=(other[j]||0)*(1-f)+(other[j+1]||0)*f;
+            if(pan<=0)value=c===0?value+v*Math.cos(angle):value*Math.sin(angle);
+            else value=c===0?value*Math.cos(angle):value+v*Math.sin(angle);
+          }
+        }
         const projectTime=a+i/sampleRate*speed;
         const fadeIn=clip.fadeIn?clamp((projectTime-start)/clip.fadeIn,0,1):1;
         const fadeOut=clip.fadeOut?clamp((end-projectTime)/clip.fadeOut,0,1):1;

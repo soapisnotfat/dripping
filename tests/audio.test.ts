@@ -22,6 +22,12 @@ describe('PCM and non-destructive edits',()=>{
   it('exports float WAV with correct channels, rate and duration',()=>{
     const wav=encodeWav(signal,32),v=new DataView(wav);expect(v.getUint16(20,true)).toBe(3);expect(v.getUint16(22,true)).toBe(2);expect(v.getUint32(24,true)).toBe(sr);expect(wav.byteLength).toBe(44+sr*2*2*4);
   });
+  it.each([-1,1])('preserves a stereo channel when panning it fully across the output (%s)',pan=>{
+    const pcm:PCM={sampleRate:sr,channels:[new Float32Array(sr).fill(pan===1?.2:0),new Float32Array(sr).fill(pan===-1?.2:0)]};
+    const out=renderTrack({...track,pan,volume:1,clips:[{...clip,end:1}]},new Map([['a',pcm]]),0,1,sr,1,true);
+    expect(out.channels[pan===1?1:0][100]).toBeCloseTo(.2,6);
+    expect(out.channels[pan===1?0:1][100]).toBeCloseTo(0,6);
+  });
   it.each([.5,.75,1.25,1.5])('changes duration at %s× while retaining pitch and stereo separation',(speed)=>{
     const out=stretchAudio(signal,speed);expect(out.channels[0].length).toBe(Math.ceil(sr*2/speed));
     expect(frequency(out.channels[0])).toBeCloseTo(440,0);expect(frequency(out.channels[1])).toBeCloseTo(660,0);
