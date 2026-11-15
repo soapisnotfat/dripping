@@ -53,18 +53,22 @@ export function editSelection(project:Project,action:'split'|'clear'|'trim'|'fad
   });
 }
 export async function finishTake(project:Project,sessionId:string,interrupted=false):Promise<Project>{
+  if(project.takes.some(t=>t.id===sessionId)){await deleteSession(sessionId);return clone(project);}
   const {session,channels}=await readSession(sessionId),pcm={sampleRate:session.sampleRate,channels};
   const asset=audioAsset(project,pcm,`${session.name}.wav`),duration=channels[0].length/session.sampleRate;
-  const start=Math.max(0,session.start-session.latencyMs/1000*session.speed),end=start+duration*session.speed;
+  const rawStart=session.start-session.latencyMs/1000*session.speed,start=Math.max(0,rawStart),end=rawStart+duration*session.speed;
+  const sourceStart=Math.max(0,-rawStart)/session.speed;
   const p=editProject(project,'record',p=>{
     let track=p.tracks.find(t=>t.id===session.trackId);
     if(!track){track={id:session.trackId,name:session.name,role:'recording',sourceAssetId:asset.id,volume:.85,pan:0,mute:false,solo:false,offset:0,color:2,clips:[]};p.tracks.push(track);}
     // Punch replacement is non-destructive. Every original take remains in p.takes.
-    track.clips=clearClips(track.clips,start-track.offset,end-track.offset);
-    track.clips.push({id:uid(),assetId:asset.id,label:session.name,start:start-track.offset,end:end-track.offset,sourceStart:0,rate:1/session.speed,gain:1,fadeIn:.005,fadeOut:.005});
+    if(end>start){
+      track.clips=clearClips(track.clips,start-track.offset,end-track.offset);
+      track.clips.push({id:uid(),assetId:asset.id,label:session.name,start:start-track.offset,end:end-track.offset,sourceStart,rate:1/session.speed,gain:1,fadeIn:.005,fadeOut:.005});
+    }
     track.clips.sort((a,b)=>a.start-b.start);
   });
-  p.assetIds.push(asset.id);p.takes.push({id:session.id,name:session.name,assetId:asset.id,trackId:session.trackId,start,end,speed:session.speed,sampleRate:session.sampleRate,channels:session.channels,createdAt:session.createdAt,inputLabel:session.inputLabel,latencyMs:session.latencyMs,interrupted});
+  p.assetIds.push(asset.id);p.takes.push({id:session.id,name:session.name,assetId:asset.id,trackId:session.trackId,start:rawStart,end,speed:session.speed,sampleRate:session.sampleRate,channels:session.channels,createdAt:session.createdAt,inputLabel:session.inputLabel,latencyMs:session.latencyMs,interrupted});
   p.updatedAt=new Date().toISOString();p.revision++;await saveProject(p,[asset]);await deleteSession(sessionId);transport.pcm.set(asset.id,pcm);return p;
 }
 export function newRecordingSession(project:Project,trackId:string,start:number,sampleRate:number,channels:number,inputLabel:string,latencyMs:number):RecordingSession{

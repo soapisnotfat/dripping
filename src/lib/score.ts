@@ -193,6 +193,7 @@ export function parseScore(xml: string, selectedPart?: string): Score {
   if (!parts.length || !parts[0].measures.length) throw Error('乐谱没有小节 / The score has no measures');
   const part=parts.find(p=>p.id===selectedPart) || parts[0], route=expandRoute(part.measures);
   const events: ScoreEvent[]=[], tempo: Score['tempo']=[];
+  if(!part.measures[0].tempo.some(t=>t.offset===0)&&!parts[0].measures[0].tempo.some(t=>t.offset===0))warnings.push('乐谱开头没有速度标记，暂按四分音符 = 80；请对齐音频或手动校正 / No initial tempo mark; using quarter note = 80 until alignment is corrected');
   let bpm=80;
   for (const occurrence of route) {
     const m=part.measures[occurrence.measure];
