@@ -33,6 +33,18 @@ The production build was loaded over localhost, controlled by its service worker
 
 macOS identified the Roland AE-20 as a USB audio device with two input and two output channels, at 44.1 kHz. Chrome's microphone permission selector and Dripping's audio-input selector both listed AE-20. MIDI was not used. Opening this device through the new connection test, capturing an actual performance, and measuring latency remain unverified; the browser connection ended before that test completed.
 
+## Workbench control changes, 2026-11-15
+
+- 40 unit/component tests and the production build pass. New checks cover export mute/solo defaults and manual overrides, exact range creation/editing and project changes, variable-meter position labels, stereo pan crossfeed, and selected-channel metering before recording.
+- Re-ran `/tests/browser.html`: worker alignment, scheduled dry capture, interruption recovery, byte-identical backup/restore, equal-length stems and transport playback pass.
+- The synthetic-input UI displays approximately −20.0 dBFS for an injected 0.1-peak signal before recording. Closing the input dialog stops the check. Physical-device metering remains unverified.
+- Created the exact 5.125–12.750 second range without a drag gesture. Changing its edit track left looping off and the recording target unarmed.
+- Export initially excludes a muted demonstration track; manually checking it adds it without unmuting playback. Resetting to audible tracks removes it again. Changing the score-synth instrument leaves the synth switch off.
+- Downloaded the selected-range mix at 75% practice speed. Its WAV header contains two channels, 48 kHz, 16-bit PCM and 488,000 frames: exactly `(12.750 - 5.125) / 0.75` seconds.
+- After dynamically narrowing to 768 × 1024, the score viewport and its scroll width both measured 734 px; the rendered SVG measured 698 px. Document width remained 768 px. This is desktop viewport emulation, not a physical iPad test.
+- Imported a separately generated browser MusicXML into a new project: all 106 measures render. The application reports its incomplete measure and missing initial tempo instead of treating the score as fully verified. PDF conversion remains separate from the app.
+- The real-accompaniment slow-playback quality report in Issue #3 remains open; these checks do not establish that its listening-quality problem is fixed.
+
 ## Limits to keep visible
 
 - Physical audio capture, channel routing, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware. AE-20 device discovery was verified as described above.
