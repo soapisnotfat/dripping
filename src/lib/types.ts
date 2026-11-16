@@ -49,9 +49,13 @@ export type Take = {
 export type EditState = {tracks: Track[]; selection: Selection | null; scoreMap?: Anchor[]; referenceTrackId?: string;scoreXml?:string;partId?:string;position?:number};
 export type EditCommand = {label: string; before: EditState; after: EditState};
 export type Selection = {start: number; end: number; trackId?: string; clipId?: string};
+export type ScoreConversion = {
+  version:1;engine:'sheetscan';modelVersion:string;recognizerVersion:string;sourceCommit:string;bridge:string;createdAt:string;
+  originalAssetIds:string[];musicxmlAssetId:string;auditAssetId:string;
+};
 export type Project = {
   id: string; schemaVersion: 1; name: string; createdAt: string; updatedAt: string;
-  scoreXml?: string; scoreAssetId?: string; score?: Score; referenceTrackId?: string;
+  scoreXml?: string; scoreAssetId?: string; score?: Score; scoreConversion?: ScoreConversion; referenceTrackId?: string;
   scoreMap: Anchor[]; tracks: Track[]; takes: Take[]; assetIds: string[];
   speed: number; position: number; selection: Selection | null; loop: boolean;
   masterGainDb?: number;

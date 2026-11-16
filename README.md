@@ -1,6 +1,6 @@
 # Dripping
 
-Dripping is a browser app for practicing and recording music with sheet music and backing tracks. Import a MusicXML score, follow it during playback, loop a difficult passage, and record your instrument on a separate track. Export your takes to continue editing in Logic Pro or GarageBand.
+Dripping is a browser app for practicing and recording music with sheet music and backing tracks. Import a PDF or MusicXML score, follow it during playback, loop a difficult passage, and record your instrument on a separate track. Export your takes to continue editing in Logic Pro or GarageBand.
 
 Audio, scores, and projects stay in your browser. No account or backend is required. The interface supports English and Chinese.
 
@@ -34,7 +34,7 @@ Recording requires microphone permission and an HTTPS or localhost address. Use 
 
 ## Your first session
 
-1. **Import your music.** Add a `.musicxml`, `.xml`, or `.mxl` score, with optional audio files. Assign each file its role: Score, Backing, or Demo recording. Practice and recording require a score; existing audio-only projects retain their data until a score is added. PDF scores must be converted to MusicXML before import.
+1. **Import your music.** Add a `.pdf`, `.musicxml`, `.xml`, or `.mxl` score, with optional audio files. Assign each file its role: Score, Backing, or Demo recording. Practice and recording require a score; existing audio-only projects retain their data until a score is added. PDF pages are converted to MusicXML in browser workers; models download on first use. Review the recognized notation. Cancellation or failure retains selected files and leaves the previous project intact. Original PDFs, generated MusicXML and conversion provenance are included in project backups.
 2. **Check the written tempo.** The score's tempo, meter and expanded repeat route set the clock for every project. Enter **Score tempo BPM** to change the opening tempo; valid input applies automatically and can be undone. If the opening tempo is missing, entering a valid BPM enables practice. Later written tempo changes remain in place.
 3. **Align audio to the score.** Open **Alignment**, analyze the demonstration track, and audition the candidate with score synth. MusicXML transposition is respected, including its normal zero-transposition default when omitted. An explicitly named transposing instrument with no declaration asks for notation review; you can also correct the notation interpretation when the source score shows a different instrument. Note evidence is shown as musical positions linked to the original waveform. Weak or ambiguous candidates cannot be applied automatically. To correct a local passage, audition the original waveform and pair two real source points with score bars and beats; only their interval is rebuilt, and exterior automatic timing stays intact. **Pair manually** starts a separate whole-track manual map. Then choose **Align track to score**. Unverified ranges stay visible on a mixed manual result. A reviewed demonstration can help match the backing when shared accompaniment is detected. Conformation adjusts audio to the score's musical clock, including written tempo changes, meter and manual offbeat anchors. Original audio is retained and the edit is undoable. Automatic candidates still require content and listening checks.
 4. **Practice a passage.** Click a note to seek, drag across notes or a region, or enter start/end bars and beats above the tracks and choose **Create range**. The range editor shows the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording. Drag the selected region's left/right handles to trim it without changing the source. Snap applies to edge drags; hold Alt to bypass it. Arrow keys adjust a focused handle by one beat, or one eighth of a beat with Shift. Use **Edit selection** for splitting, fades, or punch-in recording.
@@ -125,7 +125,7 @@ The build includes a service worker for offline use and an `_headers` file for c
 ```sh
 npm run check  # TypeScript checks
 npm test       # Unit and regression tests
-npm run build  # Production build, dependency notices, and offline cache
+npm run build  # Verify/download pinned models, production build, notices and offline cache
 ```
 
 With the development server running, `/tests/browser.html` exercises audio processing, recording, storage, backup/restore, and WAV rendering using generated audio. `/tests/recording-ui.html` opens the complete app with a generated 440 Hz input for recording checks. Neither page requests a physical microphone; both use the local development project library and are excluded from production builds.
@@ -144,4 +144,8 @@ See [product scope](docs/product.md) for the application's design boundaries. Ke
 
 ## License
 
-A license for the application code has not been specified. Dependency licenses and notices are listed in [THIRD_PARTY.md](THIRD_PARTY.md).
+Dripping application software is licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE). The complete application source and release history are available at [soapisnotfat/dripping](https://github.com/soapisnotfat/dripping). Dependencies retain their own licenses and notices in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+Dripping does not apply its software license to your imported PDFs, MusicXML, audio, recordings or other user content. Their existing rights remain unchanged.
+
+PDF recognition uses the pinned browser SDK in `vendor/sheetscan/`; its source and licenses are linked there. `scripts/prepare-sheetscan.mjs` verifies every vendored file, downloads official model release archives, and verifies both archive and raw ONNX SHA-256 values. Models are excluded from Git history and ordinary service-worker precaching. Recognition code/models are loaded only for PDF import. Runtime dependencies are static downloads from the SDK’s pinned CDN versions; no local program or inference service is required. The host owns the only service worker. On a fresh browser without JSPI it can reload once, before the app mounts or files are selected, to establish shared memory. Existing tabs and later updates retain the explicit save/update flow. Desktop browser checks do not establish physical iPad/iPhone performance or a general transcription accuracy percentage.
