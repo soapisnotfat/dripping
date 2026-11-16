@@ -38,3 +38,5 @@
 .score-tempo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 20px;color:var(--muted);font-size:12px}.score-tempo input{width:76px}.score-tempo span{color:var(--ink)}
 
 .draft-number{display:grid;gap:5px}.draft-number small{font-size:11px;color:var(--red);line-height:1.5}.export-status{font-size:11px;color:var(--accent);line-height:1.6;overflow-wrap:anywhere;min-height:1.6em}
+
+.save-status.error{overflow:visible;white-space:normal;flex-wrap:wrap;max-width:none}.save-status button{font-size:10px;padding:5px 8px;min-height:24px}.save-status i{flex-shrink:0}

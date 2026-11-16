@@ -22,4 +22,11 @@ describe('local persistence and recovery',()=>{
     const result=await readSession(s.id);expect(result.channels[0]).toEqual(new Float32Array([.1,.2,.3]));expect(result.session.frames).toBe(3);
     expect((await recoverySessions()).some(v=>v.id===s.id)).toBe(true);await deleteSession(s.id);expect((await recoverySessions()).some(v=>v.id===s.id)).toBe(false);
   });
+  it('aborts project and asset writes together after a save failure and can retry the same snapshot',async()=>{
+    const p=newProject('Latest draft'),a:Asset={id:crypto.randomUUID(),projectId:p.id,name:'pending.wav',type:'audio/wav',blob:new Blob([new Uint8Array([2,4,6])]) as unknown as globalThis.Blob};p.assetIds=[a.id];
+    const put=IDBObjectStore.prototype.put,fail=vi.spyOn(IDBObjectStore.prototype,'put').mockImplementation(function(this:IDBObjectStore,value,key){if(this.name==='projects'&&value.id===p.id)throw new DOMException('Simulated quota failure','QuotaExceededError');return put.call(this,value,key);});
+    try{await expect(saveProject(p,[a])).rejects.toThrow('Simulated quota failure');}finally{fail.mockRestore();}
+    expect(await getProject(p.id)).toBeUndefined();await expect(getAsset(a.id)).rejects.toThrow('Missing project asset');
+    await saveProject(p,[a]);expect((await getProject(p.id))!.name).toBe('Latest draft');expect(await(await getAsset(a.id)).blob.arrayBuffer()).toEqual(await a.blob.arrayBuffer());
+  });
 });
