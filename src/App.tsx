@@ -39,6 +39,7 @@ export default function App(){
   const [busy,setBusy]=useState(''),[error,setError]=useState(''),[saved,setSaved]=useState('saved'),[ready,setReady]=useState(false);
   const [zoom,setZoom]=useState(.9),[scale,setScale]=useState(42),[followScore,setFollowScore]=useState(true),[followTimeline,setFollowTimeline]=useState(true),[snap,setSnap]=useState(true),[mode,setMode]=useState<CursorMode>('note');
   const [reference,setReference]=useState(false),[instrument,setInstrument]=useState<'flute'|'piano'>('flute'),[metronome,setMetronome]=useState(false);
+  const cuePreferences=useRef({reference,metronome});cuePreferences.current={reference,metronome};
   const [waveforms,setWaveforms]=useState(new Map<string,Waveform>()),[menu,setMenu]=useState<{x:number;y:number}|null>(null),[editingTrack,setEditingTrack]=useState('');
   const [devices,setDevices]=useState<MediaDeviceInfo[]>([]),[device,setDevice]=useState(localStorage.getItem('dripping.inputDevice')||''),[channels,setChannels]=useState(localStorage.getItem('dripping.inputChannels')||'0'),[countIn,setCountIn]=useState(4),[latency,setLatency]=useState(Number(localStorage.getItem('dripping.latency')||0)),[monitor,setMonitor]=useState(false),[meter,setMeter]=useState(0);
   const [inputStatus,setInputStatus]=useState(''),[probing,setProbing]=useState(false),[inputClipped,setInputClipped]=useState(false);
@@ -136,6 +137,7 @@ export default function App(){
       const start=punch&&p.selection?p.selection.start:position,stop=punch&&p.selection?p.selection.end:projectDuration(p);
       if(stop-start<.02)throw Error(t('请把播放头放到结束之前','Move the playhead before the end'));
       const playingProject=clone(p);playingProject.loop=false;playingProject.tracks=playingProject.tracks.map(t=>t.id===target.id?{...t,mute:true}:t);
+      transport.reference=cuePreferences.current.reference;transport.metronome=cuePreferences.current.metronome;
       const time=await transport.start(playingProject,start,name=>setBusy(t('准备录音：','Preparing recording: ')+name),countIn,stop);
       const active=newRecordingSession(p,target.id,start,transport.ctx.sampleRate,inputChannels.length,input.label||'Audio input',latency);session.current=active;
       await rec.arm(active,time,time+(stop-start)/p.speed);rec.onEnded=()=>void finalize();setPosition(start);setCounting(countIn>0);setPlaying(true);setRecording(true);setBusy('');setMenu(null);

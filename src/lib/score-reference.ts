@@ -1,10 +1,21 @@
 import type {Project,Score,ScoreEvent,Alignment,Anchor} from './types';
 import {parseScore,scorePitchDeclaration} from './score';
+import {validateAnchors,qToSeconds} from './time';
 
 export type ScoreReference={score:Score;kind:'score-part'|'score-parts';parts:{id:string;name:string}[];signature:string;pitch:'xml'|'concert'|'unspecified';warnings:string[]};
 const signature=async(value:unknown)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(value)))),byte=>byte.toString(16).padStart(2,'0')).join('');
 export const alignmentMapSignature=(anchors:Anchor[])=>signature(anchors.map(anchor=>[anchor.q,anchor.seconds]));
 export function alignmentMatchesReference(alignment:Alignment|undefined,reference:ScoreReference){return !!alignment?.reference&&alignment.reference.scoreSignature===reference.signature&&alignment.reference.pitch!=='unspecified'&&reference.pitch!=='unspecified';}
+export function reviewedDemoBasis(alignment:Alignment|undefined,reference:ScoreReference,sourceDuration=Infinity):'automatic'|'manual'|null{
+  if(alignment?.status!=='accepted'||alignment.reference?.scoreSignature!==reference.signature)return null;
+  try{validateAnchors(alignment.anchors);}catch{return null;}
+  if(alignment.method==='manual'){
+    const explicit=alignment.manualPairs,pairs=explicit??(alignment.manualAnchors?.map(q=>({q,seconds:qToSeconds(q,alignment.anchors)}))||(alignment.anchors.length<=32?alignment.anchors:[]));
+    const audible=(point:Anchor)=>Number.isFinite(point.q)&&Number.isFinite(point.seconds)&&point.seconds>=0&&(explicit?point.seconds<sourceDuration:point.seconds<=sourceDuration);
+    if(explicit&&pairs.some(point=>!audible(point)))return null;const usable=pairs.filter(audible);if(usable.length<2)return null;try{validateAnchors(usable);}catch{return null;}return 'manual';
+  }
+  return alignmentMatchesReference(alignment,reference)&&alignment.assessment?.decision==='supported'&&!alignment.assessment.unverified?.length&&!alignment.assessment.unassessed?.length?'automatic':null;
+}
 export async function scoreReference(project:Project,accompaniment=false):Promise<ScoreReference>{
   if(!project.scoreXml||!project.score)throw Error('请先添加乐谱 / Add a score first');
   const canonical=project.score,warnings:string[]=[],parts:{id:string;name:string}[]=[],events:ScoreEvent[]=[];

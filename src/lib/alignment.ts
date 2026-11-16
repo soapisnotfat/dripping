@@ -4,7 +4,7 @@ import {soundingEvents} from './score';
 import {tempoMap, secondsToQ, qToSeconds, validateAnchors,beatGrid} from './time';
 import {stretchAudio, slicePCM} from './audio';
 
-export type Features={values:Float32Array;bass?:Float32Array;energy:Float32Array;frames:number;hop:number;duration:number};
+export type Features={values:Float32Array;bass?:Float32Array;onsets?:Float32Array;energy:Float32Array;frames:number;hop:number;duration:number};
 function fft(real:Float32Array,imag:Float32Array){
   const n=real.length;
   for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){[real[i],real[j]]=[real[j],real[i]];[imag[i],imag[j]]=[imag[j],imag[i]];}}
@@ -59,12 +59,12 @@ function soundingWindow(features:Features):{features:Features;offset:number}{
   return {offset:first*features.hop,features:{...features,values:features.values.slice(first*12,end*12),energy:features.energy.slice(first,end),frames:end-first,duration:(end-first)*features.hop}};
 }
 
-export function dtw(reference:Features,audio:Features,compareBacking=false):{path:[number,number][];cost:number;coverage:number} {
+export function dtw(reference:Features,audio:Features,compareBacking=false,pin:{start?:boolean;end?:boolean;onsetWeight?:number}={}):{path:[number,number][];cost:number;coverage:number} {
   const m=reference.frames,n=audio.frames;
   if(m*n>20_000_000)throw Error('匹配范围过大，请先裁短素材 / Alignment input is too long');
   let previous=new Float32Array(n+1).fill(Infinity),previous2=previous.slice();
   // Subsequence initialization permits extra prelude/outro in the recording.
-  previous.fill(0);previous2[0]=0;
+  if(pin.start)previous[0]=0;else previous.fill(0);previous2[0]=0;
   const direction=new Uint8Array((m+1)*(n+1));
   const peak=Math.max(...audio.energy),silence=Math.max(.00005,peak*.012);
   for(let i=1;i<=m;i++){
@@ -72,6 +72,7 @@ export function dtw(reference:Features,audio:Features,compareBacking=false):{pat
     const center=i/m*n,band=Math.max(80,n*.35);
     const begin=Math.max(1,Math.floor(center-band)),end=Math.min(n,Math.ceil(center+band));
     for(let j=begin;j<=end;j++){
+      if(pin.start&&(i===1||j===1)&&(i!==1||j!==1))continue;
       const r=i-1,a=j-1;let distance=0;
       if(reference.energy[r]<.01)distance=audio.energy[a]<silence?.05:.3;
       else if(audio.energy[a]<silence)distance=.95;
@@ -82,14 +83,16 @@ export function dtw(reference:Features,audio:Features,compareBacking=false):{pat
         if(compareBacking&&reference.bass&&audio.bass)dot=.25*dot+.75*bassDot;
         distance=1-clamp(dot,0,1);
       }
-      const choices=[previous[j-1],j>1?previous[j-2]+.04:Infinity,i>1?previous2[j-1]+.04:Infinity];
+      const onsetWeight=pin.onsetWeight||0;
+      if(onsetWeight&&reference.onsets?.[r])distance+=onsetWeight*reference.onsets[r]*(1-(audio.onsets?.[a]||0));
+      const choices=[previous[j-1],j>1?previous[j-2]+.04:Infinity,i>1?previous2[j-1]+.04+onsetWeight*(reference.onsets?.[i-2]||0):Infinity];
       let which=0;if(choices[1]<choices[which])which=1;if(choices[2]<choices[which])which=2;
       current[j]=choices[which]+distance*(which===0?1:1.5);
       direction[i*(n+1)+j]=which+1;
     }
     previous2=previous;previous=current;
   }
-  let end=1;for(let j=2;j<=n;j++)if(previous[j]<previous[end])end=j;
+  let end=pin.end?n:1;if(!pin.end)for(let j=2;j<=n;j++)if(previous[j]<previous[end])end=j;
   if(!Number.isFinite(previous[end]))throw Error('无法找到连续匹配 / No continuous alignment found');
   const totalCost=previous[end];
   let i=m,j=end;const path:[number,number][]=[];

@@ -6,7 +6,7 @@ import {expect,it,vi} from 'vitest';
 import {parseScore,setOpeningTempo,setNotationInstrument,scorePitchDeclaration,notationInstrumentChoice,soundingEvents} from '../src/lib/score';
 import {newProject,exportProject,importProject} from '../src/lib/storage';
 import {changeNotationInstrument,undoProject} from '../src/lib/project';
-import {scoreReference,alignmentMapSignature,alignmentMatchesReference} from '../src/lib/score-reference';
+import {scoreReference,alignmentMapSignature,alignmentMatchesReference,reviewedDemoBasis} from '../src/lib/score-reference';
 import {tempoMap} from '../src/lib/time';
 vi.stubGlobal('crypto',webcrypto);vi.stubGlobal('Blob',Blob);
 const note=(step:string,duration=1,extra='')=>`<note><pitch><step>${step}</step><octave>5</octave></pitch><duration>${duration}</duration><voice>lead</voice><staff>1</staff>${extra}</note>`;
@@ -51,4 +51,12 @@ it.each(['Piano','Flute','Violin','Voice'])('preserves the zero-transposition de
 });
 it('requires review only for an explicitly named transposing instrument with no pitch declaration',async()=>{
  const value=xml.replace('<part-name>Voice</part-name>','<part-name>Alto Saxophone</part-name>');expect(scorePitchDeclaration(value,'P1')).toBe('unspecified');expect((await scoreReference(project(value))).pitch).toBe('unspecified');expect(parseScore(setNotationInstrument(value,'P1','alto')).events[0].midi).toBe(65);
+});
+
+it('reuses an accepted current manual demo map without claiming automatic whole-note confirmation',async()=>{
+ const reference=await scoreReference(project()),alignment={anchors:[{q:0,seconds:-1},{q:2,seconds:1},{q:13,seconds:8}],manualPairs:[{q:2,seconds:1},{q:6,seconds:4}],manualAnchors:[2,6],manualMode:'local' as const,method:'manual' as const,status:'accepted' as const,warnings:[],reference:{kind:'score-part' as const,scoreSignature:reference.signature,partIds:['P1'],pitch:'xml' as const,sampleRate:48000},assessment:{basis:'score-notes' as const,decision:'review' as const,supportedFraction:.7,reasons:['manual-source-correction'],unverified:[{from:4,to:5}],points:[]}};expect(reviewedDemoBasis(alignment,reference,9)).toBe('manual');expect(reviewedDemoBasis({...alignment,status:'candidate'},reference,9)).toBeNull();expect(reviewedDemoBasis({...alignment,manualPairs:[alignment.manualPairs[0]]},reference,9)).toBeNull();expect(reviewedDemoBasis({...alignment,reference:{...alignment.reference,scoreSignature:'f'.repeat(64)}},reference,9)).toBeNull();expect(reviewedDemoBasis({...alignment,anchors:[{q:0,seconds:1},{q:2,seconds:0}]},reference,9)).toBeNull();expect(reviewedDemoBasis(alignment,reference,2)).toBeNull();
+ const legacy={...alignment,manualPairs:undefined,manualMode:undefined};expect(reviewedDemoBasis(legacy,reference,9)).toBe('manual');expect(reviewedDemoBasis({...legacy,manualAnchors:undefined,anchors:[{q:0,seconds:0},{q:13,seconds:9}]},reference,9)).toBe('manual');expect(reviewedDemoBasis({...alignment,manualPairs:[{q:2,seconds:1},{q:2,seconds:1}]},reference,9)).toBeNull();
+});
+it('round-trips an explicitly manual demo reference basis without turning it into automatic note verification',async()=>{
+ const p=project(),ref=await scoreReference(p),anchors=[{q:0,seconds:0},{q:13,seconds:8}];p.tracks=[{id:'empty',name:'Empty',role:'recording',offset:0,volume:1,pan:0,mute:false,solo:false,color:0,clips:[],alignment:{anchors,status:'accepted',method:'chroma-dtw',warnings:[],reference:{kind:'demo',scoreSignature:ref.signature,partIds:['P1'],pitch:'xml',sampleRate:48000,demoTrackId:'manual-demo',demoMapSignature:await alignmentMapSignature(anchors),demoBasis:'manual'},assessment:{basis:'shared-accompaniment',decision:'supported',supportedFraction:.8,reasons:[],points:[]}}}];const restored=await importProject(await exportProject(p));expect(restored.tracks[0].alignment!.reference!.demoBasis).toBe('manual');expect(restored.tracks[0].alignment!.assessment!.basis).toBe('shared-accompaniment');
 });
