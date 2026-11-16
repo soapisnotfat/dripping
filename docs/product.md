@@ -1,10 +1,14 @@
-# Dripping
+# Product scope
+
+[Back to the project](../README.md) · [User guide](user-guide.md) · [Development](development.md)
 
 ## Input contract
 
-Import a prepared MusicXML (`.musicxml`, `.xml`, `.mxl`) score, backing audio, and demonstration audio. PDF conversion and optical music recognition are outside this app. A score-only project and an audio-only project remain useful intermediate states.
+Import a MusicXML (`.musicxml`, `.xml`, `.mxl`) score or a PDF recognized in the browser, with optional backing and demonstration audio. A score and its tempo are required for practice and recording. A score-only project is supported; existing audio-only projects retain their data until a score is added.
 
-## First usable release
+PDF imports save their original PDFs and audio before recognition starts. The workspace remains available during recognition, and failure or cancellation preserves the project for retry and backup. Recognition uses pinned static resources and browser workers; see [PDF import](pdf-import.md).
+
+## Current workspace
 
 - A desktop and tablet workspace, with interactive sheet music above a separately scrollable audio timeline.
 - Click notes, select passages, loop, change practice speed without changing pitch, and follow the current score position.
@@ -16,7 +20,7 @@ Import a prepared MusicXML (`.musicxml`, `.xml`, `.mxl`) score, backing audio, a
 
 ## Product boundaries
 
-No MIDI input, full DAW framework, PDF recognition, account, server or cloud upload is required. Local browser storage is not a backup. USB device/channel support, recording latency and background suspension depend on the browser and hardware and must be tested on the target device.
+No MIDI input, full DAW framework, account, server or cloud upload is required. Local browser storage is not a backup. USB device/channel support, recording latency and background suspension depend on the browser and hardware and must be tested on the target device.
 
 ## Visual direction
 

@@ -1,8 +1,14 @@
-# Dripping 0.1.0 validation
+# Validation record
 
-Validated locally on 2026-11-14. This is a first usable release, not a claim of universal score or hardware compatibility.
+[Back to the project](../README.md) · [Development and check commands](development.md)
 
-## Automated checks
+This is a historical record of checks at successive development revisions, beginning on 2026-11-14. Test counts, outputs, package versions, and timings belong to the revision described by each entry; they are not a live test report for the current checkout. Run the [development checks](development.md#setup-and-commands) for current results.
+
+Generated-input desktop checks do not establish physical audio capture, latency calibration, mobile memory limits, or universal score compatibility. The [limits below](#limits-to-keep-visible) remain relevant. The current PDF package and recognizer identity are recorded in [pin.json](../vendor/sheetscan/pin.json); the v13 integration receipts below describe the earlier recognition package.
+
+## Initial release, 2026-11-14
+
+### Automated checks
 
 - 22 unit tests pass across MusicXML interpretation, tempo mapping, alignment, audio rendering, storage, and audio-input connection cleanup.
 - MusicXML fixtures cover meter changes, pickup duration, multi-measure rests, ties, grace notes, tuplets, polyphonic backup, first/second endings, transposition, MXL input, and rejection of XML entities.
@@ -11,7 +17,7 @@ Validated locally on 2026-11-14. This is a first usable release, not a claim of 
 - Recording latency compensation at project zero preserves the entire original take while trimming only its playable clip. Repeating finalization does not duplicate assets or takes.
 - TypeScript checking and the production Vite build pass.
 
-## Real browser checks
+### Real browser checks
 
 The developer test page uses browser AudioContext, a real AudioWorklet, a generated MediaStream, workers, and IndexedDB. It requests no physical microphone access.
 
@@ -42,7 +48,7 @@ macOS identified the Roland AE-20 as a USB audio device with two input and two o
 - Export initially excludes a muted demonstration track; manually checking it adds it without unmuting playback. Resetting to audible tracks removes it again. Changing the score-synth instrument leaves the synth switch off.
 - Downloaded the selected-range mix at 75% practice speed. Its WAV header contains two channels, 48 kHz, 16-bit PCM and 488,000 frames: exactly `(12.750 - 5.125) / 0.75` seconds.
 - After dynamically narrowing to 768 × 1024, the score viewport and its scroll width both measured 734 px; the rendered SVG measured 698 px. Document width remained 768 px. This is desktop viewport emulation, not a physical iPad test.
-- Imported a separately generated browser MusicXML into a new project: all 106 measures render. The application reports its incomplete measure and missing initial tempo instead of treating the score as fully verified. PDF conversion remains separate from the app.
+- Imported a separately generated browser MusicXML into a new project: all 106 measures render. The application reports its incomplete measure and missing initial tempo instead of treating the score as fully verified. At this revision, PDF conversion remained separate from the app; later browser integration is recorded below.
 - The real-accompaniment slow-playback quality report in Issue #3 remains open; these checks do not establish that its listening-quality problem is fixed.
 
 ## Timeline grid and mobile rows, 2026-11-15
