@@ -61,5 +61,17 @@ export function assessDemoBridge(score:Score,demo:Features,demoMap:Alignment['an
   if(supportedFraction<.7)reasons.push('weak-shared-accompaniment');const count=Math.max(2,Math.ceil(points.length/4));if(ratio(points.slice(0,count))<.5||ratio(points.slice(-count))<.5)reasons.push('weak-bridge-boundaries');
   const classes=new Set(profiles.map(profile=>profile.indexOf(Math.max(...profile))));if(points.length<8||classes.size<3)reasons.push('low-shared-structure');
   if((alignment.cost??0)>.5)reasons.push('weak-shared-accompaniment');
-  return {basis:'shared-accompaniment',decision:reasons.length?'insufficient':'supported',supportedFraction,reasons,points};
+  if(!reasons.length){
+    const all=grid.slice(0,-1),queries=all.length<=64?all:Array.from({length:64},(_,index)=>all[Math.round(index*(all.length-1)/63)]),left=demo.bass||demo.values,right=audio.bass||audio.values;
+    const sample=queries.map(q=>({demo:Math.round(qToSeconds(q,demoMap)/demo.hop-.5),source:qToSeconds(q,alignment.anchors)})),from=Math.min(...sample.map(point=>point.source)),to=Math.max(...sample.map(point=>point.source)),barSpan=Math.max(audio.hop*4,...score.route.slice(0,4).map(bar=>qToSeconds(bar.q+bar.duration,alignment.anchors)-qToSeconds(bar.q,alignment.anchors))),block=Math.max(2,Math.ceil(sample.length/4));
+    // An extra whole performance/section must not be selected merely because
+    // its shared pitch profile gives the first minimum. Compare complete,
+    // well-separated alternatives, keeping the score route unchanged.
+    for(let shift=Math.ceil(-from/audio.hop);shift<=Math.floor((audio.duration-to)/audio.hop);shift++){
+      const offset=shift*audio.hop;if(Math.abs(offset)<barSpan)continue;
+      const matches=sample.map(point=>{const b=Math.round((point.source+offset)/audio.hop-.5);if(point.demo<0||point.demo>=demo.frames||b<0||b>=audio.frames||audio.energy[b]<=Math.max(.00005,peak*.012))return false;let dot=0;for(let pc=0;pc<12;pc++)dot+=left[point.demo*12+pc]*right[b*12+pc];return dot>=.75;});
+      const share=(rows:boolean[])=>rows.filter(Boolean).length/Math.max(1,rows.length);if(share(matches)>=.7&&share(matches.slice(0,block))>=.5&&share(matches.slice(-block))>=.5){reasons.push('ambiguous-shared-passages');break;}
+    }
+  }
+  return {basis:'shared-accompaniment',decision:reasons.includes('ambiguous-shared-passages')?'ambiguous':reasons.length?'insufficient':'supported',supportedFraction,reasons,points};
 }

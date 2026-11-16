@@ -28,7 +28,7 @@ export type Alignment = {
   manualPairs?: Anchor[];
   manualMode?: 'points'|'local';
   anchorSources?: ('automatic'|'manual'|'extrapolated')[];
-  reference?: {kind:'score-part'|'score-parts'|'demo'|'manual';scoreSignature:string;partIds:string[];pitch:'xml'|'concert'|'unspecified';sampleRate:number;demoTrackId?:string;demoMapSignature?:string};
+  reference?: {kind:'score-part'|'score-parts'|'demo'|'manual';scoreSignature:string;partIds:string[];pitch:'xml'|'concert'|'unspecified';sampleRate:number;demoTrackId?:string;demoMapSignature?:string;demoBasis?:'automatic'|'manual'};
   assessment?: {basis:'score-notes'|'shared-accompaniment';decision:'supported'|'review'|'insufficient'|'ambiguous';supportedFraction:number;reasons:string[];unverified?:{from:number;to:number}[];unassessed?:{from:number;to:number}[];points:{q:number;sourceSample:number;midi:number[];support:number;attack:number}[]};
 };
 export type Clip = {
