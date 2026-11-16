@@ -82,6 +82,7 @@ function checkProject(p:Project,assetIds:Set<string>){
   if(p.schemaVersion!==1||!Array.isArray(p.tracks)||!Array.isArray(p.takes)||!Array.isArray(p.assetIds))throw Error('不支持的项目格式 / Unsupported project format');
   if(p.masterGainDb!==undefined&&(!Number.isFinite(p.masterGainDb)||p.masterGainDb< -36||p.masterGainDb>6))throw Error('无效输出增益 / Invalid output gain');
   for(const id of p.assetIds)if(!assetIds.has(id))throw Error('项目缺少素材 / Incomplete project assets');
+  if(p.pdfSource){const source=p.pdfSource;if(source.version!==1||typeof source.id!=='string'||!source.id||!Array.isArray(source.assetIds)||!source.assetIds.length||source.assetIds.length>100||source.assetIds.some(id=>!assetIds.has(id)||!p.assetIds.includes(id))||!['pending','paused','failed','complete'].includes(source.state)||typeof source.createdAt!=='string'||!Number.isFinite(Date.parse(source.createdAt))||source.error&&(typeof source.error.message!=='string'||source.error.message.length>4000||source.error.code!==undefined&&typeof source.error.code!=='string'||source.error.resourceURL!==undefined&&typeof source.error.resourceURL!=='string'))throw Error('无效待识别 PDF 来源 / Invalid pending PDF source');}
   if(p.scoreConversion){
     const c=p.scoreConversion,refs=[...(Array.isArray(c.originalAssetIds)?c.originalAssetIds:[]),c.musicxmlAssetId,c.auditAssetId],text=(value:unknown)=>typeof value==='string'&&value.length>0&&value.length<=120;
     if(c.version!==1||c.engine!=='sheetscan'||!text(c.modelVersion)||!text(c.recognizerVersion)||!/^[a-f0-9]{40}$/.test(c.sourceCommit)||!['jspi','shared memory'].includes(c.bridge)||typeof c.createdAt!=='string'||!Number.isFinite(Date.parse(c.createdAt))||!Array.isArray(c.originalAssetIds)||!c.originalAssetIds.length||c.originalAssetIds.length>100||refs.some(id=>typeof id!=='string'||!assetIds.has(id)||!p.assetIds.includes(id)))throw Error('无效识谱来源 / Invalid score conversion provenance');
@@ -138,6 +139,7 @@ export async function importProject(file:Blob):Promise<Project>{
   for(const command of [...project.undo,...project.redo]){remap(command.before.tracks);remap(command.after.tracks);}
   project.takes.forEach(t=>t.assetId=oldToNew.get(t.assetId)!);
   if(project.scoreAssetId)project.scoreAssetId=oldToNew.get(project.scoreAssetId);
+  if(project.pdfSource)project.pdfSource.assetIds=project.pdfSource.assetIds.map(id=>oldToNew.get(id)!);
   if(project.scoreConversion){const c=project.scoreConversion;c.originalAssetIds=c.originalAssetIds.map(id=>oldToNew.get(id)!);c.musicxmlAssetId=oldToNew.get(c.musicxmlAssetId)!;c.auditAssetId=oldToNew.get(c.auditAssetId)!;}
   if(project.scoreXml){project.score=parseScore(project.scoreXml,project.score?.partId);if(!project.scoreMap.length)project.scoreMap=tempoMap(project.score);}
   project.updatedAt=new Date().toISOString();project.name+=' · restored';
