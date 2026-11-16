@@ -23,7 +23,7 @@ export function SelectionEditor({project,locale,trackId,disabled,onSelect}:{proj
   const track=project.tracks.find(track=>track.id===editTrack),clip=selection?.trackId===editTrack?track?.clips.find(clip=>clip.id===selection.clipId):undefined,section=track&&clip?clipSelection(track,clip):null;
   useEffect(()=>{setStartMusic(score?musicalPositionAt(initialStart,score,project.scoreMap):null);setEndMusic(score?musicalPositionAt(initialEnd,score,project.scoreMap):null);setError('');},[initialStart,initialEnd,selection?.clipId,project.id,score,project.scoreMap]);
   useEffect(()=>setEditTrack(trackId),[trackId]);
-  if(!score||!startMusic||!endMusic)return <p className="muted selection-editor">{t('先添加乐谱，按小节与拍建立练习。','Add a score to practice in bars and beats.')}</p>;
+  if(!score||!startMusic||!endMusic)return <p className="muted selection-editor">{project.pdfSource?t('等待识谱完成后，即可按小节与拍建立选区。','Musical ranges become available after recognition.'):t('先添加乐谱，按小节与拍建立练习。','Add a score to practice in bars and beats.')}</p>;
   return <form className="selection-editor" onSubmit={event=>{
     event.preventDefault();const a=musicalPositionSeconds(startMusic,score,project.scoreMap),b=musicalPositionSeconds(endMusic,score,project.scoreMap);
     if(!Number.isFinite(a)||!Number.isFinite(b)){setError(t('请输入所选小节内的有效拍位。','Enter a valid beat within the selected bar.'));return;}
