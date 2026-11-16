@@ -99,7 +99,7 @@ export default function App(){
     const tick=(now:number)=>{if(transport.playing&&now-last>30){last=now;setPosition(transport.position());setCounting(transport.countingIn);if(transport.finished){if(session.current)void finalize();else pause();}}frame=requestAnimationFrame(tick);};frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
   },[pause,finalize]);
   useEffect(()=>{
-    const leave=(e:BeforeUnloadEvent)=>{if(session.current||saved!=='saved'){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
+    const leave=(e:BeforeUnloadEvent)=>{if(session.current||saved!=='saved'||drafts.current.size||stagedAssets.current.size){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',leave);return()=>window.removeEventListener('beforeunload',leave);
   },[saved]);
   useEffect(()=>{
     const visibility=()=>{if(document.hidden&&session.current)void finalize(true);};const state=()=>{if(transport.ctx.state==='suspended'&&session.current)void finalize(true);};document.addEventListener('visibilitychange',visibility);
