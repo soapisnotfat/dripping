@@ -1,7 +1,7 @@
 import type {Score, Anchor, Alignment, PCM} from './types';
 import {clamp} from './types';
 import {soundingEvents} from './score';
-import {tempoMap, secondsToQ, qToSeconds, validateAnchors} from './time';
+import {tempoMap, secondsToQ, qToSeconds, validateAnchors,beatGrid} from './time';
 import {stretchAudio, slicePCM} from './audio';
 
 export type Features={values:Float32Array;bass?:Float32Array;energy:Float32Array;frames:number;hop:number;duration:number};
@@ -120,13 +120,31 @@ export function alignToDemo(score:Score,demo:Features,demoMap:Anchor[],audio:Fea
     warnings:result.cost>.5?['示范与此音轨匹配较弱 / Weak match between demonstration and track']:[]};
 }
 
-export function conformAudio(pcm:PCM,sourceMap:Anchor[],targetMap:Anchor[],duration:number):PCM {
+export function conformKnots(score:Score,sourceMap:Anchor[],targetMap:Anchor[],manualAnchors:number[]=[]):number[]{
+  validateAnchors(sourceMap);validateAnchors(targetMap);
+  const start=Math.max(sourceMap[0].q,targetMap[0].q),end=Math.min(sourceMap.at(-1)!.q,targetMap.at(-1)!.q);
+  if(manualAnchors.some(q=>!Number.isFinite(q)||q<start||q>end))throw Error('无效手动音乐锚点 / Invalid manual musical anchor');
+  const unique=(values:number[])=>values.filter(q=>q>=start&&q<=end).sort((a,b)=>a-b).filter((q,index,all)=>!index||q-all[index-1]>1e-7);
+  const fixed=unique([start,end,...targetMap.map(anchor=>anchor.q),...score.tempo.map(change=>change.q),...score.route.flatMap(bar=>[bar.q,bar.q+bar.duration]),...manualAnchors]);
+  const candidates=unique([...beatGrid(score),...fixed]),kept=new Set(fixed),beatSize=(q:number)=>{const bar=[...score.route].reverse().find(bar=>bar.q<=q+1e-7)||score.route[0];return 4/score.measures[bar.measure].beatType;};
+  // Sample automatic frame paths on the score's beat grid, then keep only
+  // bends that move a musical beat by more than 1/16 beat. Written tempo,
+  // bar boundaries and explicitly edited offbeat anchors are never removed.
+  const pending=fixed.slice(1).map((q,index)=>[fixed[index],q]);
+  while(pending.length){
+    const [a,b]=pending.pop()!,sourceA=qToSeconds(a,sourceMap),sourceB=qToSeconds(b,sourceMap),targetA=qToSeconds(a,targetMap),targetB=qToSeconds(b,targetMap);
+    let worst=1/16,split:number|undefined;
+    for(const q of candidates){if(q<=a||q>=b)continue;const output=targetA+(qToSeconds(q,sourceMap)-sourceA)/(sourceB-sourceA)*(targetB-targetA),error=Math.abs(secondsToQ(output,targetMap)-q)/beatSize(q);if(error>worst){worst=error;split=q;}}
+    if(split!==undefined){kept.add(split);pending.push([a,split],[split,b]);}
+  }
+  return [...kept].sort((a,b)=>a-b);
+}
+
+export function conformAudio(pcm:PCM,sourceMap:Anchor[],targetMap:Anchor[],duration:number,score:Score,manualAnchors:number[]=[]):PCM {
   validateAnchors(sourceMap);validateAnchors(targetMap);
   const sr=pcm.sampleRate,length=Math.ceil(duration*sr),out=pcm.channels.map(()=>new Float32Array(length));
   const weights=new Float32Array(length);
-  // Coarser warp knots avoid stretching every individual spectral frame.
-  const qStart=Math.max(sourceMap[0].q,targetMap[0].q),qEnd=Math.min(sourceMap.at(-1)!.q,targetMap.at(-1)!.q);
-  const qs=[qStart];for(let q=Math.ceil(qStart/4)*4;q<qEnd;q+=4)if(q>qStart)qs.push(q);qs.push(qEnd);
+  const qs=conformKnots(score,sourceMap,targetMap,manualAnchors),qStart=qs[0],qEnd=qs.at(-1)!;
   for(let k=0;k<qs.length-1;k++){
     const a=qToSeconds(qs[k],sourceMap),b=qToSeconds(qs[k+1],sourceMap);
     const x=qToSeconds(qs[k],targetMap),y=qToSeconds(qs[k+1],targetMap);

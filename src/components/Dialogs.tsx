@@ -58,12 +58,12 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
     const result=demo?await audioJobs.run<Alignment>('align-demo',{score,demo:await features(demo.sourceAssetId),demoMap:demo.alignment!.anchors,features:audio}):await audioJobs.run<Alignment>('align',{score,features:audio});
     if(activeTrack.current!==operationTrack)return;setCandidate(result);setStatus(text('匹配完成，核对后将本轨对齐到谱面。','Candidate ready. Check it, then align this track to the score.'));
   }catch(error){onError(String(error));}finally{setBusy('');}};
-  const manual=()=>setCandidate({anchors:tempoMap(score),method:'manual',status:'candidate',warnings:[]});
+  const manual=()=>setCandidate({anchors:tempoMap(score),manualAnchors:[],method:'manual',status:'candidate',warnings:[]});
   const anchors=candidate?.anchors||[];
   const addAnchor=()=>{try{const at=musicalPositionSeconds(scoreAt,score,project.scoreMap),source=musicalPositionSeconds(audioAt,score,project.scoreMap),q=secondsToQ(at,project.scoreMap);
-    const copy=anchors.filter(anchor=>Math.abs(anchor.q-q)>.00001).concat({q,seconds:source}).sort((a,b)=>a.q-b.q);validateAnchors(copy);setCandidate({...candidate!,anchors:copy,method:'manual',status:'candidate'});
+    const copy=anchors.filter(anchor=>Math.abs(anchor.q-q)>.00001).concat({q,seconds:source}).sort((a,b)=>a.q-b.q);validateAnchors(copy);const edited=candidate?.manualAnchors??(candidate?.method==='manual'&&anchors.length<=32?anchors.map(anchor=>anchor.q):[]);setCandidate({...candidate!,anchors:copy,manualAnchors:[...new Set([...edited.filter(at=>Math.abs(at-q)>.00001),q])].sort((a,b)=>a-b),method:'manual',status:'candidate'});
   }catch(error){onError(String(error));}};
-  const render=async()=>{if(!candidate||!track)throw Error(text('先匹配音轨','Match a track first'));validateAnchors(candidate.anchors);return audioJobs.run<PCM>('conform',{pcm:await transport.asset(track.sourceAssetId),sourceMap:candidate.anchors,targetMap:project.scoreMap,duration:projectDuration(project)});};
+  const render=async()=>{if(!candidate||!track)throw Error(text('先匹配音轨','Match a track first'));validateAnchors(candidate.anchors);return audioJobs.run<PCM>('conform',{pcm:await transport.asset(track.sourceAssetId),sourceMap:candidate.anchors,targetMap:project.scoreMap,duration:projectDuration(project),score,manualAnchors:candidate.manualAnchors??(candidate.method==='manual'&&candidate.anchors.length<=32?candidate.anchors.map(anchor=>anchor.q):[])});};
   const conform=async()=>{if(!candidate||!track)return;try{setBusy(text('按谱面保调校正…','Aligning to the score, preserving pitch…'));transport.pause();
     const rendered=await render(),asset=audioAsset(project,rendered,`${track.name} — aligned.wav`),duration=projectDuration(project);
     const next=editProject(project,'align to score',p=>{const tr=p.tracks.find(track=>track.id===id)!;tr.offset=0;tr.clips=[{id:uid(),assetId:asset.id,label:track.name,start:0,end:duration,sourceStart:0,rate:1,gain:1,fadeIn:.005,fadeOut:.005}];tr.alignment={...candidate,status:'accepted'};});
