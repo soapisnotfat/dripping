@@ -18,30 +18,31 @@ const hash=createHash('sha256');
 for(const p of paths)hash.update(await readFile('dist/'+p));
 const cache='dripping-'+hash.digest('hex').slice(0,12),pin=JSON.parse(await readFile('vendor/sheetscan/pin.json','utf8'));
 await writeFile('dist/sw.js',`const PREFIX='dripping-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',CACHE=PREFIX+${JSON.stringify(cache)},DEMAND=PREFIX+${JSON.stringify('score-'+pin.version)},FILES=${JSON.stringify(paths)};
+async function cached(name,request,options){try{return await(await caches.open(name)).match(request,options);}catch{return undefined;}}
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(p=>new URL(p,self.registration.scope).href)))));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')self.skipWaiting()});
 // Keep one previous core cache for immutable chunks requested by already-open tabs.
 // Current navigation always comes from CACHE, never an arbitrary older index.
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
- const keys=await caches.keys(),previous=keys.filter(k=>k.startsWith(PREFIX+'dripping-')&&k!==CACHE).at(-1);
+ const keys=await caches.keys().catch(()=>[]),previous=keys.filter(k=>k.startsWith(PREFIX+'dripping-')&&k!==CACHE).at(-1);
  await Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE&&k!==DEMAND&&k!==previous).map(k=>caches.delete(k)));
  await self.clients.claim();
 })()));
 self.addEventListener('fetch',e=>{
  const url=new URL(e.request.url);if(e.request.method!=='GET'||url.origin!==self.location.origin)return;
  e.respondWith((async()=>{
-  const current=await caches.open(CACHE),isRecognition=url.pathname.includes('/vendor/sheetscan/');
-  let response=e.request.mode==='navigate'?await current.match(new URL('index.html',self.registration.scope).href):await current.match(e.request);
+  const isRecognition=url.pathname.includes('/vendor/sheetscan/');
+  let response=e.request.mode==='navigate'?await cached(CACHE,new URL('index.html',self.registration.scope).href):await cached(CACHE,e.request);
   if(!response&&isRecognition){
-   response=await(await caches.open('omr-assets-v1')).match(e.request,{ignoreSearch:true});
-   if(!response)response=await(await caches.open(DEMAND)).match(e.request);
+   response=await cached('omr-assets-v1',e.request,{ignoreSearch:true});
+   if(!response)response=await cached(DEMAND,e.request);
   }
   if(!response&&/\\/assets\\/[^/]+-[\\w-]{6,}\\.(?:js|mjs|css|woff2?)$/.test(url.pathname)){
-   const previous=(await caches.keys()).filter(k=>k.startsWith(PREFIX+'dripping-')&&k!==CACHE).at(-1);
-   if(previous)response=await(await caches.open(previous)).match(e.request);
+   const previous=(await caches.keys().catch(()=>[])).filter(k=>k.startsWith(PREFIX+'dripping-')&&k!==CACHE).at(-1);
+   if(previous)response=await cached(previous,e.request);
   }
   if(!response){
-   try{response=await fetch(e.request);}catch{response=e.request.mode==='navigate'?await current.match(new URL('index.html',self.registration.scope).href):Response.error();}
+   try{response=await fetch(e.request);}catch{response=e.request.mode==='navigate'?await cached(CACHE,new URL('index.html',self.registration.scope).href):Response.error();}
    // The SDK owns validated large-resource caching. Avoid storing a second copy.
    if(response?.ok&&isRecognition&&!/\\/runtime\\/|\\/models\\/|\\/homr\\.zip$/.test(url.pathname)){
     const copy=response.clone();e.waitUntil(caches.open(DEMAND).then(cache=>cache.put(e.request,copy)).catch(()=>{}));
