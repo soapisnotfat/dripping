@@ -108,13 +108,14 @@ export function TrimHandles({
           }}
           onPointerCancel={cancel}
           onKeyDown={(event) => {
-            event.stopPropagation();
             if (event.key === 'Escape') {
+              event.stopPropagation();
               event.preventDefault();
               cancel();
               return;
             }
             if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+              event.stopPropagation();
               event.preventDefault();
               commit(
                 resize(

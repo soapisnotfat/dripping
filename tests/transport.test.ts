@@ -43,3 +43,49 @@ it('toggles cues independently without stopping playback or unmuting the recordi
     pause.mockRestore();
   }
 });
+
+it('applies live mute, solo and volume changes while keeping the recording track silent', () => {
+  const transport = new Transport(),
+    project = newProject('Live track controls');
+  project.tracks = ['backing', 'demo', 'recording'].map(
+    (id) => ({ id, volume: 0.8, pan: 0, mute: false, solo: false, clips: [{}] }) as Track,
+  );
+  const gains = (transport as unknown as { gains: Map<string, GainNode> }).gains;
+  for (const track of project.tracks)
+    gains.set(track.id, { gain: { setTargetAtTime: vi.fn() } } as unknown as GainNode);
+  const context = vi
+      .spyOn(transport, 'ctx', 'get')
+      .mockReturnValue({ currentTime: 12 } as AudioContext),
+    pause = vi.spyOn(transport, 'pause');
+  transport.playing = true;
+  const values = () => {
+    transport.updateMix(project, 'recording');
+    expect(transport.playing).toBe(true);
+    expect(pause).not.toHaveBeenCalled();
+    return project.tracks.map(
+      (track) => vi.mocked(gains.get(track.id)!.gain.setTargetAtTime).mock.lastCall![0],
+    );
+  };
+  try {
+    expect(values()).toEqual([0.8, 0.8, 0]);
+    project.tracks[0].mute = true;
+    expect(values()).toEqual([0, 0.8, 0]);
+    project.tracks[0].mute = false;
+    project.tracks[1].solo = true;
+    expect(values()).toEqual([0, 0.8, 0]);
+    project.tracks[1].volume = 0.35;
+    expect(values()).toEqual([0, 0.35, 0]);
+    project.tracks[1].mute = true;
+    expect(values()).toEqual([0, 0, 0]);
+    project.tracks[1].solo = false;
+    expect(values()).toEqual([0.8, 0, 0]);
+    project.tracks[2].solo = true;
+    expect(values()).toEqual([0, 0, 0]);
+    project.tracks[2].solo = false;
+    project.tracks[1].mute = false;
+    expect(values()).toEqual([0.8, 0.35, 0]);
+  } finally {
+    context.mockRestore();
+    pause.mockRestore();
+  }
+});

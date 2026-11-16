@@ -57,11 +57,19 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-const pointer = (lane: HTMLElement, type: string, seconds: number) =>
+const pointer = (lane: HTMLElement, type: string, seconds: number, altKey = false) =>
   act(() =>
-    lane.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0, clientX: seconds * 100 })),
+    lane.dispatchEvent(
+      new MouseEvent(type, { bubbles: true, button: 0, clientX: seconds * 100, altKey }),
+    ),
   );
-function render(clips: Clip[], offset = 0, selection: Selection | null = null, locked = false) {
+function render(
+  clips: Clip[],
+  offset = 0,
+  selection: Selection | null = null,
+  locked = false,
+  snap = true,
+) {
   const project = newProject('Regions'),
     onSelect = vi.fn(),
     onSeek = vi.fn();
@@ -78,7 +86,7 @@ function render(clips: Clip[], offset = 0, selection: Selection | null = null, l
         locale="en"
         position={0}
         scale={100}
-        snap
+        snap={snap}
         follow={false}
         waveforms={new Map()}
         recording={locked}
@@ -103,10 +111,18 @@ function render(clips: Clip[], offset = 0, selection: Selection | null = null, l
   vi.spyOn(lane, 'getBoundingClientRect').mockReturnValue({ left: 0 } as DOMRect);
   return { lane, onSelect, onSeek, project };
 }
-it('selects an uncut backing as a whole, then each of five separate regions independently', () => {
+it('single-clicks inside audio to seek and clears the previous range instead of selecting the whole region', () => {
+  const result = render([clip('Backing', 0, 20)], 0, { start: 1, end: 4 });
+  const region = document.querySelector<HTMLElement>('[data-clip-id]')!;
+  pointer(region, 'pointerdown', 12.12);
+  expect(result.onSelect).not.toHaveBeenCalled();
+  pointer(region, 'pointerup', 12.12);
+  expect(result.onSelect).toHaveBeenCalledExactlyOnceWith(null);
+  expect(result.onSeek).toHaveBeenCalledExactlyOnceWith(12);
+});
+it('double-clicks an uncut backing as a whole, then selects each split region independently', () => {
   let result = render([clip('Backing', 0, 20)]);
-  pointer(result.lane, 'pointerdown', 12);
-  pointer(result.lane, 'pointerup', 12);
+  pointer(result.lane, 'dblclick', 12);
   expect(result.onSelect).toHaveBeenLastCalledWith({
     start: 0,
     end: 20,
@@ -117,12 +133,50 @@ it('selects an uncut backing as a whole, then each of five separate regions inde
   const pieces = Array.from({ length: 5 }, (_, i) => clip(`Part ${i + 1}`, i * 4, (i + 1) * 4));
   result = render(pieces);
   pieces.forEach((piece) => {
-    pointer(result.lane, 'pointerdown', piece.start + 1);
-    pointer(result.lane, 'pointerup', piece.start + 1);
+    pointer(result.lane, 'dblclick', piece.start + 1);
     expect(result.onSelect).toHaveBeenLastCalledWith(
       clipSelection(result.project.tracks[0], piece),
     );
   });
+});
+it.each([true, false])('seeks to an arbitrary point with snap=%s using Alt when needed', (snap) => {
+  const result = render([clip('Take', 1, 5)], 0.5, null, false, snap);
+  pointer(result.lane, 'pointerdown', 2.37, snap);
+  pointer(result.lane, 'pointerup', 2.37, snap);
+  expect(result.onSeek).toHaveBeenLastCalledWith(2.37);
+  expect(result.onSelect).toHaveBeenLastCalledWith(null);
+});
+it('clears ranges when seeking in an empty lane or on the ruler', () => {
+  const result = render([clip('Take', 1, 5)], 0, { start: 1, end: 3 });
+  pointer(result.lane, 'pointerdown', 7.1);
+  pointer(result.lane, 'pointerup', 7.1);
+  expect(result.onSelect).toHaveBeenLastCalledWith(null);
+  expect(result.onSeek).toHaveBeenLastCalledWith(7);
+  const ruler = document.querySelector<HTMLElement>('.ruler')!;
+  vi.spyOn(ruler, 'getBoundingClientRect').mockReturnValue({ left: 0 } as DOMRect);
+  pointer(ruler, 'pointerdown', 3.17, true);
+  expect(result.onSelect).toHaveBeenLastCalledWith(null);
+  expect(result.onSeek).toHaveBeenLastCalledWith(3.17);
+});
+it('does not seek or select on canceled gestures, right clicks, or recording-time clicks', () => {
+  let result = render([clip('Take', 1, 5)]);
+  pointer(result.lane, 'pointerdown', 2);
+  pointer(result.lane, 'pointercancel', 2);
+  pointer(result.lane, 'pointerup', 2);
+  act(() =>
+    result.lane.dispatchEvent(
+      new MouseEvent('pointerdown', { bubbles: true, button: 2, clientX: 200 }),
+    ),
+  );
+  pointer(result.lane, 'pointerup', 2);
+  expect(result.onSelect).not.toHaveBeenCalled();
+  expect(result.onSeek).not.toHaveBeenCalled();
+  result = render([clip('Take', 1, 5)], 0, null, true);
+  pointer(result.lane, 'pointerdown', 2);
+  pointer(result.lane, 'pointerup', 2);
+  pointer(result.lane, 'dblclick', 2);
+  expect(result.onSelect).not.toHaveBeenCalled();
+  expect(result.onSeek).not.toHaveBeenCalled();
 });
 it('keeps forward and reverse drag ranges inside the original region, with track offsets and snapping', () => {
   const result = render([clip('Take 1', 1.03, 4.03), clip('Take 2', 4.03, 6)], 0.5);
@@ -144,6 +198,7 @@ it('keeps forward and reverse drag ranges inside the original region, with track
     trackId: 'recording',
     clipId: 'Take 1',
   });
+  expect(result.onSeek).not.toHaveBeenCalled();
 });
 it('supports keyboard region selection and ignores recording-time edits', () => {
   const take = clip('Take 2', 4, 8);

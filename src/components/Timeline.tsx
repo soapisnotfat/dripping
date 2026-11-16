@@ -20,6 +20,7 @@ type Props = {
   playing: boolean;
   counting: boolean;
   locked: boolean;
+  mixLocked?: boolean;
   armedTrackId?: string;
   activeRecording: Pick<RecordingSession, 'trackId' | 'start'> | null;
   onArm: (id: string) => void;
@@ -88,6 +89,7 @@ export function Timeline({
   playing,
   counting,
   locked,
+  mixLocked = locked,
   armedTrackId,
   activeRecording,
   onArm,
@@ -198,7 +200,10 @@ export function Timeline({
             className="ruler"
             style={{ width }}
             onPointerDown={(e) => {
-              if (!arrangeLocked) onSeek(point(e, e.currentTarget));
+              if (!arrangeLocked && e.button === 0) {
+                onSelect(null);
+                onSeek(point(e, e.currentTarget));
+              }
             }}
           >
             {labels
@@ -252,7 +257,7 @@ export function Timeline({
                   </button>
                 )}
                 <button
-                  disabled={locked}
+                  disabled={mixLocked}
                   className={track.mute ? 'active' : ''}
                   aria-label={`${t('静音', 'Mute')} ${track.name}`}
                   aria-pressed={track.mute}
@@ -261,7 +266,7 @@ export function Timeline({
                   M
                 </button>
                 <button
-                  disabled={locked}
+                  disabled={mixLocked}
                   className={track.solo ? 'active' : ''}
                   aria-label={`${t('独奏', 'Solo')} ${track.name}`}
                   aria-pressed={track.solo}
@@ -271,7 +276,7 @@ export function Timeline({
                 </button>
                 <input
                   aria-label={`${track.name} ${t('音量', 'volume')}`}
-                  disabled={locked}
+                  disabled={mixLocked}
                   type="range"
                   min="0"
                   max="1.5"
@@ -297,7 +302,6 @@ export function Timeline({
                   downX: e.clientX,
                   moved: false,
                 };
-                onSelect(section);
                 e.currentTarget.setPointerCapture(e.pointerId);
               }}
               onPointerMove={(e) => {
@@ -305,22 +309,33 @@ export function Timeline({
                 const end = point(e, e.currentTarget);
                 setHover(end);
                 const d = drag.current;
-                if (!d?.section || Math.abs(e.clientX - d.downX) < 4) return;
+                if (!d?.section || (!d.moved && Math.abs(e.clientX - d.downX) < 4)) return;
                 d.moved = true;
                 const to = clamp(end, d.section.start, d.section.end);
-                if (Math.abs(to - d.start) > 1e-7)
-                  onSelect({
-                    ...d.section,
-                    start: Math.min(d.start, to),
-                    end: Math.max(d.start, to),
-                  });
+                onSelect(
+                  Math.abs(to - d.start) > 1e-7
+                    ? {
+                        ...d.section,
+                        start: Math.min(d.start, to),
+                        end: Math.max(d.start, to),
+                      }
+                    : null,
+                );
               }}
               onPointerUp={(e) => {
                 const d = drag.current;
                 drag.current = null;
                 if (e.currentTarget.hasPointerCapture(e.pointerId))
                   e.currentTarget.releasePointerCapture(e.pointerId);
-                if (d && !d.section && !d.moved) onSeek(d.start);
+                if (d && !d.moved && !arrangeLocked) {
+                  onSelect(null);
+                  onSeek(d.start);
+                }
+              }}
+              onDoubleClick={(e) => {
+                if (arrangeLocked || e.button !== 0) return;
+                const clip = at(track, point(e, e.currentTarget, false));
+                if (clip) onSelect(clipSelection(track, clip));
               }}
               onPointerCancel={() => (drag.current = null)}
               onPointerLeave={() => setHover(null)}
@@ -352,6 +367,7 @@ export function Timeline({
                 }
                 if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                   e.preventDefault();
+                  onSelect(null);
                   onSeek(
                     Math.max(
                       0,
@@ -393,9 +409,13 @@ export function Timeline({
                         width: (clip.end - clip.start) * scale,
                       }}
                       title={
-                        project.score
+                        (project.score
                           ? `${clip.label} · ${musicalLabel(clip.start + track.offset, project, locale)}–${musicalLabel(clip.end + track.offset, project, locale)}`
-                          : clip.label
+                          : clip.label) +
+                        t(
+                          ' · 单击定位，拖动选范围，双击选整段；按住 Alt 自由定位',
+                          ' · Click to seek, drag for a range, double-click for the whole region; hold Alt to bypass Snap',
+                        )
                       }
                       onKeyDown={(e) => {
                         if (

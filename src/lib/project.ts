@@ -316,10 +316,17 @@ export function editSelection(
       b = selection.end - t.offset;
     if (selected && (a < selected.start - 1e-7 || b > selected.end + 1e-7))
       throw Error('选区需在当前片段内 / Keep the range within this region');
+    const region = selected ? clipSelection(t, selected) : null,
+      wholeRegion =
+        region &&
+        Math.abs(selection.start - region.start) < 1e-7 &&
+        Math.abs(selection.end - region.end) < 1e-7;
     const clips = selected ? [selected] : t.clips,
       edited =
         action === 'clear'
-          ? clearClips(clips, a, b)
+          ? wholeRegion
+            ? []
+            : clearClips(clips, a, b)
           : action === 'trim'
             ? trimClips(clips, a, b)
             : splitClips(clips, a, b);
