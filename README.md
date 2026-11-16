@@ -144,6 +144,8 @@ See [product scope](docs/product.md) for the application's design boundaries. Ke
 
 ## License
 
-A license for the application code has not been specified. Dependency licenses and notices are listed in [THIRD_PARTY.md](THIRD_PARTY.md).
+Dripping application software is licensed under **AGPL-3.0-only**; see [LICENSE](LICENSE). The complete application source and release history are available at [soapisnotfat/dripping](https://github.com/soapisnotfat/dripping). Dependencies retain their own licenses and notices in [THIRD_PARTY.md](THIRD_PARTY.md).
+
+Dripping does not apply its software license to your imported PDFs, MusicXML, audio, recordings or other user content. Their existing rights remain unchanged.
 
 PDF recognition uses the pinned browser SDK in `vendor/sheetscan/`; its source and licenses are linked there. `scripts/prepare-sheetscan.mjs` verifies every vendored file, downloads official model release archives, and verifies both archive and raw ONNX SHA-256 values. Models are excluded from Git history and ordinary service-worker precaching. Recognition code/models are loaded only for PDF import. Runtime dependencies are static downloads from the SDK’s pinned CDN versions; no local program or inference service is required. The host owns the only service worker. On a fresh browser without JSPI it can reload once, before the app mounts or files are selected, to establish shared memory. Existing tabs and later updates retain the explicit save/update flow. Desktop browser checks do not establish physical iPad/iPhone performance or a general transcription accuracy percentage.

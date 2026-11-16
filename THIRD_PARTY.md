@@ -1,5 +1,7 @@
 # Third-party components
 
+Dripping application software is AGPL-3.0-only; user-imported scores, audio and takes retain their existing rights. Each component below retains its own license.
+
 Runtime versions are pinned in `package-lock.json`. The SheetScan package is checked against `vendor/sheetscan/pin.json`; host packaging moves its embedded PDF.js worker to a same-origin file without changing the decoded worker bytes.
 
 | Component | Version | License | Source |

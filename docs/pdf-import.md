@@ -8,12 +8,10 @@ Conversion produces MusicXML in memory. Dripping's existing parser must accept i
 
 JSPI is preferred. For a new browser without JSPI, the host service worker can establish COOP/COEP isolation with one bootstrap reload before React mounts or any files can be selected. A session guard prevents loops. Existing controlled tabs and waiting updates stay in the normal explicit save/update flow. The SDK never registers a service worker or reloads the page. Simulated non-JSPI Chrome is a shared-memory bridge test, not a physical Safari/iOS qualification.
 
-# License decision for release review
+# Software and content licenses
 
-The application license remains unchanged. The following is a proposal for the owner to approve, not an adopted license declaration:
+The owner has adopted AGPL-3.0-only for the integrated Dripping application. The root `LICENSE`, package metadata and README identify that license. Complete corresponding application source and release history are public at https://github.com/soapisnotfat/dripping. The browser interface also links to this source.
 
-- Apply AGPL-3.0 to the integrated application release and add the matching root license/README notice. Keep compatible component notices and provide the complete corresponding application source from its exact public release commit.
-- Retain the SheetScan AGPL license and exact corresponding-source link, the homr archive, and all glyph/font notices. Keep browser-accessible source/license links.
-- Keep the packaging changes in the public application source. The host externalizes the PDF.js worker and controls isolation/caching; recognition code and model weights retain their pinned hashes. PDF.js, ONNX Runtime, Pyodide and OCR dependencies remain separately identified by their distributions and notices.
+SheetScan retains its AGPL license and exact corresponding-source link, the homr archive, and the glyph/font notices. The host's PDF.js worker packaging and isolation/caching code are included in the public application source. Other components retain their respective licenses and notices.
 
-Publishing this integration is pending the owner's final application-license decision and joint model/browser review. This document does not change the application's existing license status.
+The application software license does not relabel imported PDFs, MusicXML, audio or takes. Dripping preserves their contents and existing rights; it adds no AGPL declaration to those user assets.

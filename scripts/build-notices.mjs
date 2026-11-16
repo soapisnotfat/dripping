@@ -1,6 +1,6 @@
 import {readFile,readdir,writeFile} from 'node:fs/promises';
 const lock=JSON.parse(await readFile('package-lock.json','utf8'));
-const sections=['Dripping runtime third-party notices\nOriginal application code and generated exercise are separate from these components.'];
+const sections=['Dripping software: AGPL-3.0-only. Complete application source: https://github.com/soapisnotfat/dripping\nRuntime components retain their own notices below. Imported PDFs, MusicXML, audio and takes retain their existing rights.'];
 for(const [path,metadata] of Object.entries(lock.packages)){
   if(!path||metadata.dev||path.includes('/@types/'))continue;
   const pkg=JSON.parse(await readFile(path+'/package.json','utf8'));
