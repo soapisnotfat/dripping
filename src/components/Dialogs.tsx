@@ -14,9 +14,9 @@ import {audibleTrackIds} from '../lib/mix';
 import {amplitudeDb,planMaster,type AudioStats,type MasterPlan} from '../lib/master';
 
 export function Modal({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}){
-  const closeRef=useRef(onClose);closeRef.current=onClose;
-  useEffect(()=>{const prev=document.activeElement as HTMLElement;const fn=(e:KeyboardEvent)=>{if(e.key==='Escape')closeRef.current();};document.addEventListener('keydown',fn);return()=>{document.removeEventListener('keydown',fn);prev?.focus();};},[]);
-  return <div className="modal-backdrop" onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}><section role="dialog" aria-modal="true" aria-label={title} className={`modal ${wide?'wide':''}`} onKeyDown={e=>{if(e.key!=='Tab')return;const els=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],textarea:not(:disabled)')).filter(n=>n.offsetParent!==null);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}}>
+  const closeRef=useRef(onClose),dialog=useRef<HTMLElement>(null),previous=useRef(document.activeElement as HTMLElement);closeRef.current=onClose;
+  useEffect(()=>{if(!dialog.current?.contains(document.activeElement))(dialog.current?.querySelector<HTMLElement>('[data-dialog-autofocus]')||dialog.current?.querySelector<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled)'))?.focus();const fn=(e:KeyboardEvent)=>{if(e.key==='Escape')closeRef.current();};document.addEventListener('keydown',fn);return()=>{document.removeEventListener('keydown',fn);(previous.current?.isConnected?previous.current:document.querySelector<HTMLElement>('[data-modal-focus-fallback]'))?.focus();};},[]);
+  return <div className="modal-backdrop" onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={dialog} role="dialog" aria-modal="true" aria-label={title} className={`modal ${wide?'wide':''}`} onKeyDown={e=>{if(e.key!=='Tab')return;const els=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],textarea:not(:disabled)')).filter(n=>n.offsetParent!==null);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}}>
     <header><h2>{title}</h2><button className="icon-button" aria-label="Close / 关闭" onClick={onClose}>×</button></header>{children}
   </section></div>;
 }
@@ -34,7 +34,7 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles
     const p=project||newProject(name.trim()||t('未命名练习','Untitled practice'));onOpen(await addFiles(p,items,setBusy));
   }catch(e){onError(String(e));setBusy('');}};
   return <Modal title={project?t('添加素材','Add files'):t('新的练习','A new practice')} onClose={()=>{if(!busy)onClose();}}>
-    {!project&&<label className="field">{t('项目名称','Project name')}<input autoFocus value={name} placeholder={t('今天想练什么？','What are you playing today?')} onChange={e=>setName(e.target.value)}/></label>}
+    {!project&&<label className="field">{t('项目名称','Project name')}<input autoFocus data-dialog-autofocus value={name} placeholder={t('今天想练什么？','What are you playing today?')} onChange={e=>setName(e.target.value)}/></label>}
     <label className="drop-zone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();add([...e.dataTransfer.files]);}}><span className="drop-symbol">＋</span><strong>{t('放入乐谱、伴奏和示范','Drop your score, backing and demo')}</strong><span>MusicXML / MXL · WAV / MP3 / M4A / FLAC</span><input aria-label={t('选择素材','Choose files')} type="file" multiple accept=".musicxml,.mxl,.xml,.drippingproj,audio/*" onChange={e=>{add([...e.target.files||[]]);e.target.value='';}}/></label>
     <div className="import-list">{items.map((item,i)=><div key={i}><span title={item.file.name}>{item.file.name}<small>{(item.file.size/1024/1024).toFixed(1)} MB</small></span>{! /\.drippingproj$/i.test(item.file.name)&&<select aria-label={`${item.file.name} role`} value={item.role} onChange={e=>setItems(rows=>rows.map((r,j)=>i===j?{...r,role:e.target.value as ImportItem['role']}:r))}><option value="score">{t('乐谱','Score')}</option><option value="backing">{t('伴奏','Backing')}</option><option value="demo">{t('示范录音','Demo recording')}</option></select>}<button className="icon-button" aria-label={t('移除','Remove')} onClick={()=>setItems(rows=>rows.filter((_,j)=>i!==j))}>×</button></div>)}</div>
     {!hasScore&&!archiveOnly&&<p className="muted">{t('先放入乐谱，练习与录音都跟随谱面的小节、拍与速度。','Add a score first. Practice and recording follow its bars, beats and tempo.')}</p>}
@@ -87,7 +87,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
 
 export function ExportDialog({project,locale,onClose,onError}:Common&{project:Project}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
-  const [busy,setBusy]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[speed,setSpeed]=useState(1);
+  const [busy,setBusy]=useState(''),[status,setStatus]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[speed,setSpeed]=useState(1);
   const [bitDepth,setBitDepth]=useState<24|32>(24),[ceiling,setCeiling]=useState(-1),[matchLoudness,setMatchLoudness]=useState(false),[target,setTarget]=useState(-18);
   const [analysis,setAnalysis]=useState<{key:string;stats:AudioStats}|null>(null),cache=useRef<{key:string;pcm:PCM;stats:AudioStats}|null>(null);
   const audible=new Set(audibleTrackIds(project.tracks)),solo=project.tracks.some(track=>track.solo);
@@ -106,19 +106,20 @@ export function ExportDialog({project,locale,onClose,onError}:Common&{project:Pr
     const result={key,pcm,stats};cache.current=result;setAnalysis({key,stats});return result;
   };
   const analyze=async()=>{try{setBusy(t('准备分析…','Preparing analysis…'));await getMix();}catch(error){onError(String(error));}finally{setBusy('');}};
-  const perform=async(kind:'stems'|'mix'|'project')=>{try{setBusy(t('正在准备导出…','Preparing export…'));
-    if(kind==='project'){download(await exportProject(project),`${safe(project.name)}.drippingproj`);return;}
+  const startDownload=(blob:Blob,name:string)=>{download(blob,name);setStatus(t('已生成并开始下载：','Generated and download started: ')+name);};
+  const perform=async(kind:'stems'|'mix'|'project')=>{try{setStatus('');setBusy(t('正在准备导出…','Preparing export…'));
+    if(kind==='project'){startDownload(await exportProject(project),`${safe(project.name)}.drippingproj`);return;}
     if(!project.score||project.score.tempoMissing)throw Error(t('请先添加乐谱并确认谱面速度','Add a score and confirm its tempo first'));
     const tracks=project.tracks.filter(track=>selected.includes(track.id));if(!tracks.length)throw Error(t('至少选择一条音轨','Choose at least one track'));
     if(kind==='mix'){
       const {pcm,stats}=await getMix();setBusy(t('生成高品质 WAV…','Encoding WAV…'));
       const result=await audioJobs.run<{wav:ArrayBuffer;plan:MasterPlan}>('master-wav',{pcm,stats,settings,bitDepth});
-      download(new Blob([result.wav],{type:'audio/wav'}),`${safe(project.name)} — mix.wav`);
+      startDownload(new Blob([result.wav],{type:'audio/wav'}),`${safe(project.name)} — mix.wav`);
     }else{
       const files:Record<string,Uint8Array>={};
       for(let i=0;i<tracks.length;i++){setBusy(tracks[i].name);const pcm=await renderExport(project,tracks[i],a,b,false,speed);files[`${String(i+1).padStart(2,'0')} ${safe(tracks[i].name)}.wav`]=new Uint8Array(encodeWav(pcm,32));}
       files['session.json']=strToU8(JSON.stringify({project:project.name,range:{start:a,end:b},sampleRate:48000,bitDepth:32,format:'IEEE float WAV',speed,masterGainDb:project.masterGainDb??0,alignment:'All files share the same zero and length',tracks:tracks.map(track=>({name:track.name,role:track.role,volume:track.volume,pan:track.pan}))},null,2));
-      const data=await new Promise<Uint8Array>((resolve,reject)=>zip(files,{level:0},(error,out)=>error?reject(error):resolve(out)));download(new Blob([data as Uint8Array<ArrayBuffer>],{type:'application/zip'}),`${safe(project.name)} — stems.zip`);
+      const data=await new Promise<Uint8Array>((resolve,reject)=>zip(files,{level:0},(error,out)=>error?reject(error):resolve(out)));startDownload(new Blob([data as Uint8Array<ArrayBuffer>],{type:'application/zip'}),`${safe(project.name)} — stems.zip`);
     }
   }catch(error){onError(String(error));}finally{setBusy('');}};
   return <Modal title={t('带走你的练习','Export your practice')} onClose={()=>{if(!busy)onClose();}}>
@@ -137,7 +138,7 @@ export function ExportDialog({project,locale,onClose,onError}:Common&{project:Pr
     <button disabled={!!busy||!selected.length} onClick={()=>void analyze()}>{t('分析混音','Analyze mix')}</button>
     {plan&&<div className="mix-analysis" aria-label={t('预计导出电平','Planned export levels')}><dl><dt>{t('整体响度','Integrated loudness')}</dt><dd>{plan.lufs===null?'—':`${plan.lufs.toFixed(1)} LUFS-I`}</dd><dt>{t('真峰值估计','Estimated true peak')}</dt><dd>{db(plan.truePeak)} dBTP</dd><dt>{t('采样峰值','Sample peak')}</dt><dd>{db(plan.samplePeak)} dBFS</dd><dt>{t('最终混音增益','Final mix gain')}</dt><dd>{plan.gainDb>0?'+':''}{plan.gainDb.toFixed(1)} dB</dd></dl>{plan.reductionDb>.01&&<p>{t('为保留峰值余量，整体降低','Overall reduction for peak headroom: ')} {plan.reductionDb.toFixed(1)} dB{locale==='zh'?'。':'.'}</p>}{plan.targetLimited&&<p>{t('峰值上限优先，响度低于所选目标。','The peak ceiling takes priority; loudness stays below the selected target.')}</p>}{matchLoudness&&plan.lufs===null&&<p>{t('片段过短或无有效信号，未匹配响度。','Too short or no gated signal; loudness matching is unavailable.')}</p>}</div>}
     <p className="muted compact">{t('混音套用推子、声像与主输出增益；峰值保护及响度匹配只改变整体增益，保留演奏动态。分轨不套用这些增益。仅导出勾选音轨，不包含谱面合成音和节拍器。','Mixes apply faders, pan and main output gain. Peak protection and loudness matching use constant gain to preserve dynamics. Stems exclude these gains. Only checked tracks are exported; score synth and click are excluded.')}</p>
-    <footer className="wrap"><button disabled={!!busy||!selected.length} onClick={()=>perform('stems')}>{t('分轨 WAV','WAV stems')}</button><button disabled={!!busy||!selected.length} onClick={()=>perform('mix')}>{t('混音 WAV','Mix WAV')}</button><button className="primary" disabled={!!busy} onClick={()=>perform('project')}>{t('完整项目备份','Project backup')}</button></footer><p className="busy-text">{busy}</p>
-    {!!project.takes.length&&<details><summary>{t('每次录音的原始干声','Original dry takes')} ({project.takes.length})</summary>{project.takes.map(take=><div className="take-row" key={take.id}><span>{take.name} · {take.speed}× · {take.sampleRate/1000} kHz · {take.channels} ch · {take.interrupted?t('已恢复','Recovered'):t('原始干声','Original dry audio')}</span><button onClick={async()=>{try{download(await originalTake(take.assetId),`${safe(take.name)} — dry.wav`);}catch(error){onError(String(error));}}}>{t('下载原声','Download dry')}</button></div>)}</details>}
+    <footer className="wrap"><button disabled={!!busy||!selected.length} onClick={()=>perform('stems')}>{t('分轨 WAV','WAV stems')}</button><button disabled={!!busy||!selected.length} onClick={()=>perform('mix')}>{t('混音 WAV','Mix WAV')}</button><button className="primary" disabled={!!busy} onClick={()=>perform('project')}>{t('完整项目备份','Project backup')}</button></footer><p className="export-status" role="status" aria-live="polite">{busy||status}</p>
+    {!!project.takes.length&&<details><summary>{t('每次录音的原始干声','Original dry takes')} ({project.takes.length})</summary>{project.takes.map(take=><div className="take-row" key={take.id}><span>{take.name} · {take.speed}× · {take.sampleRate/1000} kHz · {take.channels} ch · {take.interrupted?t('已恢复','Recovered'):t('原始干声','Original dry audio')}</span><button disabled={!!busy} onClick={async()=>{try{startDownload(await originalTake(take.assetId),`${safe(take.name)} — dry.wav`);}catch(error){onError(String(error));}}}>{t('下载原声','Download dry')}</button></div>)}</details>}
   </Modal>;
 }
