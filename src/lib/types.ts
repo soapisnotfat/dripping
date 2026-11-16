@@ -53,9 +53,10 @@ export type ScoreConversion = {
   version:1;engine:'sheetscan';modelVersion:string;recognizerVersion:string;sourceCommit:string;bridge:string;createdAt:string;
   originalAssetIds:string[];musicxmlAssetId:string;auditAssetId:string;
 };
+export type PdfSource = {version:1;id:string;assetIds:string[];state:'pending'|'paused'|'failed'|'complete';createdAt:string;error?:{message:string;code?:string;resourceURL?:string;attempts?:number}};
 export type Project = {
   id: string; schemaVersion: 1; name: string; createdAt: string; updatedAt: string;
-  scoreXml?: string; scoreAssetId?: string; score?: Score; scoreConversion?: ScoreConversion; referenceTrackId?: string;
+  scoreXml?: string; scoreAssetId?: string; score?: Score; scoreConversion?: ScoreConversion; pdfSource?: PdfSource; referenceTrackId?: string;
   scoreMap: Anchor[]; tracks: Track[]; takes: Take[]; assetIds: string[];
   speed: number; position: number; selection: Selection | null; loop: boolean;
   masterGainDb?: number;

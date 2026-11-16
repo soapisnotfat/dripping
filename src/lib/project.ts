@@ -19,16 +19,19 @@ export function guessRole(name:string):ImportItem['role']{
 export function audioAsset(project:Project,pcm:PCM,name:string):Asset{
   return {id:uid(),projectId:project.id,name,type:'audio/wav',blob:new Blob([encodeWav(pcm,32)],{type:'audio/wav'}),sampleRate:pcm.sampleRate,frames:pcm.channels[0].length,channels:pcm.channels.length};
 }
-export async function addFiles(project:Project,items:ImportItem[],progress:(text:string)=>void,options:{signal?:AbortSignal;converted?:PreparedScore}={}):Promise<Project>{
+export async function prepareImport(project:Project,items:ImportItem[],progress:(text:string)=>void,options:{signal?:AbortSignal;converted?:PreparedScore}={}):Promise<{project:Project;assets:Asset[]}>{
   const p=clone(project),assets:Asset[]=[];
-  if(items.filter(i=>i.role==='score').length>1)throw Error('每个项目请选一份乐谱 / Choose one score per project');
-  if(p.score&&items.some(i=>i.role==='score'))throw Error('请为另一份乐谱建立新项目 / Create a new project for another score');
+  const pdfItems=items.filter(item=>item.role==='score'&&/\.pdf$/i.test(item.file.name));
+  if(pdfItems.length>100)throw Error('PDF 文件过多 / Choose at most 100 PDF files');
+  if(items.filter(i=>i.role==='score'&&!pdfItems.includes(i)).length+(pdfItems.length?1:0)>1)throw Error('每个项目请选一份乐谱 / Choose one score per project');
+  if((p.score||p.pdfSource)&&items.some(i=>i.role==='score'))throw Error('请为另一份乐谱建立新项目 / Create a new project for another score');
   let saved=false;try{
   for(const {file,role} of items){
     options.signal?.throwIfAborted();progress(file.name);
     if(file.size>160*1024*1024)throw Error('单个文件请小于 160 MB / Keep each file below 160 MB');
     const asset:Asset={id:uid(),projectId:p.id,name:file.name,type:file.type||'application/octet-stream',blob:file};
-    if(role==='score'){
+    if(role==='score'&&/\.pdf$/i.test(file.name)){asset.type='application/pdf';}
+    else if(role==='score'){
       const xml=await readScoreFile(file),score=parseScore(xml);p.scoreXml=xml;p.score=score;p.scoreAssetId=asset.id;p.scoreMap=tempoMap(score);
     }else{
       const pcm=await transport.decode(file);
@@ -41,14 +44,31 @@ export async function addFiles(project:Project,items:ImportItem[],progress:(text
     }
     assets.push(asset);p.assetIds.push(asset.id);
   }
+  if(pdfItems.length)p.pdfSource={version:1,id:uid(),assetIds:assets.filter(asset=>asset.type==='application/pdf').map(asset=>asset.id),state:'pending',createdAt:new Date().toISOString()};
   if(options.converted){
     const conversion=options.converted,originalAssetIds=conversion.originals.map(file=>{const id=uid();assets.push({id,projectId:p.id,name:file.name,type:'application/pdf',blob:file});p.assetIds.push(id);return id;}),auditAssetId=uid();
     assets.push({id:auditAssetId,projectId:p.id,name:'score-conversion.json',type:'application/json',blob:conversion.audit});p.assetIds.push(auditAssetId);
     p.scoreConversion={...conversion.provenance,originalAssetIds,musicxmlAssetId:p.scoreAssetId!,auditAssetId};
   }
-  options.signal?.throwIfAborted();p.updatedAt=new Date().toISOString();p.revision++;const normalized=scoreTempoProject(p);await saveProject(normalized,assets,options.signal);saved=true;return normalized;
+  options.signal?.throwIfAborted();p.updatedAt=new Date().toISOString();p.revision++;const normalized=scoreTempoProject(p);saved=true;return {project:normalized,assets};
   }finally{if(!saved)for(const asset of assets)transport.pcm.delete(asset.id);}
 }
+export async function addFiles(project:Project,items:ImportItem[],progress:(text:string)=>void,options:{signal?:AbortSignal;converted?:PreparedScore}={}):Promise<Project>{
+  const prepared=await prepareImport(project,items,progress,options);
+  try{await saveProject(prepared.project,prepared.assets,options.signal);return prepared.project;}
+  catch(error){for(const asset of prepared.assets)transport.pcm.delete(asset.id);throw error;}
+}
+// Import only appends material. Preserve every edit to the latest project while
+// audio decoding or a background score conversion was running.
+export function mergeImportedFiles(base:Project,latest:Project,prepared:Project):Project{
+  if(base.id!==latest.id||prepared.id!==latest.id)throw Error('导入项目已改变 / Import project changed');
+  const p=clone(latest),oldTrackIds=new Set(base.tracks.map(track=>track.id));
+  p.tracks.push(...prepared.tracks.filter(track=>!oldTrackIds.has(track.id)));p.assetIds=[...new Set([...p.assetIds,...prepared.assetIds])];
+  if(!base.score&&prepared.score){if(p.score||p.pdfSource)throw Error('乐谱来源已改变 / Score source changed');p.score=prepared.score;p.scoreXml=prepared.scoreXml;p.scoreAssetId=prepared.scoreAssetId;p.scoreMap=prepared.scoreMap;}
+  if(!base.pdfSource&&prepared.pdfSource){if(p.score||p.pdfSource)throw Error('乐谱来源已改变 / Score source changed');p.pdfSource=prepared.pdfSource;}
+  return scoreTempoProject(p);
+}
+
 export function editProject(project:Project,label:string,mutate:(p:Project)=>void):Project{
   const p=clone(project),snapshot=()=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),referenceTrackId:p.referenceTrackId}),before=snapshot();mutate(p);
   p.undo.push({label,before,after:snapshot()});if(p.undo.length>60)p.undo.shift();p.redo=[];return p;
