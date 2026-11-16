@@ -2,6 +2,7 @@ import {useEffect,useRef,useState,useMemo} from 'react';
 import {OpenSheetMusicDisplay,type VexFlowGraphicalNote} from 'opensheetmusicdisplay';
 import type {Project,Locale,ScoreEvent,Selection} from '../lib/types';
 import {secondsToQ,qToSeconds} from '../lib/time';
+import {scoreEngraving} from '../lib/score-display';
 
 export type CursorMode='note'|'beat'|'bar'|'continuous'|'off';
 type NoteBox={id:string;measure:number;x:number;y:number;width:number;height:number};
@@ -14,6 +15,7 @@ export function ScoreView({project,position,locale,zoom,follow,onFollow,mode,onS
   const [boxes,setBoxes]=useState<NoteBox[]>([]),[loading,setLoading]=useState(false),[width,setWidth]=useState(800);
   const programmaticScroll=useRef(0),drag=useRef<{id:string;x:number;y:number;moved:boolean}|null>(null);
   const q=secondsToQ(position,project.scoreMap),score=project.score;
+  const engraving=useMemo(()=>scoreEngraving(project),[project.scoreXml,project.scoreConversion?.engine]);
   const current=score?[...score.events].reverse().find(e=>e.q<=q+1e-7&&!e.grace):undefined;
   const boxById=useMemo(()=>new Map(boxes.map(b=>[b.id,b])),[boxes]);
   const activeBox=current?boxById.get(current.id):undefined;
@@ -31,11 +33,11 @@ export function ScoreView({project,position,locale,zoom,follow,onFollow,mode,onS
     if(!host.current||!project.scoreXml||!score)return;
     let stopped=false;setLoading(true);
     const mount=document.createElement('div');host.current.replaceChildren(mount);
-    const osmd=new OpenSheetMusicDisplay(mount,{backend:'svg',autoResize:false,drawTitle:false,drawSubtitle:false,drawComposer:false,drawPartNames:false,drawPartAbbreviations:false,drawMeasureNumbers:true,followCursor:false,disableCursor:true,pageFormat:'Endless',newSystemFromXML:false,newPageFromXML:false,defaultColorMusic:'#30372f'});
+    const osmd=new OpenSheetMusicDisplay(mount,{backend:'svg',autoResize:false,autoBeam:engraving.autoBeam,drawTitle:false,drawSubtitle:false,drawComposer:false,drawPartNames:false,drawPartAbbreviations:false,drawMeasureNumbers:true,followCursor:false,disableCursor:true,pageFormat:'Endless',newSystemFromXML:false,newPageFromXML:false,defaultColorMusic:'#30372f'});
     osmd.EngravingRules.RenderMultipleRestMeasures=false;osmd.EngravingRules.AutoGenerateMultipleRestMeasuresFromRestMeasures=false;osmd.Zoom=zoom;
     osmdRef.current=osmd;
     (async()=>{
-      await osmd.load(project.scoreXml!);if(stopped)return;
+      await osmd.load(engraving.xml);if(stopped)return;
       for(const instrument of osmd.Sheet.Instruments)instrument.Visible=instrument.IdString===score.partId;
       osmd.render();
       const instrument=osmd.Sheet.Instruments.find(i=>i.IdString===score.partId),root=host.current!.getBoundingClientRect();
@@ -64,7 +66,7 @@ export function ScoreView({project,position,locale,zoom,follow,onFollow,mode,onS
       if(!stopped){setBoxes(results);setLoading(false);}
     })().catch(e=>{if(!stopped){setLoading(false);onError(String(e));}});
     return()=>{stopped=true;};
-  },[project.scoreXml,score?.partId,zoom,width]);
+  },[engraving,score?.partId,zoom,width]);
 
   useEffect(()=>{
     if(!follow||!activeBox||!viewport.current||!host.current)return;
