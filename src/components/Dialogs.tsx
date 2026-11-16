@@ -47,15 +47,16 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
   const text=(zh:string,en:string)=>locale==='zh'?zh:en;
   const available=project.tracks.filter((track):track is Track&{sourceAssetId:string}=>track.role!=='recording'&&!!track.sourceAssetId),score=project.score!;
   const [id,setId]=useState(available.find(track=>track.id===initialTrack)?.id||available[0]?.id||'');
+  const activeTrack=useRef(id);activeTrack.current=id;
   const track=available.find(track=>track.id===id),[candidate,setCandidate]=useState<Alignment|undefined>(track?.alignment),[busy,setBusy]=useState(''),[status,setStatus]=useState('');
   const [scoreAt,setScoreAt]=useState<MusicalPosition>({location:'0',value:'1'}),[audioAt,setAudioAt]=useState<MusicalPosition>({location:'0',value:'1'});
   const previewId=useRef(`alignment-preview-${uid()}`);
   useEffect(()=>()=>{transport.pause();transport.pcm.delete(previewId.current);},[]);
   const features=async(assetId:string)=>audioJobs.run<Features>('features',{samples:mono(await transport.asset(assetId)),sampleRate:11025,hop:.12});
-  const analyze=async()=>{if(!track)return;try{setBusy(text('分析音高与节奏…','Analyzing pitch and timing…'));
+  const analyze=async()=>{if(!track)return;const operationTrack=track.id;try{setBusy(text('分析音高与节奏…','Analyzing pitch and timing…'));
     const demo=available.find(other=>other.role==='demo'&&other.id!==id&&other.alignment?.status==='accepted'),audio=await features(track.sourceAssetId);
     const result=demo?await audioJobs.run<Alignment>('align-demo',{score,demo:await features(demo.sourceAssetId),demoMap:demo.alignment!.anchors,features:audio}):await audioJobs.run<Alignment>('align',{score,features:audio});
-    setCandidate(result);setStatus(text('匹配完成，核对后将本轨对齐到谱面。','Candidate ready. Check it, then align this track to the score.'));
+    if(activeTrack.current!==operationTrack)return;setCandidate(result);setStatus(text('匹配完成，核对后将本轨对齐到谱面。','Candidate ready. Check it, then align this track to the score.'));
   }catch(error){onError(String(error));}finally{setBusy('');}};
   const manual=()=>setCandidate({anchors:tempoMap(score),method:'manual',status:'candidate',warnings:[]});
   const anchors=candidate?.anchors||[];
@@ -72,7 +73,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
     const p=clone(project);p.tracks=p.tracks.map(other=>({...other,mute:other.id!==id,solo:false,offset:0,clips:other.id===id?[{id:'preview',assetId:previewId.current,label:other.name,start:0,end:projectDuration(p),sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0}]:other.clips}));p.loop=false;transport.reference=true;await transport.start(p,musicalPositionSeconds(scoreAt,score,project.scoreMap));setStatus(text('正在试听对齐结果与谱面合成音。','Auditioning the aligned track with score synth.'));
   }catch(error){onError(String(error));}finally{setBusy('');}};
   return <Modal title={text('乐谱与音频对齐','Score & audio alignment')} onClose={()=>{if(!busy){transport.pause();transport.reference=false;onClose();}}} wide>
-    <div className="alignment-top"><label className="field">{text('音轨','Track')}<select value={id} onChange={event=>{setId(event.target.value);setCandidate(available.find(track=>track.id===event.target.value)?.alignment);setStatus('');}}>{available.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><button disabled={!!busy||!track} onClick={analyze}>{text('自动匹配','Analyze audio')}</button><button disabled={!!busy} onClick={manual}>{text('按谱速手动设置','Set anchors manually')}</button></div>
+    <div className="alignment-top"><label className="field">{text('音轨','Track')}<select disabled={!!busy} value={id} onChange={event=>{transport.pause();setId(event.target.value);setCandidate(available.find(track=>track.id===event.target.value)?.alignment);setStatus('');}}>{available.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><button disabled={!!busy||!track} onClick={analyze}>{text('自动匹配','Analyze audio')}</button><button disabled={!!busy||!track} onClick={manual}>{text('按谱速手动设置','Set anchors manually')}</button></div>
     <p className="muted">{text('谱面的小节、拍号和速度始终是基准。音频位置也按谱速显示；将对应的音乐位置配对，再校正音轨。','Score bars, meter and tempo always set the clock. Audio positions use score tempo too; pair matching musical moments, then align the track.')}</p>
     <div className="status-line">{busy||status}</div>
     {candidate&&<><div className="anchor-add">
@@ -80,7 +81,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
       <MusicalEndpoint allowOutside name="audio" label={text('音频位置','Audio position')} position={audioAt} score={score} map={project.scoreMap} locale={locale} disabled={!!busy} onChange={setAudioAt}/>
       <button disabled={!!busy} onClick={addAnchor}>{text('添加／更新点','Add / update anchor')}</button><button disabled={!!busy} onClick={preview}>{text('试听对齐结果','Audition alignment')}</button></div>
       {candidate.warnings.map(warning=><p className="warning" key={warning}>{warning}</p>)}
-      <div className="anchor-table"><table><thead><tr><th>{text('谱面小节·拍','Score bar · beat')}</th><th>{text('音频小节·拍（按谱速）','Audio bar · beat (score tempo)')}</th><th/></tr></thead><tbody>{anchors.map((anchor,index)=><tr key={index}><td><button onClick={()=>{setScoreAt(musicalPositionAt(qToSeconds(anchor.q,project.scoreMap),score,project.scoreMap));setAudioAt(musicalPositionAt(anchor.seconds,score,project.scoreMap));}}>{scorePositionLabel(anchor.q,score,locale)}</button></td><td>{musicalLabel(anchor.seconds,project,locale)}</td><td><button disabled={!!busy||anchors.length<=2} aria-label={text('删除对齐点','Remove anchor')} onClick={()=>setCandidate({...candidate,anchors:anchors.filter((_,i)=>i!==index),status:'candidate'})}>×</button></td></tr>)}</tbody></table></div>
+      <div className="anchor-table"><table><thead><tr><th>{text('谱面小节·拍','Score bar · beat')}</th><th>{text('音频小节·拍（按谱速）','Audio bar · beat (score tempo)')}</th><th/></tr></thead><tbody>{anchors.map((anchor,index)=><tr key={index}><td><button disabled={!!busy} onClick={()=>{setScoreAt(musicalPositionAt(qToSeconds(anchor.q,project.scoreMap),score,project.scoreMap));setAudioAt(musicalPositionAt(anchor.seconds,score,project.scoreMap));}}>{scorePositionLabel(anchor.q,score,locale)}</button></td><td>{musicalLabel(anchor.seconds,project,locale)}</td><td><button disabled={!!busy||anchors.length<=2} aria-label={text('删除对齐点','Remove anchor')} onClick={()=>setCandidate({...candidate,anchors:anchors.filter((_,i)=>i!==index),status:'candidate'})}>×</button></td></tr>)}</tbody></table></div>
       <footer><button className="primary" disabled={!!busy} onClick={conform}>{text('将本轨对齐到谱面','Align track to score')}</button></footer></>}
   </Modal>;
 }
