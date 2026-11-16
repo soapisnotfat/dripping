@@ -3,6 +3,7 @@ import {audioFeatures,alignToScore,alignToDemo,conformAudio} from '../lib/alignm
 import {renderTrack,stretchAudio,resamplePCM} from '../lib/audio';
 import type {PCM} from '../lib/types';
 import {measureExport,masterWav} from '../lib/master';
+import {assessAlignment,assessDemoBridge} from '../lib/alignment-evidence';
 
 self.onmessage=({data})=>{
   const {id,kind,payload}=data;
@@ -11,6 +12,7 @@ self.onmessage=({data})=>{
     if(kind==='features')result=audioFeatures(payload.samples,payload.sampleRate,payload.hop);
     else if(kind==='align')result=alignToScore(payload.score,payload.features);
     else if(kind==='align-demo')result=alignToDemo(payload.score,payload.demo,payload.demoMap,payload.features);
+    else if(kind==='assess-alignment')result=payload.demo?assessDemoBridge(payload.score,payload.demo,payload.demoMap,payload.features,payload.alignment,payload.sampleRate):assessAlignment(payload.score,payload.features,payload.alignment,payload.sampleRate);
     else if(kind==='conform')result=conformAudio(payload.pcm,payload.sourceMap,payload.targetMap,payload.duration,payload.score,payload.manualAnchors);
     else if(kind==='stretch')result=stretchAudio(payload.pcm,payload.speed);
     else if(kind==='resample')result=resamplePCM(payload.pcm,payload.sampleRate,payload.frames);

@@ -25,6 +25,8 @@ export type Alignment = {
   method: 'score-tempo' | 'chroma-dtw' | 'manual' | 'reference';
   cost?: number; coverage?: number; warnings: string[];
   manualAnchors?: number[];
+  reference?: {kind:'score-part'|'score-parts'|'demo'|'manual';scoreSignature:string;partIds:string[];pitch:'xml'|'concert'|'unspecified';sampleRate:number;demoTrackId?:string;demoMapSignature?:string};
+  assessment?: {basis:'score-notes'|'shared-accompaniment';decision:'supported'|'review'|'insufficient'|'ambiguous';supportedFraction:number;reasons:string[];points:{q:number;sourceSample:number;midi:number[];support:number;attack:number}[]};
 };
 export type Clip = {
   id: string; assetId: string; label: string; start: number; end: number;
