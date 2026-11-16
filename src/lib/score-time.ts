@@ -31,7 +31,7 @@ export function scoreTempoProject(project:Project):Project{
     if(finish<=start||value.clipId&&!current.some(track=>track.id===value.trackId&&track.clips.some(clip=>clip.id===value.clipId)))return null;
     return {...value,start,end:finish};
   };
-  const state=(value:EditState):EditState=>{const map=value.scoreMap?.length?value.scoreMap:old,current=tracks(value.tracks,map);return {...value,tracks:current,selection:selection(value.selection,map,current),scoreMap:clone(target),referenceTrackId:undefined};};
+  const state=(value:EditState):EditState=>{const map=value.scoreMap?.length?value.scoreMap:old,current=tracks(value.tracks,map);return {...value,tracks:current,selection:selection(value.selection,map,current),position:value.position===undefined?undefined:Math.max(0,Math.min(end,convert(value.position,map))),scoreMap:clone(target),referenceTrackId:undefined};};
   result.tracks=tracks(result.tracks,old);result.selection=selection(result.selection,old,result.tracks);result.position=Math.max(0,Math.min(end,convert(result.position,old)));result.scoreMap=target;result.referenceTrackId=undefined;
   result.undo=result.undo.map(command=>({...command,before:state(command.before),after:state(command.after)}));result.redo=result.redo.map(command=>({...command,before:state(command.before),after:state(command.after)}));if(!result.selection)result.loop=false;
   return result;

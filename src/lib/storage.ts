@@ -87,7 +87,12 @@ function checkProject(p:Project,assetIds:Set<string>){
     if(t.alignment)validateAnchors(t.alignment.anchors);
   };
   p.tracks.forEach(checkTrack);
-  for(const command of [...(p.undo||[]),...(p.redo||[])]){command.before.tracks.forEach(checkTrack);command.after.tracks.forEach(checkTrack);}
+  for(const command of [...(p.undo||[]),...(p.redo||[])])for(const state of [command.before,command.after]){
+    state.tracks.forEach(checkTrack);if(state.scoreMap?.length)validateAnchors(state.scoreMap);
+    if(state.position!==undefined&&(!Number.isFinite(state.position)||state.position<0))throw Error('无效历史位置 / Invalid history position');
+    if(state.partId!==undefined&&typeof state.partId!=='string')throw Error('无效历史声部 / Invalid history part');
+    if(state.scoreXml!==undefined){if(typeof state.scoreXml!=='string')throw Error('无效历史乐谱 / Invalid history score');parseScore(state.scoreXml,state.partId);}
+  }
   if(p.scoreMap.length)validateAnchors(p.scoreMap);
   if(p.takes.some(t=>!assetIds.has(t.assetId)))throw Error('项目缺少录音 / Missing take asset');
   if(!(p.speed>=.5&&p.speed<=1.5))throw Error('无效练习速度 / Invalid speed');
