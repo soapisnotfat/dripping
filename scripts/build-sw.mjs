@@ -1,23 +1,34 @@
-import {readdir,writeFile,readFile} from 'node:fs/promises';
-import {createHash} from 'node:crypto';
-async function files(dir,prefix='') {
-  const out=[];
-  for(const e of await readdir(dir,{withFileTypes:true})) {
-    const name=prefix+e.name;
-    if(e.isDirectory())out.push(...await files(dir+'/'+e.name,name+'/'));
-    else if(name!=='sw.js')out.push(name);
+import { readdir, writeFile, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+async function files(dir, prefix = '') {
+  const out = [];
+  for (const e of await readdir(dir, { withFileTypes: true })) {
+    const name = prefix + e.name;
+    if (e.isDirectory()) out.push(...(await files(dir + '/' + e.name, name + '/')));
+    else if (name !== 'sw.js') out.push(name);
   }
   return out;
 }
-const index=await readFile('dist/index.html','utf8');
-const policy="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'";
-await writeFile('dist/index.html',index.replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">/,'').replace('<head>',`<head><meta http-equiv="Content-Security-Policy" content="${policy}">`));
+const index = await readFile('dist/index.html', 'utf8');
+const policy =
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'";
+await writeFile(
+  'dist/index.html',
+  index
+    .replace(/<meta http-equiv="Content-Security-Policy" content="[^"]*">/, '')
+    .replace('<head>', `<head><meta http-equiv="Content-Security-Policy" content="${policy}">`),
+);
 // No recognition code, runtime or ONNX weights in ordinary-practice precaching.
-const paths=(await files('dist')).filter(p=>p!=='_headers'&&!p.startsWith('vendor/sheetscan/'));
-const hash=createHash('sha256');
-for(const p of paths)hash.update(await readFile('dist/'+p));
-const cache='dripping-'+hash.digest('hex').slice(0,12),pin=JSON.parse(await readFile('vendor/sheetscan/pin.json','utf8'));
-await writeFile('dist/sw.js',`const PREFIX='dripping-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',CACHE=PREFIX+${JSON.stringify(cache)},DEMAND=PREFIX+${JSON.stringify('score-'+pin.version)},FILES=${JSON.stringify(paths)};
+const paths = (await files('dist')).filter(
+  (p) => p !== '_headers' && !p.startsWith('vendor/sheetscan/'),
+);
+const hash = createHash('sha256');
+for (const p of paths) hash.update(await readFile('dist/' + p));
+const cache = 'dripping-' + hash.digest('hex').slice(0, 12),
+  pin = JSON.parse(await readFile('vendor/sheetscan/pin.json', 'utf8'));
+await writeFile(
+  'dist/sw.js',
+  `const PREFIX='dripping-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',CACHE=PREFIX+${JSON.stringify(cache)},DEMAND=PREFIX+${JSON.stringify('score-' + pin.version)},FILES=${JSON.stringify(paths)};
 async function cached(name,request,options){try{return await(await caches.open(name)).match(request,options);}catch{return undefined;}}
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(p=>new URL(p,self.registration.scope).href)))));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')self.skipWaiting()});
@@ -52,5 +63,6 @@ self.addEventListener('fetch',e=>{
   return response||Response.error();
  })());
 });
-`);
-console.log('Offline cache:',cache,paths.length,'files');
+`,
+);
+console.log('Offline cache:', cache, paths.length, 'files');

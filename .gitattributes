@@ -1,0 +1,2 @@
+# Fold generated SDK bundles in GitHub diffs; keep pins, notices, and licenses readable.
+vendor/sheetscan/**/*.js linguist-generated=true

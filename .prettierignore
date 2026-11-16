@@ -1,0 +1,20 @@
+# Generated build output and caches.
+node_modules/
+dist/
+coverage/
+.cache/
+test-results/
+playwright-report/
+*.tsbuildinfo
+package-lock.json
+
+# Pinned third-party SDKs, runtimes, models, notices, and generated static assets.
+vendor/
+public/
+
+# Local project backups and recordings.
+*.drippingproj
+recordings/
+
+# Synced local duplicates are not repository source.
+**/* 2.*
