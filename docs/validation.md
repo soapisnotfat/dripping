@@ -83,7 +83,7 @@ macOS identified the Roland AE-20 as a USB audio device with two input and two o
 
 ## Score-reference and original-source review
 
-The alignment reference follows actual MusicXML parts placed on the selected part's canonical measure route, including pickups and repeats. Tests cover sounding transposition, voices, separate-part ties, notation-pitch undo/redo, unchanged reference identity after a tempo-only edit, and provenance/evidence backup round trips. Existing explicit MusicXML pitch declarations are retained; unspecified notation requires a choice before automatic application.
+The alignment reference follows actual MusicXML parts placed on the selected part's canonical measure route, including pickups and repeats. Tests cover sounding transposition, voices, separate-part ties, notation-pitch undo/redo, unchanged reference identity after a tempo-only edit, and provenance/evidence backup round trips. Existing explicit MusicXML pitch declarations are retained. Ordinary files with no transpose use the standard zero-transposition default; an explicitly named transposing instrument missing its declaration requires review.
 
 Automatic application now requires note/attack or shared-accompaniment evidence. Synthetic negatives cover melody-free backing, a repeated eight-note prefix, a constant shared bass note, unresolved adjacent source-note positions, and missing score tempo. These are rejection checks, not calibrated note-accuracy or onset-accuracy guarantees. A correct manually reviewed map can verify actual shared demo/backing content; an older DTW bridge may still be rejected until its source positions improve.
 
