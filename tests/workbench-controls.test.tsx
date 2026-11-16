@@ -9,7 +9,7 @@ import { parseScore } from '../src/lib/score';
 import { tempoMap } from '../src/lib/time';
 import { audibleTrackIds } from '../src/lib/mix';
 import { scorePositionLabel, musicalPositionAt, musicalPositionSeconds } from '../src/lib/time';
-import { ExportDialog } from '../src/components/Dialogs';
+import { ExportDialog } from '../src/components/dialogs';
 import { SelectionEditor } from '../src/components/SelectionEditor';
 
 let root: Root;

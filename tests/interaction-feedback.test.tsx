@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { DraftNumber } from '../src/components/DraftNumber';
-import { Modal } from '../src/components/Dialogs';
+import { Modal } from '../src/components/dialogs';
 
 let root: Root;
 beforeEach(() => {
