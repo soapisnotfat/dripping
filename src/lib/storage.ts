@@ -84,7 +84,7 @@ function checkProject(p:Project,assetIds:Set<string>){
   for(const id of p.assetIds)if(!assetIds.has(id))throw Error('项目缺少素材 / Incomplete project assets');
   if(p.scoreConversion){
     const c=p.scoreConversion,refs=[...(Array.isArray(c.originalAssetIds)?c.originalAssetIds:[]),c.musicxmlAssetId,c.auditAssetId],text=(value:unknown)=>typeof value==='string'&&value.length>0&&value.length<=120;
-    if(c.version!==1||c.engine!=='sheetscan'||!text(c.modelVersion)||!text(c.recognizerVersion)||!/^[a-f0-9]{40}$/.test(c.sourceCommit)||!['jspi','shared memory'].includes(c.bridge)||!Number.isFinite(Date.parse(c.createdAt))||!Array.isArray(c.originalAssetIds)||!c.originalAssetIds.length||c.originalAssetIds.length>100||refs.some(id=>typeof id!=='string'||!assetIds.has(id)||!p.assetIds.includes(id)))throw Error('无效识谱来源 / Invalid score conversion provenance');
+    if(c.version!==1||c.engine!=='sheetscan'||!text(c.modelVersion)||!text(c.recognizerVersion)||!/^[a-f0-9]{40}$/.test(c.sourceCommit)||!['jspi','shared memory'].includes(c.bridge)||typeof c.createdAt!=='string'||!Number.isFinite(Date.parse(c.createdAt))||!Array.isArray(c.originalAssetIds)||!c.originalAssetIds.length||c.originalAssetIds.length>100||refs.some(id=>typeof id!=='string'||!assetIds.has(id)||!p.assetIds.includes(id)))throw Error('无效识谱来源 / Invalid score conversion provenance');
   }
   const checkTrack=(t:Project['tracks'][number])=>{
     const sourceValid=t.sourceAssetId!==undefined?assetIds.has(t.sourceAssetId):t.role==='recording'&&Array.isArray(t.clips)&&t.clips.length===0;

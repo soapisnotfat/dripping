@@ -10,7 +10,11 @@ const digest=async(blob:Blob)=>Array.from(new Uint8Array(await crypto.subtle.dig
 export async function convertPdf(files:File[],signal:AbortSignal,onProgress:(event:ConversionProgress)=>void):Promise<PreparedScore>{
   signal.throwIfAborted();
   const url=new URL(`${import.meta.env.BASE_URL}vendor/sheetscan/${pin.version}/sheetscan.js`,document.baseURI).href;
-  const sdk=await import(/* @vite-ignore */ url) as SDK;signal.throwIfAborted();
+  // Native module loading cannot be aborted, but Cancel must release the UI
+  // immediately and must never start a late converter after its download.
+  let abort=()=>{};
+  const cancelled=new Promise<never>((_,reject)=>{abort=()=>reject(signal.reason);signal.addEventListener('abort',abort,{once:true});});
+  const sdk=await Promise.race([import(/* @vite-ignore */ url) as Promise<SDK>,cancelled]).finally(()=>signal.removeEventListener('abort',abort));signal.throwIfAborted();
   const converter=sdk.createScoreConverter({onProgress});
   try{
     const result=await converter.convert(files,{signal});signal.throwIfAborted();

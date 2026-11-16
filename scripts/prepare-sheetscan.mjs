@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {unzipSync} from 'fflate';
 const source=new URL('../vendor/sheetscan/',import.meta.url),cache=new URL('../.cache/sheetscan/',import.meta.url);
 const pin=JSON.parse(await readFile(new URL('pin.json',source),'utf8')),target=new URL('../public/vendor/sheetscan/'+pin.version+'/',import.meta.url),sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-await mkdir(cache,{recursive:true});await mkdir(target,{recursive:true});
+await mkdir(cache,{recursive:true});await rm(new URL('../public/vendor/sheetscan/',import.meta.url),{recursive:true,force:true});await mkdir(target,{recursive:true});
 for(const [name,hash] of Object.entries(pin.files)){
   let bytes=await readFile(new URL(name,source));if(sha(bytes)!==hash)throw Error('SheetScan vendored checksum mismatch: '+name);
   if(name==='sheetscan.js'){
