@@ -248,15 +248,19 @@ export function notationInstrumentChoice(xml:string,partId:string):NotationInstr
   const transposes=all(part,'transpose');if(transposes.length!==1||transposes[0].getAttribute('id')!==`dripping-notation-${partId}`)return null;
   const shift=num(transposes[0],'chromatic')+12*num(transposes[0],'octave-change');return shift===0?'concert':shift===-9?'alto':shift===-14?'tenor':shift===-2?'bb':null;
 }
-export function scorePitchDeclaration(xml:string,partId:string):'concert'|'transpose'|'for-part'|'unspecified'{
+export function scorePitchDeclaration(xml:string,partId:string):'concert'|'transpose'|'for-part'|'default'|'unspecified'{
   const root=parseXml(xml).documentElement,part=children(root,'part').find(part=>part.getAttribute('id')===partId);if(!part)throw Error('找不到乐谱声部 / Score part is missing');
   if(all(root,'concert-score').length)return 'concert';
   if(all(part,'transpose').length)return 'transpose';
   if(all(part,'for-part').length)return 'for-part';
-  return 'unspecified';
+  const definition=all(root,'score-part').find(part=>part.getAttribute('id')===partId),name=definition?[...all(definition,'part-name'),...all(definition,'instrument-name')].map(element=>txt(element)).join(' '):'';
+  // Omitted transpose has MusicXML's ordinary zero-transposition meaning.
+  // Flag a concrete conflict, such as an explicitly named transposing instrument,
+  // rather than treating every normal piano/flute/violin/Voice import as unknown.
+  return /(?:alto|tenor|soprano|baritone)\s+sax|saxophone|clarinet|trumpet|french\s+horn|english\s+horn|萨克斯|薩克斯|单簧管|單簧管|小号|小號|圆号|圓號/i.test(name)?'unspecified':'default';
 }
 export function setNotationInstrument(xml:string,partId:string,instrument:NotationInstrument):string{
-  if(scorePitchDeclaration(xml,partId)!=='unspecified'&&!notationInstrumentChoice(xml,partId))throw Error('MusicXML 已声明记谱音高，保持原声明 / MusicXML already declares its pitch interpretation');
+  if(!['default','unspecified'].includes(scorePitchDeclaration(xml,partId))&&!notationInstrumentChoice(xml,partId))throw Error('MusicXML 已声明记谱音高，保持原声明 / MusicXML already declares its pitch interpretation');
   const choices={concert:{diatonic:0,chromatic:0,octave:0},alto:{diatonic:-5,chromatic:-9,octave:0},tenor:{diatonic:-1,chromatic:-2,octave:-1},bb:{diatonic:-1,chromatic:-2,octave:0}},choice=choices[instrument];if(!choice)throw Error('无效记谱乐器 / Invalid notation instrument');
   const doc=parseXml(xml),part=children(doc.documentElement,'part').find(part=>part.getAttribute('id')===partId)!,measure=children(part,'measure')[0];if(!measure)throw Error('乐谱没有小节 / Missing score measures');
   const create=(name:string)=>doc.createElementNS(measure.namespaceURI,name);let attributes=child(measure,'attributes');if(!attributes){attributes=create('attributes');measure.insertBefore(attributes,measure.firstChild);}
