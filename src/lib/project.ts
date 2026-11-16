@@ -1,6 +1,6 @@
 import type {Project,Asset,TrackRole,PCM,Track,RecordingSession,EditState} from './types';
 import {clone,uid} from './types';
-import {parseScore,readScoreFile,setOpeningTempo} from './score';
+import {parseScore,readScoreFile,setOpeningTempo,setNotationInstrument,type NotationInstrument} from './score';
 import {tempoMap,projectDuration} from './time';
 import {saveProject,getAsset,readSession,deleteSession} from './storage';
 import {transport} from './transport';
@@ -59,6 +59,11 @@ export function undoProject(project:Project,redo=false):Project{
   if(state.position!==undefined)p.position=state.position;
   p.scoreMap=state.scoreMap?.length?state.scoreMap:p.score?tempoMap(p.score):[];
   (redo?p.undo:p.redo).push(command);return scoreTempoProject(p);
+}
+export function changeNotationInstrument(project:Project,instrument:NotationInstrument):Project{
+  if(!project.scoreXml||!project.score)throw Error('先添加乐谱 / Add a score first');
+  const snapshot=(p:Project):EditState=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),scoreXml:p.scoreXml,partId:p.score?.partId,position:p.position}),before=snapshot(project),scoreXml=setNotationInstrument(project.scoreXml,project.score.partId,instrument),next={...project,scoreXml,score:parseScore(scoreXml,project.score.partId)};
+  next.undo=[...project.undo,{label:'notation pitch',before,after:snapshot(next)}].slice(-60);next.redo=[];return next;
 }
 export function addRecordingTrack(project:Project,name:string):Project{
   return editProject(project,'add recording track',p=>{

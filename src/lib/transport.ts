@@ -1,5 +1,5 @@
 import type {Project,PCM,Track} from './types';
-import {copyBuffer,toAudioBuffer} from './audio';
+import {copyBuffer,toAudioBuffer,slicePCM} from './audio';
 import {getAsset} from './storage';
 import {audioJobs} from './jobs';
 import {projectDuration,qToSeconds,secondsToQ} from './time';
@@ -42,6 +42,9 @@ export class Transport {
     const pcm=copyBuffer(buffer);this.pcm.set(id,pcm);return pcm;
   }
   async decode(file:Blob):Promise<PCM>{return copyBuffer(await this.ctx.decodeAudioData(await file.arrayBuffer()));}
+  async auditionRaw(pcm:PCM,from:number,length:number,gainDb=0):Promise<AudioBufferSourceNode>{
+    this.pause();await this.ctx.resume();this.setOutputGain(gainDb);const start=Math.min(Math.max(0,from),Math.max(0,(pcm.channels[0].length-1)/pcm.sampleRate)),buffer=toAudioBuffer(slicePCM(pcm,start,start+length),this.ctx),source=this.ctx.createBufferSource(),gain=this.ctx.createGain();source.buffer=buffer;source.connect(gain).connect(this.destination!);const now=this.ctx.currentTime,fade=Math.min(.005,buffer.duration/4);gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(1,now+fade);gain.gain.setValueAtTime(1,now+buffer.duration-fade);gain.gain.linearRampToValueAtTime(0,now+buffer.duration);source.addEventListener('ended',()=>{source.disconnect();gain.disconnect();},{once:true});this.nodes.push(source);source.start();return source;
+  }
   async prepare(project:Project,onProgress?:(text:string)=>void){
     const duration=projectDuration(project),sr=this.ctx.sampleRate;
     for(const track of project.tracks){

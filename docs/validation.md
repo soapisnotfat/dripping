@@ -77,6 +77,14 @@ macOS identified the Roland AE-20 as a USB audio device with two input and two o
 ## Limits to keep visible
 
 - Physical audio capture, channel routing, acoustic bleed, latency calibration, and iPad Safari capture/background behavior have not been verified on hardware. AE-20 device discovery was verified as described above.
-- A score-only tempo map is an estimate until aligned to a recording. Automatic alignment always produces a candidate. Sparse/repetitive accompaniment and a different arrangement may require manual anchors or a matching demonstration.
-- The reference audio must retain its original timing. Conforming another track creates a new asset; original sources and takes remain in the project. Reference changes are undoable but do not implicitly reconform other tracks.
+- The written score tempo always sets the project clock. Automatic alignment estimates where score content occurs in raw audio and produces a candidate; it never replaces that clock. Sparse/repetitive accompaniment and a different arrangement may require manual source pairs or a matching demonstration.
+- Reference audio retains its original timing. Conforming a track creates a new asset; original sources and takes remain in the project. Alignment and notation-pitch edits are undoable. A tempo-only change retimes the arrangement while preserving its musical source positions.
 - IndexedDB is device/browser/origin specific. Export project backups independently of browser storage.
+
+## Score-reference and original-source review
+
+The alignment reference follows actual MusicXML parts placed on the selected part's canonical measure route, including pickups and repeats. Tests cover sounding transposition, voices, separate-part ties, notation-pitch undo/redo, unchanged reference identity after a tempo-only edit, and provenance/evidence backup round trips. Existing explicit MusicXML pitch declarations are retained; unspecified notation requires a choice before automatic application.
+
+Automatic application now requires note/attack or shared-accompaniment evidence. Synthetic negatives cover melody-free backing, a repeated eight-note prefix, a constant shared bass note, unresolved adjacent source-note positions, and missing score tempo. These are rejection checks, not calibrated note-accuracy or onset-accuracy guarantees. A correct manually reviewed map can verify actual shared demo/backing content; an older DTW bridge may still be rejected until its source positions improve.
+
+Isolated Chrome production checks cover a positive self-composed demonstration through conform and project backup, source identity preservation, original-waveform keyboard/touch-point navigation and audition, two-point manual pairing, notation-pitch persistence and undo, weak-candidate rejection, and 393/768px layouts. Source audio is auditioned directly; it is no longer labeled with bars calculated merely from the score tempo. Precise onset matching and difficult arrangement/version differences remain open work.

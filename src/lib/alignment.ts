@@ -106,6 +106,7 @@ function pathAnchors(path:[number,number][],ref:Features,audio:Features,toQ:(tim
   return validateAnchors(anchors);
 }
 export function alignToScore(score:Score,audio:Features):Alignment {
+  if(score.tempoMissing)throw Error('先输入明确谱面速度 / Enter the score tempo first');
   const reference=scoreFeatures(score,audio.hop),result=dtw(reference,audio),map=tempoMap(score);
   const anchors=pathAnchors(result.path,reference,audio,t=>secondsToQ(t,map),score.totalQ);
   const warnings:string[]=[];
@@ -115,9 +116,24 @@ export function alignToScore(score:Score,audio:Features):Alignment {
   return {anchors,status:'candidate',method:'chroma-dtw',cost:result.cost,coverage:result.coverage,warnings};
 }
 export function alignToDemo(score:Score,demo:Features,demoMap:Anchor[],audio:Features):Alignment {
+  if(score.tempoMissing)throw Error('先输入明确谱面速度 / Enter the score tempo first');
   const result=dtw(demo,audio,true),anchors=pathAnchors(result.path,demo,audio,t=>secondsToQ(t,demoMap),score.totalQ);
   return {anchors,status:'candidate',method:'chroma-dtw',cost:result.cost,coverage:result.coverage,
     warnings:result.cost>.5?['示范与此音轨匹配较弱 / Weak match between demonstration and track']:[]};
+}
+
+export function pairSourceAnchor(totalQ:number,anchors:Anchor[],edited:number[],q:number,seconds:number):{anchors:Anchor[];manualAnchors:number[]}{
+  if(!Number.isFinite(q)||q<0||q>totalQ||!Number.isFinite(seconds)||seconds<0)throw Error('选择谱内位置与原音中的实际位置 / Choose a score position and a point inside the source');
+  const pairs=edited.filter(at=>Math.abs(at-q)>1e-7).map(at=>({q:at,seconds:qToSeconds(at,anchors)})).concat({q,seconds}).sort((a,b)=>a.q-b.q);
+  if(pairs.length>=2){
+    validateAnchors(pairs);const result=[...pairs];if(result[0].q>0)result.unshift({q:0,seconds:qToSeconds(0,pairs)});if(result.at(-1)!.q<totalQ)result.push({q:totalQ,seconds:qToSeconds(totalQ,pairs)});
+    return {anchors:validateAnchors(result),manualAnchors:pairs.map(point=>point.q)};
+  }
+  // One pair translates the provisional curve. Once a second real pair exists,
+  // interpolate through those pairs and extrapolate the score edges; untouched
+  // score-tempo endpoints must not contradict the user's actual source points.
+  const delta=seconds-qToSeconds(q,anchors),result=anchors.filter(point=>Math.abs(point.q-q)>1e-7).map(point=>({...point,seconds:point.seconds+delta})).concat({q,seconds}).sort((a,b)=>a.q-b.q);
+  return {anchors:validateAnchors(result),manualAnchors:[q]};
 }
 
 export function conformKnots(score:Score,sourceMap:Anchor[],targetMap:Anchor[],manualAnchors:number[]=[]):number[]{

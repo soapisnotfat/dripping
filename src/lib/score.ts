@@ -216,7 +216,7 @@ export function soundingEvents(score: Score): ScoreEvent[] {
   const result: ScoreEvent[]=[], ties=new Map<string,ScoreEvent>();
   for (const event of score.events) {
     if (event.midi===null || event.grace) continue;
-    const key=`${event.voice}:${event.staff}:${event.midi}`;
+    const key=`${event.part}:${event.voice}:${event.staff}:${event.midi}`;
     const preceding=ties.get(key);
     if (event.tieStop && preceding && Math.abs(preceding.q+preceding.duration-event.q)<1e-5) {
       preceding.duration+=event.duration;
@@ -240,4 +240,27 @@ export function setOpeningTempo(xml:string,bpm:number):string{
     const before=Array.from(measure.children).find(element=>element.localName!=='print'&&element.localName!=='attributes');measure.insertBefore(direction,before||null);
   }
   return new XMLSerializer().serializeToString(doc);
+}
+
+export type NotationInstrument='concert'|'alto'|'tenor'|'bb';
+export function notationInstrumentChoice(xml:string,partId:string):NotationInstrument|null{
+  const root=parseXml(xml).documentElement,part=children(root,'part').find(part=>part.getAttribute('id')===partId);if(!part||all(root,'concert-score').length||all(part,'for-part').length)return null;
+  const transposes=all(part,'transpose');if(transposes.length!==1||transposes[0].getAttribute('id')!==`dripping-notation-${partId}`)return null;
+  const shift=num(transposes[0],'chromatic')+12*num(transposes[0],'octave-change');return shift===0?'concert':shift===-9?'alto':shift===-14?'tenor':shift===-2?'bb':null;
+}
+export function scorePitchDeclaration(xml:string,partId:string):'concert'|'transpose'|'for-part'|'unspecified'{
+  const root=parseXml(xml).documentElement,part=children(root,'part').find(part=>part.getAttribute('id')===partId);if(!part)throw Error('找不到乐谱声部 / Score part is missing');
+  if(all(root,'concert-score').length)return 'concert';
+  if(all(part,'transpose').length)return 'transpose';
+  if(all(part,'for-part').length)return 'for-part';
+  return 'unspecified';
+}
+export function setNotationInstrument(xml:string,partId:string,instrument:NotationInstrument):string{
+  if(scorePitchDeclaration(xml,partId)!=='unspecified'&&!notationInstrumentChoice(xml,partId))throw Error('MusicXML 已声明记谱音高，保持原声明 / MusicXML already declares its pitch interpretation');
+  const choices={concert:{diatonic:0,chromatic:0,octave:0},alto:{diatonic:-5,chromatic:-9,octave:0},tenor:{diatonic:-1,chromatic:-2,octave:-1},bb:{diatonic:-1,chromatic:-2,octave:0}},choice=choices[instrument];if(!choice)throw Error('无效记谱乐器 / Invalid notation instrument');
+  const doc=parseXml(xml),part=children(doc.documentElement,'part').find(part=>part.getAttribute('id')===partId)!,measure=children(part,'measure')[0];if(!measure)throw Error('乐谱没有小节 / Missing score measures');
+  const create=(name:string)=>doc.createElementNS(measure.namespaceURI,name);let attributes=child(measure,'attributes');if(!attributes){attributes=create('attributes');measure.insertBefore(attributes,measure.firstChild);}
+  for(const previous of all(part,'transpose'))previous.remove();const transpose=create('transpose'),diatonic=create('diatonic'),chromatic=create('chromatic');transpose.setAttribute('id',`dripping-notation-${partId}`);diatonic.textContent=String(choice.diatonic);chromatic.textContent=String(choice.chromatic);transpose.append(diatonic,chromatic);
+  if(choice.octave){const octave=create('octave-change');octave.textContent=String(choice.octave);transpose.append(octave);}
+  attributes.insertBefore(transpose,Array.from(attributes.children).find(element=>['directive','measure-style','for-part'].includes(element.localName))||null);return new XMLSerializer().serializeToString(doc);
 }
