@@ -1,6 +1,6 @@
-import type {Project,Asset,TrackRole,PCM,Track,RecordingSession} from './types';
+import type {Project,Asset,TrackRole,PCM,Track,RecordingSession,EditState} from './types';
 import {clone,uid} from './types';
-import {parseScore,readScoreFile} from './score';
+import {parseScore,readScoreFile,setOpeningTempo} from './score';
 import {tempoMap,projectDuration} from './time';
 import {saveProject,getAsset,readSession,deleteSession} from './storage';
 import {transport} from './transport';
@@ -44,6 +44,21 @@ export async function addFiles(project:Project,items:ImportItem[],progress:(text
 export function editProject(project:Project,label:string,mutate:(p:Project)=>void):Project{
   const p=clone(project),snapshot=()=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),referenceTrackId:p.referenceTrackId}),before=snapshot();mutate(p);
   p.undo.push({label,before,after:snapshot()});if(p.undo.length>60)p.undo.shift();p.redo=[];return p;
+}
+export function changeScoreTempo(project:Project,bpm:number):Project{
+  if(!project.scoreXml||!project.score)throw Error('先添加乐谱 / Add a score first');
+  if(!project.score.tempoMissing&&bpm===project.score.tempo[0]?.bpm)return project;
+  const snapshot=(p:Project):EditState=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),scoreXml:p.scoreXml,partId:p.score?.partId,position:p.position});
+  const before=snapshot(project),scoreXml=setOpeningTempo(project.scoreXml,bpm),score=parseScore(scoreXml,project.score.partId),next=scoreTempoProject({...project,scoreXml,score});
+  next.undo=[...next.undo,{label:'score tempo',before,after:snapshot(next)}].slice(-60);next.redo=[];return next;
+}
+export function undoProject(project:Project,redo=false):Project{
+  const p=clone(project),command=(redo?p.redo:p.undo).pop();if(!command)return p;
+  const state=redo?command.after:command.before;p.tracks=state.tracks;p.selection=state.selection;p.referenceTrackId=undefined;
+  if(state.scoreXml!==undefined){p.scoreXml=state.scoreXml;p.score=parseScore(state.scoreXml,state.partId);}
+  if(state.position!==undefined)p.position=state.position;
+  p.scoreMap=state.scoreMap?.length?state.scoreMap:p.score?tempoMap(p.score):[];
+  (redo?p.undo:p.redo).push(command);return scoreTempoProject(p);
 }
 export function addRecordingTrack(project:Project,name:string):Project{
   return editProject(project,'add recording track',p=>{

@@ -3,12 +3,13 @@ import 'fake-indexeddb/auto';
 import {expect,it,vi} from 'vitest';
 import {webcrypto} from 'node:crypto';
 import {Blob} from 'node:buffer';
+import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
 import {parseScore,setOpeningTempo} from '../src/lib/score';
 import {newProject,getProject,getAsset,saveProject,exportProject,importProject} from '../src/lib/storage';
 import {scoreTempoProject} from '../src/lib/score-time';
 import {clipSourceTime} from '../src/lib/clip-time';
 import {clipTrimBounds} from '../src/lib/timeline';
-import {trimRegion} from '../src/lib/project';
+import {trimRegion,changeScoreTempo,undoProject} from '../src/lib/project';
 import {tempoMap,qToSeconds,projectDuration} from '../src/lib/time';
 import {renderTrack,splitClips,encodeWav} from '../src/lib/audio';
 import type {Track} from '../src/lib/types';
@@ -70,4 +71,31 @@ it.each([.1,8])('round-trips a migrated %s source rate and untouched original ta
   await saveProject(normalized,[{id,projectId:p.id,name:'source.wav',type:'audio/wav',blob}]);const restored=await importProject(await exportProject(normalized));
   expect(restored.tracks[0].clips[0].rate).toBeCloseTo(rate);expect(restored.takes[0]).toMatchObject({start:0,end:5.5*rate,speed:1});
   expect(await(await getAsset(restored.assetIds[0])).blob.arrayBuffer()).toEqual(await blob.arrayBuffer());
+});
+it('undoes and redoes tempo changes interleaved with trims, keeping musical positions and original audio',()=>{
+  const original=scoreTempoProject(legacy()),first=trimRegion(original,'backing','region',.5,3.5,4.75),changed=changeScoreTempo(first,60),last=trimRegion(changed,'backing','region',1.5,5,4.75);
+  const undoTrim=undoProject(last);expect(undoTrim.tracks[0].clips[0]).toMatchObject({start:1,end:5.5});expect(undoTrim.score!.tempo[0].bpm).toBe(60);
+  const undoTempo=undoProject(undoTrim);expect(undoTempo.score!.tempo[0].bpm).toBe(120);expect(undoTempo.position).toBe(3);expect(undoTempo.tracks[0].clips[0]).toMatchObject({start:.5,end:3.5});expect(undoTempo.selection).toEqual(first.selection);
+  const undoFirst=undoProject(undoTempo);expect(undoFirst.tracks[0].clips[0]).toMatchObject({start:0,end:3.5});
+  const redo=undoProject(undoProject(undoProject(undoFirst,true),true),true);expect(redo.score!.tempo[0].bpm).toBe(60);expect(redo.position).toBe(5);expect(redo.tracks[0].clips[0]).toMatchObject({start:1.5,end:5});expect(redo.selection).toEqual(last.selection);
+  expect(clipSourceTime(redo.tracks[0].clips[0],4.5)).toBeCloseTo(clipSourceTime(last.tracks[0].clips[0],4.5));expect(redo.assetIds).toEqual(original.assetIds);expect(redo.takes).toEqual(original.takes);
+  expect(redo.referenceTrackId).toBeUndefined();for(const command of [...redo.undo,...redo.redo])for(const state of [command.before,command.after])expect(state.referenceTrackId).toBeUndefined();
+});
+it('can undo the first tempo confirmation back to a retained project that requires tempo input',()=>{
+  const p=scoreTempoProject(legacy());p.scoreXml=xml.replace('<direction><sound tempo="120"/></direction>','');p.score=parseScore(p.scoreXml);p.scoreMap=tempoMap(p.score);
+  const changed=changeScoreTempo(p,100);expect(changed.score!.tempoMissing).toBe(false);const undone=undoProject(changed);expect(undone.score!.tempoMissing).toBe(true);expect(undone.scoreXml).toBe(p.scoreXml);expect(undone.assetIds).toEqual(p.assetIds);expect(undoProject(undone,true).score!.tempo[0].bpm).toBe(100);
+});
+it('round-trips tempo undo and redo through backup/import with byte-exact audio and no reference clock',async()=>{
+  const p=scoreTempoProject(legacy()),id=crypto.randomUUID(),bytes=new Uint8Array([0,1,2,3,4,5]);p.assetIds=[id];p.tracks[0].sourceAssetId=id;p.tracks[0].clips[0].assetId=id;p.undo=[];
+  await saveProject(p,[{id,projectId:p.id,name:'source.wav',type:'audio/wav',blob:new Blob([bytes]) as unknown as globalThis.Blob}]);
+  const changed=changeScoreTempo(p,96),undone=undoProject(changed);await saveProject(undone);const restored=await importProject(await exportProject(undone)),redone=undoProject(restored,true);
+  expect(redone.score!.tempo[0].bpm).toBe(96);expect(redone.position).toBe(3.5);expect(redone.selection).toMatchObject({start:1.25,end:3.5});expect(redone.scoreMap).toEqual(tempoMap(redone.score!));expect(redone.referenceTrackId).toBeUndefined();expect(await(await getAsset(redone.assetIds[0])).blob.arrayBuffer()).toEqual(bytes.buffer);
+  const loaded=await getProject(restored.id);expect(undoProject(loaded!,true).scoreXml).toBe(redone.scoreXml);
+});
+it('normalizes legacy reference snapshots when undoing without reviving audio-reference authority',()=>{
+  const p=legacy(),undone=undoProject(p);expect(undone.referenceTrackId).toBeUndefined();expect(undone.scoreMap).toEqual(tempoMap(undone.score!));expect(undone.tracks[0].clips[0]).toMatchObject({start:0,end:3.5});expect(undone.redo[0].before.referenceTrackId).toBeUndefined();
+});
+it.each([['position',-1],['scoreXml','broken score'],['partId',12]])('rejects invalid tempo-history %s in a project archive',async(field,value)=>{
+  const p=scoreTempoProject(legacy());p.tracks=[];p.assetIds=[];p.undo=[];const changed=changeScoreTempo(p,96),entries=unzipSync(new Uint8Array(await(await exportProject(changed)).arrayBuffer())),manifest=JSON.parse(strFromU8(entries['manifest.json']));
+  manifest.project.undo[0].before[field]=value;entries['manifest.json']=strToU8(JSON.stringify(manifest));await expect(importProject(new Blob([zipSync(entries)]) as unknown as globalThis.Blob)).rejects.toThrow(/history|MusicXML/);
 });

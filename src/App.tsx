@@ -2,9 +2,9 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import type {Asset,Locale,Project,Track,Selection,RecordingSession} from './lib/types';
 import {clone,clamp} from './lib/types';
 import {listProjects,getProject,saveProject,newProject,recoverySessions,deleteSession} from './lib/storage';
-import {editProject,editSelection,trimRegion,finishTake,newRecordingSession,addRecordingTrack,addFiles,guessRole} from './lib/project';
-import {parseScore,setOpeningTempo} from './lib/score';
-import {tempoMap,projectDuration,positionLabel,musicalLabel,qToSeconds,secondsToQ} from './lib/time';
+import {editProject,editSelection,trimRegion,finishTake,newRecordingSession,addRecordingTrack,addFiles,guessRole,changeScoreTempo,undoProject} from './lib/project';
+import {parseScore} from './lib/score';
+import {projectDuration,positionLabel,musicalLabel,qToSeconds,secondsToQ} from './lib/time';
 import {transport} from './lib/transport';
 import {PCMRecorder} from './lib/recorder';
 import {probeInput} from './lib/input';
@@ -79,7 +79,7 @@ export default function App(){
   const pause=useCallback(()=>{const value=transport.pause();setPlaying(false);setPosition(value);if(pRef.current)change({...pRef.current,position:value});},[change]);
   const updateScoreTempo=(bpm:number)=>{
     const p=pRef.current;if(!p?.score||!p.scoreXml||recording||playing||busy||(!p.score.tempoMissing&&bpm===p.score.tempo[0]?.bpm))return;
-    try{const scoreXml=setOpeningTempo(p.scoreXml,bpm),score=parseScore(scoreXml,p.score.partId),next=scoreTempoProject({...p,scoreXml,score});transport.seek(next.position);setPosition(next.position);change(next);}catch(error){report(String(error));}
+    try{const next=changeScoreTempo(p,bpm);transport.seek(next.position);setPosition(next.position);change(next);}catch(error){report(String(error));}
   };
   const finalize=useCallback(async(interrupted=false)=>{
     if(finishing.current||!session.current||!pRef.current)return;finishing.current=true;const active=session.current;transport.pause();setPlaying(false);setRecording(false);setBusy(locale==='zh'?'保存录音…':'Saving take…');
@@ -102,7 +102,7 @@ export default function App(){
   const seek=async(seconds:number)=>{if(!pRef.current||recording||busy)return;const value=clamp(seconds,0,projectDuration(pRef.current)),wasPlaying=playing;transport.pause();transport.seek(value);setPosition(value);setPlaying(false);change({...pRef.current,position:value});if(wasPlaying){try{setBusy(t('定位中…','Seeking…'));await transport.start(pRef.current,value);setPlaying(true);}catch(e){report(String(e));}finally{setBusy('');}}};
   const select=(selection:Selection|null)=>{if(pRef.current&&!recording){if(selection){selection={...selection,start:Math.max(0,selection.start),end:Math.min(projectDuration(pRef.current),selection.end)};if(selection.end<=selection.start)selection=null;}change({...pRef.current,selection});if(selection?.trackId)setEditingTrack(selection.trackId);}};
   const trackChange=(id:string,patch:Partial<Track>)=>{if(!pRef.current||recording)return;const p={...pRef.current,tracks:pRef.current.tracks.map(t=>t.id===id?{...t,...patch}:t)};change(p);transport.updateMix(p);};
-  const history=(redo=false)=>{if(!pRef.current||recording||busy)return;pause();const p=clone(pRef.current),command=(redo?p.redo:p.undo).pop();if(!command)return;const state=redo?command.after:command.before;p.tracks=state.tracks;p.selection=state.selection;if(p.score){p.scoreMap=tempoMap(p.score);p.referenceTrackId=undefined;}(redo?p.undo:p.redo).push(command);change(p);};
+  const history=(redo=false)=>{if(!pRef.current||recording||busy)return;pause();try{const next=undoProject(pRef.current,redo);transport.seek(next.position);setPosition(next.position);change(next);}catch(error){report(String(error));}};
   const edit=(action:'split'|'clear'|'trim'|'fade')=>{if(!pRef.current||recording)return;try{pause();const id=pRef.current.selection?.trackId||editingTrack||pRef.current.tracks.find(t=>t.role==='recording')?.id||pRef.current.tracks[0]?.id;change(editSelection(pRef.current,action,id));setMenu(null);}catch(e){report(String(e));}};
   const trimClip=(trackId:string,clipId:string,start:number,end:number)=>{
     if(!pRef.current||recording||busy)return;
