@@ -83,29 +83,38 @@ for (const model of pin.models) {
   await put(new URL('models/' + model.name + '.onnx', modelTarget), bytes);
 }
 const runtime = JSON.parse(await readFile(new URL('runtime-lock.json', source), 'utf8'));
-for (let index = 0; index < runtime.assets.length; index += 3)
-  await Promise.all(
-    runtime.assets.slice(index, index + 3).map(async (asset) => {
-      if (asset.path.startsWith('/') || asset.path.split('/').includes('..'))
-        throw Error('Unsafe runtime path: ' + asset.path);
-      const cached = new URL('runtime/' + asset.sha256, cache);
-      let bytes;
-      try {
-        bytes = await readFile(cached);
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-      if (bytes && (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256))
-        throw Error('Cached runtime checksum mismatch: ' + asset.path);
-      if (!bytes) {
-        bytes = await download(asset.url, asset.path);
-        if (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256)
-          throw Error('Runtime checksum mismatch: ' + asset.path);
-        await put(cached, bytes);
-      }
-      await put(new URL('runtime/' + asset.path, target), bytes);
-    }),
-  );
+const runtimePackages = [{ manifest: runtime, target }];
+// Retained SDKs resolve runtime files relative to their own package URL. Keep
+// those files available as well; cached bytes are shared by verified SHA-256.
+if (pin.previous?.files['runtime-lock.json'])
+  runtimePackages.push({
+    manifest: JSON.parse(await readFile(new URL('previous/runtime-lock.json', source), 'utf8')),
+    target: new URL(pin.previous.version + '/', root),
+  });
+for (const pkg of runtimePackages)
+  for (let index = 0; index < pkg.manifest.assets.length; index += 3)
+    await Promise.all(
+      pkg.manifest.assets.slice(index, index + 3).map(async (asset) => {
+        if (asset.path.startsWith('/') || asset.path.split('/').includes('..'))
+          throw Error('Unsafe runtime path: ' + asset.path);
+        const cached = new URL('runtime/' + asset.sha256, cache);
+        let bytes;
+        try {
+          bytes = await readFile(cached);
+        } catch (error) {
+          if (error.code !== 'ENOENT') throw error;
+        }
+        if (bytes && (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256))
+          throw Error('Cached runtime checksum mismatch: ' + asset.path);
+        if (!bytes) {
+          bytes = await download(asset.url, asset.path);
+          if (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256)
+            throw Error('Runtime checksum mismatch: ' + asset.path);
+          await put(cached, bytes);
+        }
+        await put(new URL('runtime/' + asset.path, pkg.target), bytes);
+      }),
+    );
 await put(new URL('pin.json', target), Buffer.from(JSON.stringify(pin, null, 2) + '\n'));
 console.log(
   'Pinned SheetScan prepared:',
