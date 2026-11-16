@@ -1,0 +1,201 @@
+{
+  "fixtureDescription": "Original seven-note Tenor Saxophone qualification score engraved with Verovio6.4.1 and printed toPDF byChromium",
+  "candidateSourceCommit": "33dd06488cc386b8ebfae929e5ea00e5a61efe74",
+  "inputSha256": "8163a11673dcc6e41432af7b4768e486bdff07b4613e3ea3d00d031f5332b959",
+  "artifacts": {
+    "fixture.musicxml": "7285a707dfa6e71a6511abd48b2373cfa0a1936b048aabf02fbe678b4aa582d6",
+    "fixture.pdf": "8163a11673dcc6e41432af7b4768e486bdff07b4613e3ea3d00d031f5332b959",
+    "baseline.musicxml": "9ef792f19ac9fa804fe001a7c2f6540b73b96630c6280d6cab838b6e8f1b187c",
+    "candidate.musicxml": "20cd8a37262be25ef85868477144429ffe36c90e7c66e03a9ad1036cad0053a3"
+  },
+  "runs": [
+    {
+      "package": "baseline",
+      "forcedShared": false,
+      "sdkVersion": "v14-static-runtime",
+      "recognizerVersion": "v13-woodwind-pdf",
+      "bridge": "jspi",
+      "browser": "156.0.8078.79",
+      "elapsedSeconds": 56.15,
+      "capabilities": {
+        "jspi": true,
+        "sharedMemory": true,
+        "supported": true
+      },
+      "notes": [
+        {
+          "pitch": "C5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "E5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "G5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "F5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "C5",
+          "duration": "4",
+          "grace": false,
+          "ties": []
+        }
+      ],
+      "transpose": [],
+      "clefs": [
+        "<clef number=\"1\"><sign>G</sign><line>2</line></clef>",
+        "<clef number=\"1\"><sign>G</sign><line>2</line></clef>"
+      ]
+    },
+    {
+      "package": "candidate",
+      "forcedShared": false,
+      "sdkVersion": "v15-notation-metadata",
+      "recognizerVersion": "v15-notation-metadata",
+      "bridge": "jspi",
+      "browser": "156.0.8078.79",
+      "elapsedSeconds": 50.21,
+      "capabilities": {
+        "jspi": true,
+        "sharedMemory": true,
+        "supported": true
+      },
+      "notes": [
+        {
+          "pitch": "C5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "E5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "G5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "F5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "C5",
+          "duration": "4",
+          "grace": false,
+          "ties": []
+        }
+      ],
+      "transpose": ["<transpose><diatonic>-8</diatonic><chromatic>-14</chromatic></transpose>"],
+      "clefs": ["<clef number=\"1\"><sign>G</sign><line>2</line></clef>"]
+    },
+    {
+      "package": "candidate",
+      "forcedShared": true,
+      "sdkVersion": "v15-notation-metadata",
+      "recognizerVersion": "v15-notation-metadata",
+      "bridge": "shared memory",
+      "browser": "156.0.8078.79",
+      "elapsedSeconds": 51.52,
+      "capabilities": {
+        "jspi": true,
+        "sharedMemory": true,
+        "supported": true
+      },
+      "notes": [
+        {
+          "pitch": "C5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "E5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "G5",
+          "duration": "1",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "F5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "D5",
+          "duration": "2",
+          "grace": false,
+          "ties": []
+        },
+        {
+          "pitch": "C5",
+          "duration": "4",
+          "grace": false,
+          "ties": []
+        }
+      ],
+      "transpose": ["<transpose><diatonic>-8</diatonic><chromatic>-14</chromatic></transpose>"],
+      "clefs": ["<clef number=\"1\"><sign>G</sign><line>2</line></clef>"]
+    }
+  ],
+  "scoreContentLicense": "CC0-1.0",
+  "fontSoftwareNotices": [
+    "Liberation-FONT-NOTICE.txt",
+    "../../../vendor/sheetscan/Leipzig-LICENSE.txt"
+  ]
+}

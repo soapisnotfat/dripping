@@ -1,0 +1,30 @@
+{
+  "baseline": [
+    {
+      "part": "P1",
+      "measure": "1",
+      "onsetQuarters": 0.0,
+      "staff": "1",
+      "sign": "G",
+      "line": "2"
+    },
+    {
+      "part": "P1",
+      "measure": "1",
+      "onsetQuarters": 0.0,
+      "staff": "1",
+      "sign": "G",
+      "line": "2"
+    }
+  ],
+  "candidate": [
+    {
+      "part": "P1",
+      "measure": "1",
+      "onsetQuarters": 0.0,
+      "staff": "1",
+      "sign": "G",
+      "line": "2"
+    }
+  ]
+}
