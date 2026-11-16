@@ -24,8 +24,8 @@ export const getAsset=async(id:string)=>{
 };
 export async function saveProject(project:Project,assets:Asset[]=[]):Promise<void>{
   const db=await dbPromise,tx=db.transaction(['projects','assets'],'readwrite');
-  for(const a of assets)await tx.objectStore('assets').put(a);
-  await tx.objectStore('projects').put(clone(project));await tx.done;
+  try{for(const a of assets)await tx.objectStore('assets').put(a);await tx.objectStore('projects').put(clone(project));await tx.done;}
+  catch(error){try{tx.abort();}catch{/* A failed request may already have aborted the transaction. */}await tx.done.catch(()=>{});throw error;}
 }
 export async function deleteProject(id:string):Promise<void>{
   const db=await dbPromise,p=await db.get('projects',id);if(!p)return;
