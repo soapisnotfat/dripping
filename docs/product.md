@@ -20,7 +20,9 @@ PDF imports save their original PDFs and audio before recognition starts. The wo
 
 ## Product boundaries
 
-No MIDI input, full DAW framework, account, server or cloud upload is required. Local browser storage is not a backup. USB device/channel support, recording latency and background suspension depend on the browser and hardware and must be tested on the target device.
+The app centers on score-led audio practice and recording. MIDI input and a full DAW workflow are outside its current scope. No account, application server, or cloud upload is required.
+
+Local browser storage is not a backup. USB device/channel support, recording latency, and background suspension depend on the browser and hardware and must be tested on the target device.
 
 ## Visual direction
 
