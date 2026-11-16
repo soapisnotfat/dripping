@@ -21,17 +21,17 @@ import {MusicalEndpoint} from './SelectionEditor';
 import {audibleTrackIds} from '../lib/mix';
 import {amplitudeDb,planMaster,type AudioStats,type MasterPlan} from '../lib/master';
 
-export function Modal({title,onClose,children,wide=false,feedback}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean;feedback?:ReactNode}){
+export function Modal({title,onClose,children,wide=false,feedback,closeDisabled=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean;feedback?:ReactNode;closeDisabled?:boolean}){
   const closeRef=useRef(onClose),dialog=useRef<HTMLElement>(null),previous=useRef(document.activeElement as HTMLElement);closeRef.current=onClose;
   useEffect(()=>{if(!dialog.current?.contains(document.activeElement))(dialog.current?.querySelector<HTMLElement>('[data-dialog-autofocus]')||dialog.current?.querySelector<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled)'))?.focus();const fn=(e:KeyboardEvent)=>{if(e.key==='Escape')closeRef.current();};document.addEventListener('keydown',fn);return()=>{document.removeEventListener('keydown',fn);(previous.current?.isConnected?previous.current:document.querySelector<HTMLElement>('[data-modal-focus-fallback]'))?.focus();};},[]);
   return <div className="modal-backdrop" onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={dialog} role="dialog" aria-modal="true" aria-label={title} className={`modal ${wide?'wide':''}`} onKeyDown={e=>{if(e.key!=='Tab')return;const els=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button,input,select,a[href],textarea,summary,[tabindex]')).filter(n=>{for(let parent=n.parentElement;parent&&parent!==e.currentTarget;parent=parent.parentElement)if(parent.tagName==='DETAILS'&&!parent.hasAttribute('open')&&!parent.querySelector(':scope > summary')?.contains(n))return false;return n.tabIndex>=0&&!n.matches(':disabled')&&!n.closest('[hidden],[inert]')&&n.getClientRects().length>0&&getComputedStyle(n).visibility==='visible';}).sort((a,b)=>(a.tabIndex>0?a.tabIndex:Number.MAX_SAFE_INTEGER)-(b.tabIndex>0?b.tabIndex:Number.MAX_SAFE_INTEGER));const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}}>
-    <header><h2>{title}</h2><button className="icon-button" aria-label="Close / 关闭" onClick={onClose}>×</button></header>{feedback}{children}
+    <header><h2>{title}</h2><button className="icon-button" aria-label="Close / 关闭" disabled={closeDisabled} onClick={onClose}>×</button></header>{feedback}{children}
   </section></div>;
 }
 type Common={locale:Locale;onClose:()=>void;onError:(text:string)=>void;feedback?:ReactNode};
 export function ImportDialog({project,locale,onClose,onError,onOpen,onAdd,initialFiles=[],feedback}:Common&{project?:Project;onOpen:(p:Project,options?:{recognizePdf?:boolean})=>void;onAdd?:(base:Project,prepared:{project:Project;assets:Asset[]})=>Promise<void>;initialFiles?:File[]}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
-  const [name,setName]=useState(project?.name||''),[items,setItems]=useState<ImportItem[]>(initialFiles.map(file=>({file,role:guessRole(file.name)}))),[busy,setBusy]=useState(''),[status,setStatus]=useState('');
+  const [name,setName]=useState(project?.name||''),[items,setItems]=useState<ImportItem[]>(initialFiles.map(file=>({file,role:guessRole(file.name)}))),[busy,setBusy]=useState(''),[status,setStatus]=useState(''),[saving,setSaving]=useState(false);
   const active=useRef<AbortController|null>(null);useEffect(()=>()=>active.current?.abort(),[]);
   const add=(files:File[])=>{if(busy)return;setItems(prev=>[...prev,...files.map(file=>({file,role:guessRole(file.name)}))]);setStatus('');if(!name&&files[0])setName(files[0].name.replace(/\.[^.]+$/,''));};
   const hasScore=!!project?.score||!!project?.pdfSource||items.some(item=>item.role==='score'),archiveOnly=items.length===1&&/\.drippingproj$/i.test(items[0].file.name);
@@ -44,11 +44,11 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,onAdd,initia
     if((project?.score||project?.pdfSource)&&items.some(item=>item.role==='score'))throw Error(t('请为另一份乐谱建立新项目','Create a new project for another score'));
     if(items.some(item=>item.file.size>160*1024*1024))throw Error(t('单个文件请小于 160 MB','Keep each file below 160 MB'));
     controller.signal.throwIfAborted();const p=project||newProject(name.trim()||t('未命名练习','Untitled practice'));
-    if(project&&onAdd){await onAdd(project,await prepareImport(p,items,setBusy,{signal:controller.signal}));onClose();}
+    if(project&&onAdd){const prepared=await prepareImport(p,items,setBusy,{signal:controller.signal});controller.signal.throwIfAborted();setSaving(true);setBusy(t('保存素材…','Saving files…'));await onAdd(project,prepared);onClose();}
     else{const created=await addFiles(p,items,setBusy,{signal:controller.signal});onOpen(created,{recognizePdf:!!created.pdfSource});}
   }catch(error){if(controller.signal.aborted)setStatus(t('已取消。所选文件已保留，可以重试。','Cancelled. Your selected files are retained; try again when ready.'));else onError(String(error));}
-  finally{if(active.current===controller){active.current=null;setBusy('');}}};
-  return <Modal feedback={feedback} title={project?t('添加素材','Add files'):t('新的练习','A new practice')} onClose={()=>{if(busy){if(!archiveOnly)cancel();}else onClose();}}>
+  finally{if(active.current===controller){active.current=null;setBusy('');setSaving(false);}}};
+  return <Modal closeDisabled={saving||archiveOnly&&!!busy} feedback={feedback} title={project?t('添加素材','Add files'):t('新的练习','A new practice')} onClose={()=>{if(busy){if(!archiveOnly&&!saving)cancel();}else onClose();}}>
     {!project&&<label className="field">{t('项目名称','Project name')}<input disabled={!!busy} autoFocus data-dialog-autofocus value={name} placeholder={t('今天想练什么？','What are you playing today?')} onChange={e=>setName(e.target.value)}/></label>}
     <label className="drop-zone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();add([...e.dataTransfer.files]);}}><span className="drop-symbol">＋</span><strong>{t('放入乐谱、伴奏和示范','Drop your score, backing and demo')}</strong><span>PDF / MusicXML / MXL · WAV / MP3 / M4A / FLAC</span><input disabled={!!busy} aria-label={t('选择素材','Choose files')} type="file" multiple accept=".pdf,.musicxml,.mxl,.xml,.drippingproj,audio/*" onChange={e=>{add([...e.target.files||[]]);e.target.value='';}}/></label>
     <div className="import-list">{items.map((item,i)=><div key={i}><span title={item.file.name}>{item.file.name}<small>{(item.file.size/1024/1024).toFixed(1)} MB</small></span>{! /\.drippingproj$/i.test(item.file.name)&&<select disabled={!!busy||/\.pdf$/i.test(item.file.name)} aria-label={`${item.file.name} role`} value={item.role} onChange={e=>setItems(rows=>rows.map((r,j)=>i===j?{...r,role:e.target.value as ImportItem['role']}:r))}><option value="score">{t('乐谱','Score')}</option><option value="backing">{t('伴奏','Backing')}</option><option value="demo">{t('示范录音','Demo recording')}</option></select>}<button disabled={!!busy} className="icon-button" aria-label={t('移除','Remove')} onClick={()=>setItems(rows=>rows.filter((_,j)=>i!==j))}>×</button></div>)}</div>
@@ -56,7 +56,7 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,onAdd,initia
     {items.some(item=>/\.pdf$/i.test(item.file.name))&&<p className="muted">{t('先保存项目与原 PDF，再在工作区后台识谱，不上传乐谱。','Your project and original PDF are saved first. Recognition runs in the workspace without uploading the score.')} <a href={scanPin.source} target="_blank" rel="noreferrer">{t('识谱源码与许可','Recognition source and license')}</a></p>}
     <p className="muted">{t('素材保存在当前浏览器。也可以选择 .drippingproj 恢复完整项目。','Files stay in this browser. Open a .drippingproj file to restore a project.')}</p>
     <p role="status" aria-live="polite">{status}</p>
-    <footer><span className="busy-text" role="status" aria-live="polite">{busy}</span>{busy&&!archiveOnly&&<button onClick={cancel}>{t('取消导入','Cancel import')}</button>}<button className="primary" disabled={!!busy||(!hasScore&&!archiveOnly)||(!items.length&&!!project)} onClick={submit}>{busy?t('正在导入…','Importing…'):items.some(item=>/\.pdf$/i.test(item.file.name))?t('创建项目','Create project'):t('开始练习','Start practicing')}</button></footer>
+    <footer><span className="busy-text" role="status" aria-live="polite">{busy}</span>{busy&&!archiveOnly&&!saving&&<button onClick={cancel}>{t('取消导入','Cancel import')}</button>}<button className="primary" disabled={!!busy||(!hasScore&&!archiveOnly)||(!items.length&&!!project)} onClick={submit}>{busy?t('正在导入…','Importing…'):items.some(item=>/\.pdf$/i.test(item.file.name))?t('创建项目','Create project'):t('开始练习','Start practicing')}</button></footer>
   </Modal>;
 }
 

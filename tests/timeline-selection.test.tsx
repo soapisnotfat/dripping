@@ -8,6 +8,8 @@ import {TrimHandles} from '../src/components/TrimHandles';
 import {newProject} from '../src/lib/storage';
 import {editSelection,trimRegion} from '../src/lib/project';
 import {clipSelection} from '../src/lib/timeline';
+import {parseScore} from '../src/lib/score';
+import {tempoMap} from '../src/lib/time';
 import type {Clip,Selection,Track} from '../src/lib/types';
 
 const clip=(id:string,start:number,end:number):Clip=>({id,assetId:id,label:id,start,end,sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0});
@@ -22,7 +24,7 @@ beforeEach(()=>{
 afterEach(()=>{act(()=>root.unmount());document.body.replaceChildren();vi.restoreAllMocks();vi.unstubAllGlobals();});
 const pointer=(lane:HTMLElement,type:string,seconds:number)=>act(()=>lane.dispatchEvent(new MouseEvent(type,{bubbles:true,button:0,clientX:seconds*100})));
 function render(clips:Clip[],offset=0,selection:Selection|null=null,locked=false){
-  const project=newProject('Regions'),onSelect=vi.fn(),onSeek=vi.fn();project.tracks=[track(clips,offset)];project.selection=selection;
+  const project=newProject('Regions'),onSelect=vi.fn(),onSeek=vi.fn();project.score=parseScore(`<score-partwise><part-list><score-part id="P1"><part-name>Flute</part-name></score-part></part-list><part id="P1">${Array.from({length:10},(_,i)=>`<measure number="${i+1}">${i===0?'<attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes><direction><sound tempo="120"/></direction>':''}<note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note></measure>`).join('')}</part></score-partwise>`);project.scoreMap=tempoMap(project.score);project.tracks=[track(clips,offset)];project.selection=selection;
   act(()=>root.render(<Timeline project={project} locale="en" position={0} scale={100} snap follow={false} waveforms={new Map()} recording={locked} playing={false} counting={false} locked={locked} activeRecording={null} onArm={()=>{}} onSeek={onSeek} onSelect={onSelect} onTrack={()=>{}} onTrim={()=>{}} onContext={()=>{}} onFollow={()=>{}} onTrackSettings={()=>{}}/>));
   const lane=document.querySelector<HTMLElement>('.track-lane')!;
   lane.setPointerCapture=vi.fn();lane.hasPointerCapture=()=>false;
