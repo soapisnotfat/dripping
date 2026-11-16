@@ -1,0 +1,3 @@
+Source: https://github.com/soapisnotfat/sheetscan/tree/ac8688002aff2069ab40b7d3811f82699249faa6
+Recognition engine: https://github.com/liebharc/homr
+Fork license: AGPL-3.0 (see LICENSE). Glyph artifacts and font notices: see licenses/.

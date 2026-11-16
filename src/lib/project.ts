@@ -9,21 +9,23 @@ import {audioJobs} from './jobs';
 import {clipSelection,clipTrimBounds} from './timeline';
 import {clipSourceTime} from './clip-time';
 import {scoreTempoProject} from './score-time';
+import type {PreparedScore} from './pdf-import';
 
 export type ImportItem={file:File;role:TrackRole|'score'};
 export function guessRole(name:string):ImportItem['role']{
-  if(/\.(xml|musicxml|mxl)$/i.test(name))return 'score';
+  if(/\.(xml|musicxml|mxl|pdf)$/i.test(name))return 'score';
   return /demo|示范|示範|演奏|performance|reference/i.test(name)?'demo':'backing';
 }
 export function audioAsset(project:Project,pcm:PCM,name:string):Asset{
   return {id:uid(),projectId:project.id,name,type:'audio/wav',blob:new Blob([encodeWav(pcm,32)],{type:'audio/wav'}),sampleRate:pcm.sampleRate,frames:pcm.channels[0].length,channels:pcm.channels.length};
 }
-export async function addFiles(project:Project,items:ImportItem[],progress:(text:string)=>void):Promise<Project>{
+export async function addFiles(project:Project,items:ImportItem[],progress:(text:string)=>void,options:{signal?:AbortSignal;converted?:PreparedScore}={}):Promise<Project>{
   const p=clone(project),assets:Asset[]=[];
   if(items.filter(i=>i.role==='score').length>1)throw Error('每个项目请选一份乐谱 / Choose one score per project');
   if(p.score&&items.some(i=>i.role==='score'))throw Error('请为另一份乐谱建立新项目 / Create a new project for another score');
+  let saved=false;try{
   for(const {file,role} of items){
-    progress(file.name);
+    options.signal?.throwIfAborted();progress(file.name);
     if(file.size>160*1024*1024)throw Error('单个文件请小于 160 MB / Keep each file below 160 MB');
     const asset:Asset={id:uid(),projectId:p.id,name:file.name,type:file.type||'application/octet-stream',blob:file};
     if(role==='score'){
@@ -39,7 +41,13 @@ export async function addFiles(project:Project,items:ImportItem[],progress:(text
     }
     assets.push(asset);p.assetIds.push(asset.id);
   }
-  p.updatedAt=new Date().toISOString();p.revision++;const normalized=scoreTempoProject(p);await saveProject(normalized,assets);return normalized;
+  if(options.converted){
+    const conversion=options.converted,originalAssetIds=conversion.originals.map(file=>{const id=uid();assets.push({id,projectId:p.id,name:file.name,type:'application/pdf',blob:file});p.assetIds.push(id);return id;}),auditAssetId=uid();
+    assets.push({id:auditAssetId,projectId:p.id,name:'score-conversion.json',type:'application/json',blob:conversion.audit});p.assetIds.push(auditAssetId);
+    p.scoreConversion={...conversion.provenance,originalAssetIds,musicxmlAssetId:p.scoreAssetId!,auditAssetId};
+  }
+  options.signal?.throwIfAborted();p.updatedAt=new Date().toISOString();p.revision++;const normalized=scoreTempoProject(p);await saveProject(normalized,assets,options.signal);saved=true;return normalized;
+  }finally{if(!saved)for(const asset of assets)transport.pcm.delete(asset.id);}
 }
 export function editProject(project:Project,label:string,mutate:(p:Project)=>void):Project{
   const p=clone(project),snapshot=()=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),referenceTrackId:p.referenceTrackId}),before=snapshot();mutate(p);

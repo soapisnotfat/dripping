@@ -22,10 +22,13 @@ export const getProject=async(id:string)=>{const db=await dbPromise,p=await db.g
 export const getAsset=async(id:string)=>{
   const a=await(await dbPromise).get('assets',id);if(!a)throw Error('找不到项目素材 / Missing project asset');return a;
 };
-export async function saveProject(project:Project,assets:Asset[]=[]):Promise<void>{
-  const db=await dbPromise,tx=db.transaction(['projects','assets'],'readwrite');
+export async function saveProject(project:Project,assets:Asset[]=[],signal?:AbortSignal):Promise<void>{
+  signal?.throwIfAborted();
+  const db=await dbPromise;signal?.throwIfAborted();const tx=db.transaction(['projects','assets'],'readwrite');
+  const abort=()=>{try{tx.abort();}catch{/* The transaction may already be complete. */}};signal?.addEventListener('abort',abort,{once:true});
   try{for(const a of assets)await tx.objectStore('assets').put(a);await tx.objectStore('projects').put(clone(project));await tx.done;}
   catch(error){try{tx.abort();}catch{/* A failed request may already have aborted the transaction. */}await tx.done.catch(()=>{});throw error;}
+  finally{signal?.removeEventListener('abort',abort);}
 }
 export async function deleteProject(id:string):Promise<void>{
   const db=await dbPromise,p=await db.get('projects',id);if(!p)return;
@@ -79,6 +82,10 @@ function checkProject(p:Project,assetIds:Set<string>){
   if(p.schemaVersion!==1||!Array.isArray(p.tracks)||!Array.isArray(p.takes)||!Array.isArray(p.assetIds))throw Error('不支持的项目格式 / Unsupported project format');
   if(p.masterGainDb!==undefined&&(!Number.isFinite(p.masterGainDb)||p.masterGainDb< -36||p.masterGainDb>6))throw Error('无效输出增益 / Invalid output gain');
   for(const id of p.assetIds)if(!assetIds.has(id))throw Error('项目缺少素材 / Incomplete project assets');
+  if(p.scoreConversion){
+    const c=p.scoreConversion,refs=[...(Array.isArray(c.originalAssetIds)?c.originalAssetIds:[]),c.musicxmlAssetId,c.auditAssetId],text=(value:unknown)=>typeof value==='string'&&value.length>0&&value.length<=120;
+    if(c.version!==1||c.engine!=='sheetscan'||!text(c.modelVersion)||!text(c.recognizerVersion)||!/^[a-f0-9]{40}$/.test(c.sourceCommit)||!['jspi','shared memory'].includes(c.bridge)||!Number.isFinite(Date.parse(c.createdAt))||!Array.isArray(c.originalAssetIds)||!c.originalAssetIds.length||c.originalAssetIds.length>100||refs.some(id=>typeof id!=='string'||!assetIds.has(id)||!p.assetIds.includes(id)))throw Error('无效识谱来源 / Invalid score conversion provenance');
+  }
   const checkTrack=(t:Project['tracks'][number])=>{
     const sourceValid=t.sourceAssetId!==undefined?assetIds.has(t.sourceAssetId):t.role==='recording'&&Array.isArray(t.clips)&&t.clips.length===0;
     if(!Array.isArray(t.clips)||!Number.isFinite(t.offset)||!Number.isFinite(t.volume)||!Number.isFinite(t.pan)||!sourceValid)throw Error('无效音轨 / Invalid track');
@@ -131,6 +138,7 @@ export async function importProject(file:Blob):Promise<Project>{
   for(const command of [...project.undo,...project.redo]){remap(command.before.tracks);remap(command.after.tracks);}
   project.takes.forEach(t=>t.assetId=oldToNew.get(t.assetId)!);
   if(project.scoreAssetId)project.scoreAssetId=oldToNew.get(project.scoreAssetId);
+  if(project.scoreConversion){const c=project.scoreConversion;c.originalAssetIds=c.originalAssetIds.map(id=>oldToNew.get(id)!);c.musicxmlAssetId=oldToNew.get(c.musicxmlAssetId)!;c.auditAssetId=oldToNew.get(c.auditAssetId)!;}
   if(project.scoreXml){project.score=parseScore(project.scoreXml,project.score?.partId);if(!project.scoreMap.length)project.scoreMap=tempoMap(project.score);}
   project.updatedAt=new Date().toISOString();project.name+=' · restored';
   const normalized=scoreTempoProject(project);await saveProject(normalized,assets);return normalized;

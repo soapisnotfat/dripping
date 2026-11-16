@@ -1,0 +1,50 @@
+{
+  "version": "v11-natural-binding-r2",
+  "recognizerVersion": "v11-natural-binding",
+  "sourceCommit": "ac8688002aff2069ab40b7d3811f82699249faa6",
+  "source": "https://github.com/soapisnotfat/sheetscan/tree/ac8688002aff2069ab40b7d3811f82699249faa6",
+  "license": "AGPL-3.0",
+  "files": {
+    "Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
+    "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+    "Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
+    "SOURCE.txt": "689d6276950dfdb3b86418c6e3e750aaf6adbe58e51e420c9a47b0e50b761639",
+    "assets/omr.worker-B3FX0Pjk.js": "75c9683266f08d292800a8d076949beb38a987bbc58dd0be1687c7eb5c768e51",
+    "assets/ort.worker-D_2t0jH_.js": "69ee7169a2ecb415eaf87d55cd485d3ce3b43687e6cf381eb634c2b149cf5c47",
+    "homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709",
+    "licenses/accidental-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
+    "licenses/accidental-fonts/Eugene-LICENSE.txt": "852b484f301e2ca787b91c6dcaccd95e7cb480587aca46c3d4f1c64b61923eae",
+    "licenses/accidental-fonts/Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
+    "licenses/accidental-fonts/Leland-LICENSE.txt": "5267f6c8e8bac5b78ac024be1bc6e325eb3621485647902fb684cc41e22ffc11",
+    "licenses/accidental-fonts/NotoSans-LICENSE.txt": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a",
+    "licenses/accidental-fonts/Sebastian-LICENSE.txt": "eae3dd8a95b13bed17e147ab40b2411ac693d9c7a74b284c03e1bdbb530b55b0",
+    "licenses/accidental-fonts/manifest.json": "7d1455950e8b9b878037cc420afdd9fb560a1aaeaa2e69c7f8d799ecfd2eee7a",
+    "licenses/tuplet-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
+    "licenses/tuplet-fonts/Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
+    "licenses/tuplet-fonts/Leland-LICENSE.txt": "5267f6c8e8bac5b78ac024be1bc6e325eb3621485647902fb684cc41e22ffc11",
+    "licenses/tuplet-fonts/NotoSans-LICENSE.txt": "cee9892f9f0cc8fe882c9e9537ee6a89621d86ee7ceaf70b02e2b2b1c25c061a",
+    "licenses/tuplet-fonts/Sebastian-LICENSE.txt": "eae3dd8a95b13bed17e147ab40b2411ac693d9c7a74b284c03e1bdbb530b55b0",
+    "licenses/tuplet-fonts/manifest.json": "4d57191638e3aa440f3392bca825bd78c9ac1601a235d29f1c116bff949c6dc3",
+    "sheetscan.js": "96a6d1ebb76377f439ffae4102aa666c7370dab63814e75bc1fa1d8408ab2ebe"
+  },
+  "models": [
+    {
+      "name": "segnet",
+      "url": "https://github.com/liebharc/homr/releases/download/onnx_checkpoints/segnet_308-3296ccd40960f90ca6ab9c035cca945675d30a0f.zip",
+      "archiveSha256": "1d4277354a8397a6830ef1279232e6d989c2d254b7451525e53ff3d3754b1f70",
+      "sha256": "6ed36640db4ef5d223098b6d5efe4eda97c66b24a2c72faab8a018c749003a8d"
+    },
+    {
+      "name": "decoder",
+      "url": "https://github.com/liebharc/homr/releases/download/onnx_checkpoints/decoder_pytorch_model_509-2293bba14bfea47d9d28411339362af15fce4c31.zip",
+      "archiveSha256": "3875da31b68c8f4a8a0c875760a6476bf96a7b5bc25d3c020a05610c709dcf64",
+      "sha256": "99a6ac39770616bc1a20d6c409bb85fbbe21ba47f972984f9ef834fb5741b96f"
+    },
+    {
+      "name": "encoder",
+      "url": "https://github.com/liebharc/homr/releases/download/onnx_checkpoints/encoder_pytorch_model_509-2293bba14bfea47d9d28411339362af15fce4c31.zip",
+      "archiveSha256": "d1c89a93a83a85a7a6980da624b60eb58c18ad453e7d72714b87d1265ea17d5b",
+      "sha256": "ee5767286c60dc3d567fe72b6560e7285261ede1535b4215153c199ab3057559"
+    }
+  ]
+}
