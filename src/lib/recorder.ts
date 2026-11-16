@@ -2,6 +2,7 @@ import recorderURL from '../workers/recorder.worklet.js?url';
 import type { RecordingSession } from './types';
 import { createSession, saveChunk } from './storage';
 import { inputConstraints } from './input';
+import type { RecordingWaveformPacket } from './recording-waveform';
 
 export class PCMRecorder {
   private stream?: MediaStream;
@@ -16,6 +17,7 @@ export class PCMRecorder {
   private failed = false;
   private started = false;
   onMeter: (peak: number, peaks?: number[], clipped?: boolean) => void = () => {};
+  onWaveform: (packet: RecordingWaveformPacket) => void = () => {};
   onError: (message: string) => void = () => {};
   onEnded: () => void = () => {};
   constructor(readonly ctx: AudioContext) {}
@@ -45,6 +47,8 @@ export class PCMRecorder {
           .catch((error) => {
             this.fail(error);
           });
+      } else if (data.type === 'waveform') {
+        if (this.started && !this.failed) this.onWaveform(data);
       } else if (data.type === 'meter') this.onMeter(data.peak, data.peaks, data.clipped);
       else if (data.type === 'error') this.fail(Error(data.message));
       else if (data.type === 'done') {

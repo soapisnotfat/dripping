@@ -10,10 +10,17 @@ class DrippingPCMRecorder extends AudioWorkletProcessor {
     this.buffers = this.channels.map(() => new Float32Array(this.capacity));
     this.meterPeaks = this.channels.map(() => 0);
     this.meterClipped = false;
+    this.framesPerBin = Math.max(1, Math.round(sampleRate / 100));
+    this.waveformBatchBins = Math.max(
+      1,
+      Math.min(4, Math.floor((this.capacity - 1) / this.framesPerBin)),
+    );
+    this.resetWaveform();
     this.port.onmessage = ({ data }) => {
       if (data.type === 'arm') {
         this.startFrame = data.startFrame;
         this.endFrame = data.endFrame;
+        this.resetWaveform();
         this.active = true;
       }
       if (data.type === 'stop') {
@@ -21,6 +28,50 @@ class DrippingPCMRecorder extends AudioWorkletProcessor {
         this.finish();
       }
     };
+  }
+  resetWaveform() {
+    this.waveformStart = 0;
+    this.waveformFrames = [];
+    this.waveformMin = this.channels.map(() => []);
+    this.waveformMax = this.channels.map(() => []);
+    this.binFrames = 0;
+    this.binMin = this.channels.map(() => Infinity);
+    this.binMax = this.channels.map(() => -Infinity);
+  }
+  finishWaveformBin() {
+    if (!this.binFrames) return;
+    this.waveformFrames.push(this.binFrames);
+    for (let c = 0; c < this.channels.length; c++) {
+      this.waveformMin[c].push(this.binMin[c]);
+      this.waveformMax[c].push(this.binMax[c]);
+      this.binMin[c] = Infinity;
+      this.binMax[c] = -Infinity;
+    }
+    this.binFrames = 0;
+    // Normally send four 10 ms bins; use smaller batches at high sample rates
+    // so the preview need not wait for the independent persistent PCM chunk.
+    if (this.waveformFrames.length >= this.waveformBatchBins) this.flushWaveform();
+  }
+  flushWaveform() {
+    if (!this.waveformFrames.length) return;
+    const frames = new Uint32Array(this.waveformFrames),
+      min = this.waveformMin.map((values) => new Float32Array(values)),
+      max = this.waveformMax.map((values) => new Float32Array(values));
+    this.port.postMessage(
+      {
+        type: 'waveform',
+        sampleRate,
+        startFrame: this.waveformStart,
+        framesPerBin: this.framesPerBin,
+        frames,
+        min,
+        max,
+      },
+      [frames.buffer, ...min.map((values) => values.buffer), ...max.map((values) => values.buffer)],
+    );
+    this.waveformStart += this.waveformFrames.reduce((sum, value) => sum + value, 0);
+    this.waveformFrames.length = 0;
+    for (const values of [...this.waveformMin, ...this.waveformMax]) values.length = 0;
   }
   flush() {
     if (!this.offset) return;
@@ -33,6 +84,8 @@ class DrippingPCMRecorder extends AudioWorkletProcessor {
   }
   finish() {
     if (this.finished) return;
+    this.finishWaveformBin();
+    this.flushWaveform();
     this.flush();
     this.active = false;
     this.finished = true;
@@ -79,8 +132,13 @@ class DrippingPCMRecorder extends AudioWorkletProcessor {
         break;
       }
       if (frame < this.startFrame) continue;
-      for (let c = 0; c < this.channels.length; c++)
-        this.buffers[c][this.offset] = input[this.channels[c]][i];
+      for (let c = 0; c < this.channels.length; c++) {
+        const value = input[this.channels[c]][i];
+        this.buffers[c][this.offset] = value;
+        this.binMin[c] = Math.min(this.binMin[c], value);
+        this.binMax[c] = Math.max(this.binMax[c], value);
+      }
+      if (++this.binFrames === this.framesPerBin) this.finishWaveformBin();
       if (++this.offset === this.capacity) this.flush();
     }
     return true;
