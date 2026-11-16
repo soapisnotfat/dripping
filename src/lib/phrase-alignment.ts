@@ -44,17 +44,18 @@ export function sourceAttacks(samples:Float32Array,sampleRate=11025):SourceAttac
   return events;
 }
 function similarity(note:PhraseAttack,attack:SourceAttack){const pcs=[...new Set(note.midi.map(midi=>(Math.round(midi)%12+12)%12))];return clamp(pcs.reduce((sum,pc)=>sum+attack.pitch[pc],0)/Math.sqrt(pcs.length),0,1);}
+export function sourceTimeIndex(events:SourceAttack[],time:number){let low=0,high=events.length;while(low<high){const middle=(low+high)>>1;if(events[middle].time<time)low=middle+1;else high=middle;}return low;}
 export function phraseCandidates(phrase:ScorePhrase,events:SourceAttack[]):PhraseCandidate[]{
   const candidates:PhraseCandidate[]=[],notes=phrase.attacks,referenceSpan=notes.at(-1)!.time-notes[0].time;
   for(let start=0;start<events.length;start++){
     if(similarity(notes[0],events[start])<.55)continue;
     let best:PhraseCandidate|undefined;
-    const scales=events.slice(start+1).filter(event=>event.time-events[start].time+.02>=referenceSpan*.5&&event.time-events[start].time-.02<=referenceSpan*2&&similarity(notes.at(-1)!,event)>=.55).map(event=>(event.time-events[start].time)/referenceSpan);
+    const scales:number[]=[],first=sourceTimeIndex(events,events[start].time+referenceSpan*.5-.02),last=sourceTimeIndex(events,events[start].time+referenceSpan*2+.02);for(let at=Math.max(start+1,first);at<last;at++)if(similarity(notes.at(-1)!,events[at])>=.55)scales.push((events[at].time-events[start].time)/referenceSpan);
     for(const scale of scales){
       const points=[{q:notes[0].q,seconds:events[start].time,support:similarity(notes[0],events[start])}];let sum=points[0].support,previous=start,missed=0;
       for(const note of notes.slice(1)){
         const expected=events[start].time+(note.time-notes[0].time)*scale,tolerance=Math.min(.2,Math.max(.065,referenceSpan*scale*.025));let value=0,chosen=-1,support=0;
-        for(let at=previous+1;at<events.length;at++){const event=events[at];if(event.time<expected-tolerance)continue;if(event.time>expected+tolerance)break;const match=similarity(note,event),score=.8*match+.2*(1-Math.abs(event.time-expected)/tolerance);if(match>=.5&&score>value){value=score;support=match;chosen=at;}}
+        for(let at=Math.max(previous+1,sourceTimeIndex(events,expected-tolerance));at<events.length;at++){const event=events[at];if(event.time>expected+tolerance)break;const match=similarity(note,event),score=.8*match+.2*(1-Math.abs(event.time-expected)/tolerance);if(match>=.5&&score>value){value=score;support=match;chosen=at;}}
         if(chosen<0){missed++;continue;}previous=chosen;sum+=value;points.push({q:note.q,seconds:events[chosen].time,support});
       }
       const score=sum/notes.length;if(missed>1||points.at(-1)!.q!==notes.at(-1)!.q||score<.65)continue;
@@ -65,9 +66,9 @@ export function phraseCandidates(phrase:ScorePhrase,events:SourceAttack[]):Phras
   const kept:PhraseCandidate[]=[];for(const candidate of candidates.sort((a,b)=>b.score-a.score))if(kept.every(other=>Math.abs(other.sourceFrom-candidate.sourceFrom)>Math.max(.5,(candidate.sourceTo-candidate.sourceFrom)*.5))){kept.push(candidate);if(kept.length===4)break;}
   return kept;
 }
-export function proposePhraseAlignment(score:Score,samples:Float32Array,sampleRate=11025):PhraseProposal{
+export function proposePhraseAlignment(score:Score,samples:Float32Array,sampleRate=11025,precomputed?:SourceAttack[]):PhraseProposal{
   if(score.tempoMissing)throw Error('Enter the score tempo first');
-  const phrases=scorePhrases(score),events=sourceAttacks(samples,sampleRate);if(phrases.length*events.length**2>400_000_000)throw Error('Phrase matching input is too long; use a shorter source');const candidates=phrases.map(phrase=>phraseCandidates(phrase,events)),nodes=candidates.flat().filter(candidate=>!candidate.reviewOnly).sort((a,b)=>a.from-b.from||a.sourceFrom-b.sourceFrom),map=tempoMap(score),paths:{value:number;indices:number[]}[][]=[];
+  const phrases=scorePhrases(score),events=precomputed||sourceAttacks(samples,sampleRate);const candidates=phrases.map(phrase=>phraseCandidates(phrase,events)),nodes=candidates.flat().filter(candidate=>!candidate.reviewOnly).sort((a,b)=>a.from-b.from||a.sourceFrom-b.sourceFrom),map=tempoMap(score),paths:{value:number;indices:number[]}[][]=[];
   for(let index=0;index<nodes.length;index++){
     const node=nodes[index],options=[{value:node.score,indices:[index]}];
     for(let before=0;before<index;before++){
