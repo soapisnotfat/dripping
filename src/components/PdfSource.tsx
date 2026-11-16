@@ -1,27 +1,212 @@
-import {useEffect,useState} from 'react';
-import type {Locale,Project} from '../lib/types';
-import {pdfFiles} from '../lib/pdf-project';
-import type {ConversionProgress,PreviewPage} from '../lib/pdf-import';
-export function PdfSource({project,locale,zoom,progress,onRecognize,onCancel}:{project:Project;locale:Locale;zoom:number;progress?:ConversionProgress;onRecognize:()=>void;onCancel:()=>void}){
-  const t=(zh:string,en:string)=>locale==='zh'?zh:en,source=project.pdfSource;
-  const [pages,setPages]=useState<{url:string;page:number;fileIndex:number;pageCount:number}[]>([]),[page,setPage]=useState(0),[previewError,setPreviewError]=useState(''),[previewAttempt,setPreviewAttempt]=useState(0),[loading,setLoading]=useState(true);
-  const key=(source?.assetIds||project.scoreConversion?.originalAssetIds||[]).join(',');
-  useEffect(()=>{const controller=new AbortController(),urls=new Map<string,string>();let active=true;setPages([]);setPage(0);setLoading(true);setPreviewError('');
-    const append=(item:PreviewPage)=>{if(!active)return;const id=`${item.fileIndex}:${item.page}`;if(urls.has(id))return;const url=URL.createObjectURL(new Blob([item.png],{type:'image/png'}));urls.set(id,url);setPages(rows=>[...rows,{url,page:item.page,fileIndex:item.fileIndex,pageCount:item.pageCount}]);};
-    void(async()=>{try{const files=await pdfFiles(project);controller.signal.throwIfAborted();const {previewPdf}=await import('../lib/pdf-import');const result=await previewPdf(files,controller.signal,append);result.pages.forEach(append);}catch(error){if(active&&!controller.signal.aborted)setPreviewError(String(error));}finally{if(active)setLoading(false);}})();
-    return()=>{active=false;controller.abort();for(const url of urls.values())URL.revokeObjectURL(url);};
-  },[project.id,key,previewAttempt]);
-  useEffect(()=>{if(progress&&previewError){setPreviewError('');setPreviewAttempt(value=>value+1);}},[!!progress]);
-  const downloading=progress?.phase==='downloading',known=downloading&&Number.isFinite(progress?.total)&&progress!.total!>0;
-  const resourceComplete=!!known&&(progress?.done||0)>=progress!.total!;
-  const stage=!progress?'':downloading?(resourceComplete?t('资源已就绪，继续准备识谱','Resource ready; preparing recognition'):t('下载识谱资源（当前文件）','Downloading recognition resource')):progress.phase==='rendering'?t('处理谱面页面','Preparing score pages')+(progress.page?` · ${progress.page}`:''):progress.phase==='text'?t('整理谱面文字与标记','Reading printed markings'):progress.phase==='loading'?t('加载识谱程序','Loading the recognizer'):t('识别谱面内容','Recognizing score content')+(progress.type==='status'&&/Reading page/i.test(progress.text||'')&&progress.done!==undefined?` · ${progress.done}/${progress.total||'?'} ${t('页','pages')}`:'');
-  const percentage=known&&!resourceComplete?Math.min(100,Math.round((progress!.done||0)/progress!.total!*100)):undefined;
-  const item=pages[Math.min(page,pages.length-1)];
-  return <div className="pdf-source">
-    {!project.score&&<div className="recognition-controls"><button className="recognition-button" disabled={!!progress} onClick={onRecognize}>{progress?t('正在识别…','Recognizing…'):source?.state==='failed'||source?.state==='paused'?t('重试识别','Retry recognition'):t('识别乐谱','Recognize score')}</button>{progress&&<button onClick={onCancel}>{t('暂停','Pause')}</button>}<div className="recognition-progress" role="status" aria-live="polite">{progress?<><span>{stage}{percentage!==undefined?` · ${percentage}%`:''}{downloading&&progress.done!==undefined?` · ${progress.done>=1048576?(progress.done/1048576).toFixed(1)+' MB':(progress.done/1024).toFixed(0)+' KB'}`:''}</span><progress aria-label={stage} max={known&&!resourceComplete?progress!.total:undefined} value={known&&!resourceComplete?progress!.done:undefined}/>{downloading&&<small>{t('这是资源下载进度，完成后继续识谱。','Resource download progress; score recognition follows.')}</small>}</>:<span>{source?.state==='failed'?t('识别未完成，原 PDF 与素材已保存。','Recognition did not finish. Your PDF and files are saved.'):t('原 PDF 已保存。识别完成前可先配置项目与音轨。','Original PDF saved. Configure your project and tracks while recognition is pending.')}</span>}</div></div>}
-    {source?.error&&!progress&&<details className="pdf-recognition-error"><summary>{t('识别错误详情','Recognition error details')}</summary><p>{source.error.message}</p>{source.error.resourceURL&&<code>{source.error.resourceURL}</code>}</details>}
-    <div className="pdf-preview-toolbar"><strong>{t('原 PDF','Original PDF')}</strong>{pages.length>0&&<><button disabled={page===0} aria-label={t('上一页 PDF','Previous PDF page')} onClick={()=>setPage(Math.max(0,page-1))}>‹</button><span>{page+1} / {loading?`${pages.length}+`:pages.length}</span><button disabled={page>=pages.length-1} aria-label={t('下一页 PDF','Next PDF page')} onClick={()=>setPage(Math.min(pages.length-1,page+1))}>›</button></>}{loading&&<span role="status">{t('加载原谱…','Loading original…')}</span>}</div>
-    {item&&<div className="pdf-preview"><img style={{width:`${zoom*100}%`,maxWidth:'none'}} src={item.url} alt={t('原 PDF 第','Original PDF page ')+(page+1)+(locale==='zh'?' 页':'')}/></div>}
-    {previewError&&<div className="pdf-preview-error" role="alert"><p>{t('原 PDF 预览暂未加载，文件仍保存在项目中。','The PDF preview could not load. Its original file remains saved.')}</p><button onClick={()=>setPreviewAttempt(value=>value+1)}>{t('重试预览','Retry preview')}</button><details><summary>{t('详情','Details')}</summary>{previewError}</details></div>}
-  </div>;
+import { useEffect, useState } from 'react';
+import type { Locale, Project } from '../lib/types';
+import { pdfFiles } from '../lib/pdf-project';
+import type { ConversionProgress, PreviewPage } from '../lib/pdf-import';
+export function PdfSource({
+  project,
+  locale,
+  zoom,
+  progress,
+  onRecognize,
+  onCancel,
+}: {
+  project: Project;
+  locale: Locale;
+  zoom: number;
+  progress?: ConversionProgress;
+  onRecognize: () => void;
+  onCancel: () => void;
+}) {
+  const t = (zh: string, en: string) => (locale === 'zh' ? zh : en),
+    source = project.pdfSource;
+  const [pages, setPages] = useState<
+      { url: string; page: number; fileIndex: number; pageCount: number }[]
+    >([]),
+    [page, setPage] = useState(0),
+    [previewError, setPreviewError] = useState(''),
+    [previewAttempt, setPreviewAttempt] = useState(0),
+    [loading, setLoading] = useState(true);
+  const key = (source?.assetIds || project.scoreConversion?.originalAssetIds || []).join(',');
+  useEffect(() => {
+    const controller = new AbortController(),
+      urls = new Map<string, string>();
+    let active = true;
+    setPages([]);
+    setPage(0);
+    setLoading(true);
+    setPreviewError('');
+    const append = (item: PreviewPage) => {
+      if (!active) return;
+      const id = `${item.fileIndex}:${item.page}`;
+      if (urls.has(id)) return;
+      const url = URL.createObjectURL(new Blob([item.png], { type: 'image/png' }));
+      urls.set(id, url);
+      setPages((rows) => [
+        ...rows,
+        { url, page: item.page, fileIndex: item.fileIndex, pageCount: item.pageCount },
+      ]);
+    };
+    void (async () => {
+      try {
+        const files = await pdfFiles(project);
+        controller.signal.throwIfAborted();
+        const { previewPdf } = await import('../lib/pdf-import');
+        const result = await previewPdf(files, controller.signal, append);
+        result.pages.forEach(append);
+      } catch (error) {
+        if (active && !controller.signal.aborted) setPreviewError(String(error));
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+      controller.abort();
+      for (const url of urls.values()) URL.revokeObjectURL(url);
+    };
+  }, [project.id, key, previewAttempt]);
+  useEffect(() => {
+    if (progress && previewError) {
+      setPreviewError('');
+      setPreviewAttempt((value) => value + 1);
+    }
+  }, [!!progress]);
+  const downloading = progress?.phase === 'downloading',
+    known = downloading && Number.isFinite(progress?.total) && progress!.total! > 0;
+  const resourceComplete = !!known && (progress?.done || 0) >= progress!.total!;
+  const stage = !progress
+    ? ''
+    : downloading
+      ? resourceComplete
+        ? t('资源已就绪，继续准备识谱', 'Resource ready; preparing recognition')
+        : t('下载识谱资源（当前文件）', 'Downloading recognition resource')
+      : progress.phase === 'rendering'
+        ? t('处理谱面页面', 'Preparing score pages') + (progress.page ? ` · ${progress.page}` : '')
+        : progress.phase === 'text'
+          ? t('整理谱面文字与标记', 'Reading printed markings')
+          : progress.phase === 'loading'
+            ? t('加载识谱程序', 'Loading the recognizer')
+            : t('识别谱面内容', 'Recognizing score content') +
+              (progress.type === 'status' &&
+              /Reading page/i.test(progress.text || '') &&
+              progress.done !== undefined
+                ? ` · ${progress.done}/${progress.total || '?'} ${t('页', 'pages')}`
+                : '');
+  const percentage =
+    known && !resourceComplete
+      ? Math.min(100, Math.round(((progress!.done || 0) / progress!.total!) * 100))
+      : undefined;
+  const item = pages[Math.min(page, pages.length - 1)];
+  return (
+    <div className="pdf-source">
+      {!project.score && (
+        <div className="recognition-controls">
+          <button className="recognition-button" disabled={!!progress} onClick={onRecognize}>
+            {progress
+              ? t('正在识别…', 'Recognizing…')
+              : source?.state === 'failed' || source?.state === 'paused'
+                ? t('重试识别', 'Retry recognition')
+                : t('识别乐谱', 'Recognize score')}
+          </button>
+          {progress && <button onClick={onCancel}>{t('暂停', 'Pause')}</button>}
+          <div className="recognition-progress" role="status" aria-live="polite">
+            {progress ? (
+              <>
+                <span>
+                  {stage}
+                  {percentage !== undefined ? ` · ${percentage}%` : ''}
+                  {downloading && progress.done !== undefined
+                    ? ` · ${progress.done >= 1048576 ? (progress.done / 1048576).toFixed(1) + ' MB' : (progress.done / 1024).toFixed(0) + ' KB'}`
+                    : ''}
+                </span>
+                <progress
+                  aria-label={stage}
+                  max={known && !resourceComplete ? progress!.total : undefined}
+                  value={known && !resourceComplete ? progress!.done : undefined}
+                />
+                {downloading && (
+                  <small>
+                    {t(
+                      '这是资源下载进度，完成后继续识谱。',
+                      'Resource download progress; score recognition follows.',
+                    )}
+                  </small>
+                )}
+              </>
+            ) : (
+              <span>
+                {source?.state === 'failed'
+                  ? t(
+                      '识别未完成，原 PDF 与素材已保存。',
+                      'Recognition did not finish. Your PDF and files are saved.',
+                    )
+                  : t(
+                      '原 PDF 已保存。识别完成前可先配置项目与音轨。',
+                      'Original PDF saved. Configure your project and tracks while recognition is pending.',
+                    )}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+      {source?.error && !progress && (
+        <details className="pdf-recognition-error">
+          <summary>{t('识别错误详情', 'Recognition error details')}</summary>
+          <p>{source.error.message}</p>
+          {source.error.resourceURL && <code>{source.error.resourceURL}</code>}
+        </details>
+      )}
+      <div className="pdf-preview-toolbar">
+        <strong>{t('原 PDF', 'Original PDF')}</strong>
+        {pages.length > 0 && (
+          <>
+            <button
+              disabled={page === 0}
+              aria-label={t('上一页 PDF', 'Previous PDF page')}
+              onClick={() => setPage(Math.max(0, page - 1))}
+            >
+              ‹
+            </button>
+            <span>
+              {page + 1} / {loading ? `${pages.length}+` : pages.length}
+            </span>
+            <button
+              disabled={page >= pages.length - 1}
+              aria-label={t('下一页 PDF', 'Next PDF page')}
+              onClick={() => setPage(Math.min(pages.length - 1, page + 1))}
+            >
+              ›
+            </button>
+          </>
+        )}
+        {loading && <span role="status">{t('加载原谱…', 'Loading original…')}</span>}
+      </div>
+      {item && (
+        <div className="pdf-preview">
+          <img
+            style={{ width: `${zoom * 100}%`, maxWidth: 'none' }}
+            src={item.url}
+            alt={t('原 PDF 第', 'Original PDF page ') + (page + 1) + (locale === 'zh' ? ' 页' : '')}
+          />
+        </div>
+      )}
+      {previewError && (
+        <div className="pdf-preview-error" role="alert">
+          <p>
+            {t(
+              '原 PDF 预览暂未加载，文件仍保存在项目中。',
+              'The PDF preview could not load. Its original file remains saved.',
+            )}
+          </p>
+          <button onClick={() => setPreviewAttempt((value) => value + 1)}>
+            {t('重试预览', 'Retry preview')}
+          </button>
+          <details>
+            <summary>{t('详情', 'Details')}</summary>
+            {previewError}
+          </details>
+        </div>
+      )}
+    </div>
+  );
 }
