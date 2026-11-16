@@ -61,10 +61,11 @@ export async function deleteSession(id:string){
 }
 const sha256=async(bytes:Uint8Array)=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes as Uint8Array<ArrayBuffer>))).map(n=>n.toString(16).padStart(2,'0')).join('');
 type PackageAsset={id:string;name:string;type:string;path:string;sha256:string;sampleRate?:number;frames?:number;channels?:number};
-export async function exportProject(project:Project):Promise<Blob>{
+export async function exportProject(project:Project,pendingAssets:Asset[]=[]):Promise<Blob>{
   const entries:Record<string,Uint8Array>={},assets:PackageAsset[]=[];let size=0;
+  const pending=new Map(pendingAssets.filter(asset=>asset.projectId===project.id).map(asset=>[asset.id,asset]));
   for(const id of project.assetIds){
-    const asset=await getAsset(id),bytes=new Uint8Array(await asset.blob.arrayBuffer());size+=bytes.length;
+    const asset=pending.get(id)||await getAsset(id),bytes=new Uint8Array(await asset.blob.arrayBuffer());size+=bytes.length;
     if(size>512*1024*1024)throw Error('项目包超过 512 MB，请先单独导出录音 / Project package exceeds 512 MB');
     const path=`assets/${id}`;entries[path]=bytes;
     assets.push({id,name:asset.name,type:asset.type,path,sha256:await sha256(bytes),sampleRate:asset.sampleRate,frames:asset.frames,channels:asset.channels});

@@ -86,7 +86,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
   </Modal>;
 }
 
-export function ExportDialog({project,locale,onClose,onError,feedback}:Common&{project:Project}){
+export function ExportDialog({project,locale,onClose,onError,feedback,pendingAssets=[]}:Common&{project:Project;pendingAssets?:Asset[]}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
   const [busy,setBusy]=useState(''),[status,setStatus]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[speed,setSpeed]=useState(1);
   const [bitDepth,setBitDepth]=useState<24|32>(24),[ceiling,setCeiling]=useState(-1),[matchLoudness,setMatchLoudness]=useState(false),[target,setTarget]=useState(-18);
@@ -109,7 +109,7 @@ export function ExportDialog({project,locale,onClose,onError,feedback}:Common&{p
   const analyze=async()=>{try{setBusy(t('准备分析…','Preparing analysis…'));await getMix();}catch(error){onError(String(error));}finally{setBusy('');}};
   const startDownload=(blob:Blob,name:string)=>{download(blob,name);setStatus(t('已生成并开始下载：','Generated and download started: ')+name);};
   const perform=async(kind:'stems'|'mix'|'project')=>{try{setStatus('');setBusy(t('正在准备导出…','Preparing export…'));
-    if(kind==='project'){startDownload(await exportProject(project),`${safe(project.name)}.drippingproj`);return;}
+    if(kind==='project'){startDownload(await exportProject(project,pendingAssets),`${safe(project.name)}.drippingproj`);return;}
     if(!project.score||project.score.tempoMissing)throw Error(t('请先添加乐谱并确认谱面速度','Add a score and confirm its tempo first'));
     const tracks=project.tracks.filter(track=>selected.includes(track.id));if(!tracks.length)throw Error(t('至少选择一条音轨','Choose at least one track'));
     if(kind==='mix'){
