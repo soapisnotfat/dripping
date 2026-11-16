@@ -1,4 +1,5 @@
 import type {Clip,Selection,Track} from './types';
+import {clipTimelineTime} from './clip-time';
 
 // Keep the playback cursor inside the useful lane area, excluding sticky labels.
 export function timelineFollowLeft(positionPixels:number,scrollLeft:number,viewportWidth:number,contentWidth:number,labelWidth=190):number{
@@ -15,5 +16,9 @@ export function clipSelection(track:Track,clip:Clip):Selection{
 export function clipTrimBounds(track:Track,clip:Clip,sourceDuration?:number){
   const previous=Math.max(-Infinity,...track.clips.filter(c=>c.id!==clip.id&&c.end<=clip.start+1e-7).map(c=>c.end));
   const next=Math.min(Infinity,...track.clips.filter(c=>c.id!==clip.id&&c.start>=clip.end-1e-7).map(c=>c.start));
-  return {start:Math.max(-track.offset,clip.start-clip.sourceStart/clip.rate,previous),end:Math.min(next,sourceDuration===undefined?clip.end:clip.start+(sourceDuration-clip.sourceStart)/clip.rate)};
+  let end=sourceDuration===undefined?clip.end:clipTimelineTime(clip,sourceDuration);
+  // AudioContext resampling can round the decoded source one frame shorter.
+  // Keep the existing edge legal and retain a matching nominal map endpoint.
+  if(sourceDuration!==undefined)for(const point of clip.timeMap||[])if(Math.abs(point.source-sourceDuration)<1/8000)end=Math.max(end,point.time);
+  return {start:Math.max(-track.offset,clipTimelineTime(clip,0),previous),end:Math.min(next,Math.max(clip.end,end))};
 }

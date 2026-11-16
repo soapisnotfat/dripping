@@ -4,6 +4,7 @@ import type {Asset, Project, RecordingSession, RecordingChunk} from './types';
 import {uid, clone} from './types';
 import {parseScore} from './score';
 import {tempoMap, validateAnchors} from './time';
+import {scoreTempoProject} from './score-time';
 
 interface DrippingDB extends DBSchema {
   projects:{key:string;value:Project};
@@ -17,7 +18,7 @@ const dbPromise=openDB<DrippingDB>('dripping',1,{upgrade(db){
   const chunks=db.createObjectStore('chunks',{keyPath:'id'});chunks.createIndex('sessionId','sessionId');
 }});
 export const listProjects=async()=>(await(await dbPromise).getAll('projects')).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
-export const getProject=async(id:string)=>(await dbPromise).get('projects',id);
+export const getProject=async(id:string)=>{const db=await dbPromise,p=await db.get('projects',id);if(!p)return p;if(p.scoreXml)p.score=parseScore(p.scoreXml,p.score?.partId);const normalized=scoreTempoProject(p);if(normalized!==p)await db.put('projects',normalized);return normalized;};
 export const getAsset=async(id:string)=>{
   const a=await(await dbPromise).get('assets',id);if(!a)throw Error('找不到项目素材 / Missing project asset');return a;
 };
@@ -80,7 +81,9 @@ function checkProject(p:Project,assetIds:Set<string>){
   const checkTrack=(t:Project['tracks'][number])=>{
     const sourceValid=t.sourceAssetId!==undefined?assetIds.has(t.sourceAssetId):t.role==='recording'&&Array.isArray(t.clips)&&t.clips.length===0;
     if(!Array.isArray(t.clips)||!Number.isFinite(t.offset)||!Number.isFinite(t.volume)||!Number.isFinite(t.pan)||!sourceValid)throw Error('无效音轨 / Invalid track');
-    for(const c of t.clips)if(!assetIds.has(c.assetId)||![c.start,c.end,c.sourceStart,c.rate,c.gain,c.fadeIn,c.fadeOut].every(Number.isFinite)||c.end<=c.start||c.sourceStart<0||c.rate<.25||c.rate>4)throw Error('无效片段 / Invalid clip');
+    for(const c of t.clips){if(!assetIds.has(c.assetId)||![c.start,c.end,c.sourceStart,c.rate,c.gain,c.fadeIn,c.fadeOut].every(Number.isFinite)||c.end<=c.start||c.sourceStart<0||c.rate<=0)throw Error('无效片段 / Invalid clip');
+      if(c.timeMap&&(c.timeMap.length<2||c.timeMap.some((point,index,all)=>!Number.isFinite(point.time)||!Number.isFinite(point.source)||index>0&&(point.time<=all[index-1].time||point.source<=all[index-1].source))))throw Error('无效音频映射 / Invalid clip timing');
+    }
     if(t.alignment)validateAnchors(t.alignment.anchors);
   };
   p.tracks.forEach(checkTrack);
@@ -115,7 +118,7 @@ export async function importProject(file:Blob):Promise<Project>{
   if(project.scoreAssetId)project.scoreAssetId=oldToNew.get(project.scoreAssetId);
   if(project.scoreXml){project.score=parseScore(project.scoreXml,project.score?.partId);if(!project.scoreMap.length)project.scoreMap=tempoMap(project.score);}
   project.updatedAt=new Date().toISOString();project.name+=' · restored';
-  await saveProject(project,assets);return project;
+  const normalized=scoreTempoProject(project);await saveProject(normalized,assets);return normalized;
 }
 
 export function download(blob:Blob,name:string):void{

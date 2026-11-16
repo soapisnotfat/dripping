@@ -19,7 +19,7 @@ function partial(samples:Float32Array,rate:number,frequency:number){
 }
 it('gives piano a percussive decay and flute a sustained note at the same pitch',()=>{
   const project=newProject('Synth timbre');
-  project.score={totalQ:1,events:[{q:.05,duration:.5,midi:72,voice:'1',staff:1}]} as Score;
+  project.score={tempo:[{q:0,bpm:60}],totalQ:1,events:[{q:.05,duration:.5,midi:72,voice:'1',staff:1}]} as Score;
   project.scoreMap=[{q:0,seconds:0},{q:1,seconds:1}];
   const flute=referencePCM(project,'flute'),piano=referencePCM(project,'piano'),sr=flute.sampleRate;
   const decay=(s:Float32Array)=>rms(s,sr,.4,.47)/rms(s,sr,.1,.17);

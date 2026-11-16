@@ -193,7 +193,8 @@ export function parseScore(xml: string, selectedPart?: string): Score {
   if (!parts.length || !parts[0].measures.length) throw Error('乐谱没有小节 / The score has no measures');
   const part=parts.find(p=>p.id===selectedPart) || parts[0], route=expandRoute(part.measures);
   const events: ScoreEvent[]=[], tempo: Score['tempo']=[];
-  if(!part.measures[0].tempo.some(t=>t.offset===0)&&!parts[0].measures[0].tempo.some(t=>t.offset===0))warnings.push('乐谱开头没有速度标记，暂按四分音符 = 80；请对齐音频或手动校正 / No initial tempo mark; using quarter note = 80 until alignment is corrected');
+  const tempoMissing=!part.measures[0].tempo.some(t=>t.offset===0)&&!parts[0].measures[0].tempo.some(t=>t.offset===0);
+  if(tempoMissing)warnings.push('乐谱开头没有数字速度标记，请先确认谱面速度 / No initial numeric tempo; confirm the score tempo before practicing');
   let bpm=80;
   for (const occurrence of route) {
     const m=part.measures[occurrence.measure];
@@ -208,7 +209,7 @@ export function parseScore(xml: string, selectedPart?: string): Score {
   return {title:txt(all(root,'work-title')[0]) || txt(all(root,'movement-title')[0]) || 'Untitled',
     composer:all(root,'creator').filter(c=>c.getAttribute('type')==='composer').map(c=>txt(c)).join(', '),
     partId:part.id,parts:parts.map(p=>({id:p.id,name:p.name})),measures:part.measures,route,
-    events:events.sort((a,b)=>a.q-b.q),tempo,totalQ,warnings:[...new Set(warnings)]};
+    events:events.sort((a,b)=>a.q-b.q),tempo,totalQ,tempoMissing,warnings:[...new Set(warnings)]};
 }
 
 export function soundingEvents(score: Score): ScoreEvent[] {
@@ -226,4 +227,17 @@ export function soundingEvents(score: Score): ScoreEvent[] {
     if (event.tieStart) ties.set(key,copy); else ties.delete(key);
   }
   return result;
+}
+
+export function setOpeningTempo(xml:string,bpm:number):string{
+  if(!Number.isFinite(bpm)||bpm<20||bpm>400)throw Error('谱面速度需为 20–400 BPM / Score tempo must be 20–400 BPM');
+  const doc=parseXml(xml),parts=all(doc.documentElement,'part');if(!parts.length)throw Error('乐谱没有声部 / Missing score parts');
+  for(const part of parts){
+    const measure=children(part,'measure')[0];if(!measure)continue;
+    for(const element of Array.from(measure.children)){if(element.localName==='note')break;if(element.localName!=='direction'||Number(txt(element,'offset','0'))!==0)continue;for(const metro of all(element,'metronome')){const parent=metro.parentNode!;parent.removeChild(metro);if(!parent.hasChildNodes())element.removeChild(parent);}for(const sound of all(element,'sound')){sound.removeAttribute('tempo');if(!sound.attributes.length&&!sound.hasChildNodes())element.removeChild(sound);}if(!element.children.length)measure.removeChild(element);}
+    const create=(name:string)=>doc.createElementNS(measure.namespaceURI,name),direction=create('direction'),type=create('direction-type'),metro=create('metronome'),unit=create('beat-unit'),minute=create('per-minute'),sound=create('sound');
+    unit.textContent='quarter';minute.textContent=String(bpm);metro.append(unit,minute);type.append(metro);sound.setAttribute('tempo',String(bpm));direction.append(type,sound);
+    const before=Array.from(measure.children).find(element=>element.localName!=='print'&&element.localName!=='attributes');measure.insertBefore(direction,before||null);
+  }
+  return new XMLSerializer().serializeToString(doc);
 }

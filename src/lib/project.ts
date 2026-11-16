@@ -7,6 +7,8 @@ import {transport} from './transport';
 import {encodeWav,clearClips,splitClips,trimClips} from './audio';
 import {audioJobs} from './jobs';
 import {clipSelection,clipTrimBounds} from './timeline';
+import {clipSourceTime} from './clip-time';
+import {scoreTempoProject} from './score-time';
 
 export type ImportItem={file:File;role:TrackRole|'score'};
 export function guessRole(name:string):ImportItem['role']{
@@ -37,7 +39,7 @@ export async function addFiles(project:Project,items:ImportItem[],progress:(text
     }
     assets.push(asset);p.assetIds.push(asset.id);
   }
-  p.updatedAt=new Date().toISOString();p.revision++;await saveProject(p,assets);return p;
+  p.updatedAt=new Date().toISOString();p.revision++;const normalized=scoreTempoProject(p);await saveProject(normalized,assets);return normalized;
 }
 export function editProject(project:Project,label:string,mutate:(p:Project)=>void):Project{
   const p=clone(project),snapshot=()=>({tracks:clone(p.tracks),selection:clone(p.selection),scoreMap:clone(p.scoreMap),referenceTrackId:p.referenceTrackId}),before=snapshot();mutate(p);
@@ -71,9 +73,9 @@ export function trimRegion(project:Project,trackId:string,clipId:string,from:num
     const track=p.tracks.find(track=>track.id===trackId),clip=track?.clips.find(clip=>clip.id===clipId);
     if(!track||!clip)throw Error('找不到片段 / Region is missing');
     const a=from-track.offset,b=to-track.offset,bounds=clipTrimBounds(track,clip,sourceDuration);
-    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||a<bounds.start-1e-7||b>bounds.end+1e-7)throw Error('裁剪不可超出原音频或覆盖相邻片段 / Keep trims within the source and neighboring regions');
+    if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a||from<0||project.score&&to>projectDuration(project)+1e-7||a<bounds.start-1e-7||b>bounds.end+1e-7)throw Error('裁剪不可超出原音频或覆盖相邻片段 / Keep trims within the source and neighboring regions');
     const leftChanged=Math.abs(a-clip.start)>1e-7,rightChanged=Math.abs(b-clip.end)>1e-7;
-    clip.sourceStart=Math.max(0,clip.sourceStart+(a-clip.start)*clip.rate);clip.start=a;clip.end=b;
+    clip.sourceStart=Math.max(0,clipSourceTime(clip,a));clip.start=a;clip.end=b;
     clip.fadeIn=Math.min(leftChanged?Math.max(.003,clip.fadeIn):clip.fadeIn,(b-a)/4);
     clip.fadeOut=Math.min(rightChanged?Math.max(.003,clip.fadeOut):clip.fadeOut,(b-a)/4);
     p.selection=clipSelection(track,clip);
@@ -104,6 +106,8 @@ export function newRecordingSession(project:Project,trackId:string,start:number,
   return {id:uid(),projectId:project.id,trackId,name:`Take ${project.takes.length+1}`,start,speed:project.speed,sampleRate,channels,createdAt:new Date().toISOString(),inputLabel,latencyMs,chunks:0,frames:0};
 }
 export async function renderExport(project:Project,track:Track,from=0,to=projectDuration(project),mixed=false,speed=1):Promise<PCM>{
+  const normalized=scoreTempoProject(project);track=normalized.tracks.find(item=>item.id===track.id)||track;project=normalized;
+  if(!project.score||project.score.tempoMissing)throw Error('先添加乐谱并确认谱面速度 / Add a score and confirm its tempo');
   const buffers=await Promise.all([...new Set(track.clips.map(c=>c.assetId))].map(async id=>[id,await transport.asset(id)]));
   const pcm=await audioJobs.run<PCM>('render',{track,buffers,from,to,sampleRate:transport.ctx.sampleRate,speed,mixed});
   const frames=Math.max(1,Math.round((to-from)/speed*48000));
