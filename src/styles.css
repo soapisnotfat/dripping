@@ -40,3 +40,5 @@
 .draft-number{display:grid;gap:5px}.draft-number small{font-size:11px;color:var(--red);line-height:1.5}.export-status{font-size:11px;color:var(--accent);line-height:1.6;overflow-wrap:anywhere;min-height:1.6em}
 
 .save-status.error{overflow:visible;white-space:normal;flex-wrap:wrap;max-width:none}.save-status button{font-size:10px;padding:5px 8px;min-height:24px}.save-status i{flex-shrink:0}
+
+.modal-error{padding:10px 12px;border:1px solid #e1cabb;border-radius:7px;margin-bottom:14px}.modal-error button{min-width:24px;min-height:24px}.track-controls button{min-width:24px;min-height:24px;font-size:9px}.track-controls input,.output-gain input{height:24px}.track-name>.text-button,.transport-options .check{min-height:24px}.trim-handle{width:24px}

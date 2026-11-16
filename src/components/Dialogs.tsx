@@ -13,15 +13,15 @@ import {MusicalEndpoint} from './SelectionEditor';
 import {audibleTrackIds} from '../lib/mix';
 import {amplitudeDb,planMaster,type AudioStats,type MasterPlan} from '../lib/master';
 
-export function Modal({title,onClose,children,wide=false}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean}){
+export function Modal({title,onClose,children,wide=false,feedback}:{title:string;onClose:()=>void;children:ReactNode;wide?:boolean;feedback?:ReactNode}){
   const closeRef=useRef(onClose),dialog=useRef<HTMLElement>(null),previous=useRef(document.activeElement as HTMLElement);closeRef.current=onClose;
   useEffect(()=>{if(!dialog.current?.contains(document.activeElement))(dialog.current?.querySelector<HTMLElement>('[data-dialog-autofocus]')||dialog.current?.querySelector<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled)'))?.focus();const fn=(e:KeyboardEvent)=>{if(e.key==='Escape')closeRef.current();};document.addEventListener('keydown',fn);return()=>{document.removeEventListener('keydown',fn);(previous.current?.isConnected?previous.current:document.querySelector<HTMLElement>('[data-modal-focus-fallback]'))?.focus();};},[]);
-  return <div className="modal-backdrop" onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={dialog} role="dialog" aria-modal="true" aria-label={title} className={`modal ${wide?'wide':''}`} onKeyDown={e=>{if(e.key!=='Tab')return;const els=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],textarea:not(:disabled)')).filter(n=>n.offsetParent!==null);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}}>
-    <header><h2>{title}</h2><button className="icon-button" aria-label="Close / 关闭" onClick={onClose}>×</button></header>{children}
+  return <div className="modal-backdrop" onPointerDown={e=>{if(e.target===e.currentTarget)onClose();}}><section ref={dialog} role="dialog" aria-modal="true" aria-label={title} className={`modal ${wide?'wide':''}`} onKeyDown={e=>{if(e.key!=='Tab')return;const els=Array.from(e.currentTarget.querySelectorAll<HTMLElement>('button,input,select,a[href],textarea,summary,[tabindex]')).filter(n=>{for(let parent=n.parentElement;parent&&parent!==e.currentTarget;parent=parent.parentElement)if(parent.tagName==='DETAILS'&&!parent.hasAttribute('open')&&!parent.querySelector(':scope > summary')?.contains(n))return false;return n.tabIndex>=0&&!n.matches(':disabled')&&!n.closest('[hidden],[inert]')&&n.getClientRects().length>0&&getComputedStyle(n).visibility==='visible';}).sort((a,b)=>(a.tabIndex>0?a.tabIndex:Number.MAX_SAFE_INTEGER)-(b.tabIndex>0?b.tabIndex:Number.MAX_SAFE_INTEGER));const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}}>
+    <header><h2>{title}</h2><button className="icon-button" aria-label="Close / 关闭" onClick={onClose}>×</button></header>{feedback}{children}
   </section></div>;
 }
-type Common={locale:Locale;onClose:()=>void;onError:(text:string)=>void};
-export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles=[]}:Common&{project?:Project;onOpen:(p:Project)=>void;initialFiles?:File[]}){
+type Common={locale:Locale;onClose:()=>void;onError:(text:string)=>void;feedback?:ReactNode};
+export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles=[],feedback}:Common&{project?:Project;onOpen:(p:Project)=>void;initialFiles?:File[]}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
   const [name,setName]=useState(project?.name||''),[items,setItems]=useState<ImportItem[]>(initialFiles.map(file=>({file,role:guessRole(file.name)}))),[busy,setBusy]=useState('');
   const add=(files:File[])=>{setItems(prev=>[...prev,...files.map(file=>({file,role:guessRole(file.name)}))]);if(!name&&files[0])setName(files[0].name.replace(/\.[^.]+$/,''));};
@@ -33,7 +33,7 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles
     if(!hasScore)throw Error(t('请先添加 MusicXML 乐谱','Add a MusicXML score first'));
     const p=project||newProject(name.trim()||t('未命名练习','Untitled practice'));onOpen(await addFiles(p,items,setBusy));
   }catch(e){onError(String(e));setBusy('');}};
-  return <Modal title={project?t('添加素材','Add files'):t('新的练习','A new practice')} onClose={()=>{if(!busy)onClose();}}>
+  return <Modal feedback={feedback} title={project?t('添加素材','Add files'):t('新的练习','A new practice')} onClose={()=>{if(!busy)onClose();}}>
     {!project&&<label className="field">{t('项目名称','Project name')}<input autoFocus data-dialog-autofocus value={name} placeholder={t('今天想练什么？','What are you playing today?')} onChange={e=>setName(e.target.value)}/></label>}
     <label className="drop-zone" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();add([...e.dataTransfer.files]);}}><span className="drop-symbol">＋</span><strong>{t('放入乐谱、伴奏和示范','Drop your score, backing and demo')}</strong><span>MusicXML / MXL · WAV / MP3 / M4A / FLAC</span><input aria-label={t('选择素材','Choose files')} type="file" multiple accept=".musicxml,.mxl,.xml,.drippingproj,audio/*" onChange={e=>{add([...e.target.files||[]]);e.target.value='';}}/></label>
     <div className="import-list">{items.map((item,i)=><div key={i}><span title={item.file.name}>{item.file.name}<small>{(item.file.size/1024/1024).toFixed(1)} MB</small></span>{! /\.drippingproj$/i.test(item.file.name)&&<select aria-label={`${item.file.name} role`} value={item.role} onChange={e=>setItems(rows=>rows.map((r,j)=>i===j?{...r,role:e.target.value as ImportItem['role']}:r))}><option value="score">{t('乐谱','Score')}</option><option value="backing">{t('伴奏','Backing')}</option><option value="demo">{t('示范录音','Demo recording')}</option></select>}<button className="icon-button" aria-label={t('移除','Remove')} onClick={()=>setItems(rows=>rows.filter((_,j)=>i!==j))}>×</button></div>)}</div>
@@ -43,7 +43,7 @@ export function ImportDialog({project,locale,onClose,onError,onOpen,initialFiles
   </Modal>;
 }
 
-export function AlignmentDialog({project,locale,onClose,onError,onCommit,initialTrack}:Common&{project:Project;onCommit:(p:Project,assets?:Asset[])=>Promise<void>;initialTrack?:string}){
+export function AlignmentDialog({project,locale,onClose,onError,onCommit,initialTrack,feedback}:Common&{project:Project;onCommit:(p:Project,assets?:Asset[])=>Promise<void>;initialTrack?:string}){
   const text=(zh:string,en:string)=>locale==='zh'?zh:en;
   const available=project.tracks.filter((track):track is Track&{sourceAssetId:string}=>track.role!=='recording'&&!!track.sourceAssetId),score=project.score!;
   const [id,setId]=useState(available.find(track=>track.id===initialTrack)?.id||available[0]?.id||'');
@@ -72,7 +72,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
   const preview=async()=>{if(!track)return;try{setBusy(text('准备对齐试听…','Preparing aligned audition…'));const rendered=await render();transport.pcm.set(previewId.current,rendered);
     const p=clone(project);p.tracks=p.tracks.map(other=>({...other,mute:other.id!==id,solo:false,offset:0,clips:other.id===id?[{id:'preview',assetId:previewId.current,label:other.name,start:0,end:projectDuration(p),sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0}]:other.clips}));p.loop=false;transport.reference=true;await transport.start(p,musicalPositionSeconds(scoreAt,score,project.scoreMap));setStatus(text('正在试听对齐结果与谱面合成音。','Auditioning the aligned track with score synth.'));
   }catch(error){onError(String(error));}finally{setBusy('');}};
-  return <Modal title={text('乐谱与音频对齐','Score & audio alignment')} onClose={()=>{if(!busy){transport.pause();transport.reference=false;onClose();}}} wide>
+  return <Modal feedback={feedback} title={text('乐谱与音频对齐','Score & audio alignment')} onClose={()=>{if(!busy){transport.pause();transport.reference=false;onClose();}}} wide>
     <div className="alignment-top"><label className="field">{text('音轨','Track')}<select disabled={!!busy} value={id} onChange={event=>{transport.pause();setId(event.target.value);setCandidate(available.find(track=>track.id===event.target.value)?.alignment);setStatus('');}}>{available.map(track=><option key={track.id} value={track.id}>{track.name}</option>)}</select></label><button disabled={!!busy||!track} onClick={analyze}>{text('自动匹配','Analyze audio')}</button><button disabled={!!busy||!track} onClick={manual}>{text('按谱速手动设置','Set anchors manually')}</button></div>
     <p className="muted">{text('谱面的小节、拍号和速度始终是基准。音频位置也按谱速显示；将对应的音乐位置配对，再校正音轨。','Score bars, meter and tempo always set the clock. Audio positions use score tempo too; pair matching musical moments, then align the track.')}</p>
     <div className="status-line">{busy||status}</div>
@@ -86,7 +86,7 @@ export function AlignmentDialog({project,locale,onClose,onError,onCommit,initial
   </Modal>;
 }
 
-export function ExportDialog({project,locale,onClose,onError}:Common&{project:Project}){
+export function ExportDialog({project,locale,onClose,onError,feedback}:Common&{project:Project}){
   const t=(zh:string,en:string)=>locale==='zh'?zh:en;
   const [busy,setBusy]=useState(''),[status,setStatus]=useState(''),[range,setRange]=useState(false),[selected,setSelected]=useState(()=>audibleTrackIds(project.tracks)),[speed,setSpeed]=useState(1);
   const [bitDepth,setBitDepth]=useState<24|32>(24),[ceiling,setCeiling]=useState(-1),[matchLoudness,setMatchLoudness]=useState(false),[target,setTarget]=useState(-18);
@@ -123,7 +123,7 @@ export function ExportDialog({project,locale,onClose,onError}:Common&{project:Pr
       const data=await new Promise<Uint8Array>((resolve,reject)=>zip(files,{level:0},(error,out)=>error?reject(error):resolve(out)));startDownload(new Blob([data as Uint8Array<ArrayBuffer>],{type:'application/zip'}),`${safe(project.name)} — stems.zip`);
     }
   }catch(error){onError(String(error));}finally{setBusy('');}};
-  return <Modal title={t('带走你的练习','Export your practice')} onClose={()=>{if(!busy)onClose();}}>
+  return <Modal feedback={feedback} title={t('带走你的练习','Export your practice')} onClose={()=>{if(!busy)onClose();}}>
     <p className="muted">{t('混音默认 48 kHz／24-bit WAV；分轨为 48 kHz／32-bit float WAV，共同起点和长度。','Mixes default to 48 kHz / 24-bit WAV. Stems use 48 kHz / 32-bit float WAV with a shared start and length.')}</p>
     <button className="export-reset" disabled={!!busy} onClick={()=>setSelected(audibleTrackIds(project.tracks))}>{t('按当前播放音轨选择','Select currently audible tracks')}</button>
     <div className="check-list">{project.tracks.map(track=><label key={track.id}><input type="checkbox" disabled={!!busy} checked={selected.includes(track.id)} onChange={event=>setSelected(ids=>event.target.checked?[...ids,track.id]:ids.filter(id=>id!==track.id))}/><span>{track.name}<small className="export-track-state">{!track.clips.length?t('无片段','No clips'):track.mute?t('已静音','Muted'):solo&&!track.solo?t('被其他轨独奏排除','Excluded by solo'):track.solo?t('独奏','Solo'):t('播放','Audible')}{selected.includes(track.id)&&!audible.has(track.id)?t(' · 已手动加入导出',' · explicitly included'):''}</small></span></label>)}</div>
