@@ -29,7 +29,7 @@ describe('PCM and non-destructive edits',()=>{
     expect(out.channels[pan===1?1:0][100]).toBeCloseTo(.2,6);
     expect(out.channels[pan===1?0:1][100]).toBeCloseTo(0,6);
   });
-  it.each([.5,.75,1.25,1.5])('changes duration at %s× while retaining pitch and stereo separation',(speed)=>{
+  it.each([.125,.5,.75,1.25,1.5,6])('changes duration at %s× while retaining pitch and stereo separation',(speed)=>{
     const out=stretchAudio(signal,speed);expect(out.channels[0].length).toBe(Math.ceil(sr*2/speed));
     expect(frequency(out.channels[0])).toBeCloseTo(440,0);expect(frequency(out.channels[1])).toBeCloseTo(660,0);
     expect(out.channels[0].some(v=>Math.abs(v)>.1)).toBe(true);

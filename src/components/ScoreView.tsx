@@ -93,7 +93,7 @@ export function ScoreView({project,position,locale,zoom,follow,onFollow,mode,onS
     if(nextBox&&Math.abs(nextBox.y-cursor.y)<100)cursor.x+=(nextBox.x-cursor.x)*Math.max(0,Math.min(1,(targetQ-current.q)/(next.q-current.q)));
     cursor.width=3;cursor.y-=10;cursor.height+=20;
   }
-  if(!score)return <div className="empty-score"><span className="empty-glyph">𝄞</span><h3>{t('添加一份 MusicXML','Add a MusicXML score')}</h3><p>{t('音乐会在这里展开。音轨现在就能播放和录制。','Your music unfolds here. Audio tracks are ready to play and record.')}</p></div>;
+  if(!score)return <div className="empty-score"><span className="empty-glyph">𝄞</span><h3>{t('添加一份 MusicXML','Add a MusicXML score')}</h3><p>{t('音乐会在这里展开。添加后，练习与录音将跟随谱面的小节、拍与速度。','Your music unfolds here. Add one to practice and record using score bars, beats and tempo.')}</p></div>;
   return <div ref={viewport} className="score-viewport" onWheel={()=>onFollow(false)} onTouchMove={()=>onFollow(false)}>
     <div className="score-paper">
       {loading&&<div className="score-loading">{t('正在排版乐谱…','Engraving your score…')}</div>}

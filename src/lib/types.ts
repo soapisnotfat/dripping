@@ -18,7 +18,7 @@ export type ScoreEvent = ScoreNote & {q: number; occurrence: string};
 export type Score = {
   title: string; composer: string; partId: string; parts: {id: string; name: string}[];
   measures: ScoreMeasure[]; route: ScoreOccurrence[]; events: ScoreEvent[];
-  tempo: {q: number; bpm: number}[]; totalQ: number; warnings: string[];
+  tempo: {q: number; bpm: number}[]; totalQ: number; warnings: string[]; tempoMissing?: boolean;
 };
 export type Alignment = {
   anchors: Anchor[]; status: 'estimated' | 'candidate' | 'accepted';
@@ -28,6 +28,7 @@ export type Alignment = {
 export type Clip = {
   id: string; assetId: string; label: string; start: number; end: number;
   sourceStart: number; rate: number; gain: number; fadeIn: number; fadeOut: number;
+  timeMap?: {time:number;source:number}[];
 };
 export type Track = {
   id: string; name: string; role: TrackRole; sourceAssetId?: string;

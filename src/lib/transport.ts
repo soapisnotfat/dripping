@@ -4,6 +4,7 @@ import {getAsset} from './storage';
 import {audioJobs} from './jobs';
 import {projectDuration,qToSeconds,secondsToQ} from './time';
 import {referencePCM,metronomePCM} from './reference';
+import {scoreTempoProject} from './score-time';
 import {audibleTrackIds} from './mix';
 
 export class Transport {
@@ -64,6 +65,8 @@ export class Transport {
     }
   }
   async start(project:Project,from:number,onProgress?:(text:string)=>void,countIn=0,durationOverride?:number):Promise<number>{
+    if(!project.score||project.score.tempoMissing)throw Error('先添加乐谱并确认谱面速度 / Add a score and confirm its tempo');
+    project=scoreTempoProject(project);
     this.pause();await this.ctx.resume();await this.prepare(project,onProgress);
     this.origin=from;this.speed=project.speed;this.end=durationOverride??projectDuration(project);
     this.loopRange=project.loop&&project.selection?{start:project.selection.start,end:project.selection.end}:undefined;

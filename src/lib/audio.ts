@@ -1,6 +1,7 @@
 import {Stretch} from '@soundtouchjs/core';
 import type {PCM, Clip, Track} from './types';
 import {clamp} from './types';
+import {clipSourceTime} from './clip-time';
 
 export function encodeWav(pcm:PCM, bitDepth:16|24|32=16,gain=1):ArrayBuffer {
   // Float preserves sources; integer PCM is used for finished listening files.
@@ -68,8 +69,13 @@ export function peaks(pcm:PCM,count=1200):Float32Array {
 }
 
 export function stretchAudio(pcm:PCM,speed:number):PCM {
-  if(!Number.isFinite(speed)||speed<.25||speed>4)throw Error('Unsupported stretch ratio');
+  if(!Number.isFinite(speed)||speed<1/256||speed>256)throw Error('Unsupported stretch ratio');
   if(pcm.channels.length>2)throw Error('Time stretching supports mono/stereo audio');
+  const requestedFrames=Math.ceil(pcm.channels[0].length/speed);
+  if(requestedFrames*pcm.channels.length>150_000_000)throw Error('Audio render exceeds the memory limit');
+  // Migration rate and practice speed multiply. Keep each SoundTouch pass in
+  // its supported range without clamping musical timing.
+  if(speed<.25||speed>4){const pass=speed<.25?.25:4;return stretchAudio(stretchAudio(pcm,pass),speed/pass);}
   if(Math.abs(speed-1)<1e-5)return {sampleRate:pcm.sampleRate,channels:pcm.channels.map(c=>c.slice())};
   if(!('resize' in ArrayBuffer.prototype))throw Error('保调变速需要较新的浏览器 / Update the browser to use pitch-preserving speed');
   const frames=pcm.channels[0].length,target=Math.ceil(frames/speed);
@@ -102,7 +108,7 @@ export function stretchAudio(pcm:PCM,speed:number):PCM {
 export function splitClips(clips:Clip[],a:number,b:number):Clip[] {
   let out=clips.map(c=>({...c}));
   for(const point of [a,b])out=out.flatMap(c=>point>c.start+1e-7&&point<c.end-1e-7?
-    [{...c,id:c.id+'a',end:point,fadeOut:0},{...c,id:c.id+'b',start:point,sourceStart:c.sourceStart+(point-c.start)*c.rate,fadeIn:0}]:[c]);
+    [{...c,id:c.id+'a',end:point,fadeOut:0},{...c,id:c.id+'b',start:point,sourceStart:clipSourceTime(c,point),fadeIn:0}]:[c]);
   return out;
 }
 export function clearClips(clips:Clip[],a:number,b:number):Clip[]{return splitClips(clips,a,b).filter(c=>c.end<=a+1e-7||c.start>=b-1e-7);}
@@ -110,6 +116,18 @@ export function trimClips(clips:Clip[],a:number,b:number):Clip[]{return splitCli
 export function slicePCM(pcm:PCM,start:number,end:number):PCM {
   const a=Math.max(0,Math.round(start*pcm.sampleRate)),b=Math.min(pcm.channels[0].length,Math.round(end*pcm.sampleRate));
   return {sampleRate:pcm.sampleRate,channels:pcm.channels.map(c=>c.slice(a,Math.max(a,b)))};
+}
+
+function warpedClip(pcm:PCM,clip:Clip,from:number,to:number,speed:number):PCM{
+  const sr=pcm.sampleRate,frames=Math.max(1,Math.round((to-from)/speed*sr)),out=pcm.channels.map(()=>new Float32Array(frames)),weights=new Float32Array(frames);
+  const knots=[from,...clip.timeMap!.map(point=>point.time).filter(time=>time>from&&time<to),to];
+  for(let k=0;k<knots.length-1;k++){
+    const a=knots[k],b=knots[k+1],sourceA=clipSourceTime(clip,a),sourceB=clipSourceTime(clip,b),ratio=(sourceB-sourceA)/(b-a)*speed,pad=.015;
+    const rawStart=Math.max(0,sourceA-pad*ratio),rawEnd=Math.min(pcm.channels[0].length/sr,sourceB+pad*ratio),rendered=stretchAudio(slicePCM(pcm,rawStart,rawEnd),ratio),offset=(a-from)/speed-(sourceA-rawStart)/ratio;
+    for(let i=0;i<rendered.channels[0].length;i++){const dest=Math.round(offset*sr)+i;if(dest<0||dest>=frames)continue;const weight=Math.min(1,i/sr/pad,(rendered.channels[0].length-i)/sr/pad);weights[dest]+=weight;for(let c=0;c<out.length;c++)out[c][dest]+=rendered.channels[c][i]*weight;}
+  }
+  for(let i=0;i<frames;i++)if(weights[i]>0)for(const channel of out)channel[i]/=weights[i];
+  return {sampleRate:sr,channels:out};
 }
 
 export function renderTrack(track:Track,buffers:Map<string,PCM>,from:number,to:number,sampleRate:number,speed=1,mixed=false):PCM {
@@ -121,8 +139,8 @@ export function renderTrack(track:Track,buffers:Map<string,PCM>,from:number,to:n
     const raw=buffers.get(clip.assetId);if(!raw)throw Error('Missing audio asset');
     const start=clip.start+track.offset,end=clip.end+track.offset,a=Math.max(from,start),b=Math.min(to,end);
     if(b<=a)continue;
-    const rawStart=clip.sourceStart+(a-start)*clip.rate,rawEnd=clip.sourceStart+(b-start)*clip.rate;
-    const segment=stretchAudio(slicePCM(raw,rawStart,rawEnd),clip.rate*speed);
+    const rawStart=clipSourceTime(clip,a-track.offset),rawEnd=clipSourceTime(clip,b-track.offset);
+    const segment=clip.timeMap?warpedClip(raw,clip,a-track.offset,b-track.offset,speed):stretchAudio(slicePCM(raw,rawStart,rawEnd),clip.rate*speed);
     const dest=Math.round((a-from)/speed*sampleRate),count=Math.min(length-dest,Math.round((b-a)/speed*sampleRate));
     for(let c=0;c<channels;c++) {
       const source=segment.channels[Math.min(c,segment.channels.length-1)];
