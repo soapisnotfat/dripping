@@ -11,7 +11,7 @@ self.onmessage=({data})=>{
     if(kind==='features')result=audioFeatures(payload.samples,payload.sampleRate,payload.hop);
     else if(kind==='align')result=alignToScore(payload.score,payload.features);
     else if(kind==='align-demo')result=alignToDemo(payload.score,payload.demo,payload.demoMap,payload.features);
-    else if(kind==='conform')result=conformAudio(payload.pcm,payload.sourceMap,payload.targetMap,payload.duration);
+    else if(kind==='conform')result=conformAudio(payload.pcm,payload.sourceMap,payload.targetMap,payload.duration,payload.score,payload.manualAnchors);
     else if(kind==='stretch')result=stretchAudio(payload.pcm,payload.speed);
     else if(kind==='resample')result=resamplePCM(payload.pcm,payload.sampleRate,payload.frames);
     else if(kind==='render')result=renderTrack(payload.track,new Map(payload.buffers),payload.from,payload.to,payload.sampleRate,payload.speed,payload.mixed);

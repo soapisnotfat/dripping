@@ -24,6 +24,7 @@ export type Alignment = {
   anchors: Anchor[]; status: 'estimated' | 'candidate' | 'accepted';
   method: 'score-tempo' | 'chroma-dtw' | 'manual' | 'reference';
   cost?: number; coverage?: number; warnings: string[];
+  manualAnchors?: number[];
 };
 export type Clip = {
   id: string; assetId: string; label: string; start: number; end: number;

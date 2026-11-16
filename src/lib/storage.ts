@@ -84,7 +84,7 @@ function checkProject(p:Project,assetIds:Set<string>){
     for(const c of t.clips){if(!assetIds.has(c.assetId)||![c.start,c.end,c.sourceStart,c.rate,c.gain,c.fadeIn,c.fadeOut].every(Number.isFinite)||c.end<=c.start||c.sourceStart<0||c.rate<=0)throw Error('无效片段 / Invalid clip');
       if(c.timeMap&&(c.timeMap.length<2||c.timeMap.some((point,index,all)=>!Number.isFinite(point.time)||!Number.isFinite(point.source)||index>0&&(point.time<=all[index-1].time||point.source<=all[index-1].source))))throw Error('无效音频映射 / Invalid clip timing');
     }
-    if(t.alignment)validateAnchors(t.alignment.anchors);
+    if(t.alignment){validateAnchors(t.alignment.anchors);const edited=t.alignment.manualAnchors;if(edited!==undefined&&(!Array.isArray(edited)||edited.some((q,index)=>!Number.isFinite(q)||q<t.alignment!.anchors[0].q||q>t.alignment!.anchors.at(-1)!.q||index>0&&q<=edited[index-1])))throw Error('无效手动音乐锚点 / Invalid manual musical anchors');}
   };
   p.tracks.forEach(checkTrack);
   for(const command of [...(p.undo||[]),...(p.redo||[])])for(const state of [command.before,command.after]){

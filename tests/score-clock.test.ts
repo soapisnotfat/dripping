@@ -99,3 +99,11 @@ it.each([['position',-1],['scoreXml','broken score'],['partId',12]])('rejects in
   const p=scoreTempoProject(legacy());p.tracks=[];p.assetIds=[];p.undo=[];const changed=changeScoreTempo(p,96),entries=unzipSync(new Uint8Array(await(await exportProject(changed)).arrayBuffer())),manifest=JSON.parse(strFromU8(entries['manifest.json']));
   manifest.project.undo[0].before[field]=value;entries['manifest.json']=strToU8(JSON.stringify(manifest));await expect(importProject(new Blob([zipSync(entries)]) as unknown as globalThis.Blob)).rejects.toThrow(/history|MusicXML/);
 });
+it('round-trips only the explicitly edited musical anchors without rewriting source audio',async()=>{
+  const p=scoreTempoProject(legacy()),id=crypto.randomUUID(),bytes=new Uint8Array([1,3,5,7]);p.undo=[];p.assetIds=[id];p.tracks[0].sourceAssetId=id;p.tracks[0].clips[0].assetId=id;p.tracks[0].alignment={anchors:[{q:0,seconds:0},{q:1.375,seconds:1},{q:5.5,seconds:4.75}],manualAnchors:[1.375],method:'manual',status:'accepted',warnings:[]};
+  await saveProject(p,[{id,projectId:p.id,name:'source.wav',type:'audio/wav',blob:new Blob([bytes]) as unknown as globalThis.Blob}]);const restored=await importProject(await exportProject(p));expect(restored.tracks[0].alignment!.manualAnchors).toEqual([1.375]);expect(await(await getAsset(restored.assetIds[0])).blob.arrayBuffer()).toEqual(bytes.buffer);
+});
+it.each([[1,1],[-1],[9],[Number.NaN]].map(manualAnchors=>({manualAnchors})))('rejects invalid or duplicate explicit musical anchors $manualAnchors',async({manualAnchors})=>{
+  const p=scoreTempoProject(legacy());p.assetIds=[];p.tracks=[{id:'empty',name:'Empty',role:'recording',offset:0,volume:1,pan:0,mute:false,solo:false,color:0,clips:[],alignment:{anchors:[{q:0,seconds:0},{q:5.5,seconds:4}],manualAnchors,method:'manual',status:'candidate',warnings:[]}}];p.undo=[];
+  await expect(importProject(await exportProject(p))).rejects.toThrow(/manual musical anchors/);
+});
