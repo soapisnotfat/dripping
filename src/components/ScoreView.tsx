@@ -329,7 +329,7 @@ export function ScoreView({
                   drag.current = null;
                   if (e.currentTarget.hasPointerCapture(e.pointerId))
                     e.currentTarget.releasePointerCapture(e.pointerId);
-                  if (!d?.moved) {
+                  if (d && !d.moved) {
                     const event = eventFor(box.id);
                     if (event) {
                       if (e.shiftKey && project.selection) {
@@ -343,16 +343,23 @@ export function ScoreView({
                             qToSeconds(event.q + Math.max(0.125, event.duration), project.scoreMap),
                           ),
                         });
-                      } else onSeek(qToSeconds(event.q, project.scoreMap));
+                      } else {
+                        onSelect(null);
+                        onSeek(qToSeconds(event.q, project.scoreMap));
+                      }
                     }
                   }
                 }}
+                onPointerCancel={() => (drag.current = null)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     e.stopPropagation();
                     const event = eventFor(box.id);
-                    if (event) onSeek(qToSeconds(event.q, project.scoreMap));
+                    if (event) {
+                      onSelect(null);
+                      onSeek(qToSeconds(event.q, project.scoreMap));
+                    }
                   }
                 }}
                 onContextMenu={(e) => {

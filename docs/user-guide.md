@@ -28,9 +28,11 @@ A reviewed demonstration can help match the backing when shared accompaniment is
 
 ## Practice and edit a passage
 
-Click a note to seek, drag across notes or a region, or enter start/end bars and beats above the tracks and choose **Create range**. The range editor shows the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording.
+Click a note, the ruler, or an audio waveform to move the playback cursor and clear the previous range. Waveform and ruler clicks follow **Snap**; turn Snap off or hold Alt to choose any exact point. Double-click an audio region to select the whole region, drag across notes or within a region to select a range, or enter start/end bars and beats above the tracks and choose **Create range**. The range editor shows the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording.
 
 Drag the selected region's left/right handles to trim it without changing the source. Snap applies to edge drags; hold Alt to bypass it. Arrow keys adjust a focused handle by one beat, or one eighth of a beat with Shift. Use **Edit selection** for splitting, fades, or punch-in recording.
+
+To remove a whole region, double-click it and choose **Delete region** above the tracks, or press **Delete** / **Backspace**. For a partial range, the button reads **Delete selected audio**. Deleting a range removes only that audio from the selected track and leaves the other regions in place. Undo restores it; the original source recording remains available.
 
 ## Record a take
 
@@ -39,6 +41,8 @@ Choose **+ Recording track** to create and arm a track, or use an existing recor
 In **Audio input**, choose your device and channels. **Test connection** reports device settings; **Check input levels** displays the selected channels while you play, without saving a take or monitoring input. Set the count-in and timing correction before recording.
 
 Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage. After an interrupted recording, it can recover audio chunks that were saved before the interruption.
+
+During recording, use each track's **M** (Mute), **S** (Solo), and volume fader to change what you hear immediately. These controls do not change the dry input being recorded. The recording target stays silent during capture; changing the target or editing audio waits until recording stops.
 
 ## Save and restore a project
 

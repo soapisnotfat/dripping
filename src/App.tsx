@@ -26,6 +26,7 @@ import {
 import { parseScore, type NotationInstrument } from './lib/score';
 import { projectDuration, positionLabel, musicalLabel, qToSeconds, secondsToQ } from './lib/time';
 import { transport } from './lib/transport';
+import { clipSelection } from './lib/timeline';
 import { PCMRecorder } from './lib/recorder';
 import { probeInput } from './lib/input';
 import { peaks } from './lib/audio';
@@ -573,18 +574,23 @@ export default function App() {
         };
         if (selection.end <= selection.start) selection = null;
       }
-      change({ ...pRef.current, selection });
+      change({ ...pRef.current, selection, loop: selection ? pRef.current.loop : false });
       if (selection?.trackId) setEditingTrack(selection.trackId);
     }
   };
   const trackChange = (id: string, patch: Partial<Track>) => {
-    if (!pRef.current || recording) return;
+    if (!pRef.current || busy) return;
+    if (
+      recording &&
+      Object.keys(patch).some((key) => !['mute', 'solo', 'volume', 'pan'].includes(key))
+    )
+      return;
     const p = {
       ...pRef.current,
       tracks: pRef.current.tracks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     };
     change(p);
-    transport.updateMix(p);
+    transport.updateMix(p, session.current?.trackId);
   };
   const history = (redo = false) => {
     if (!pRef.current || recording || busy) return;
@@ -599,7 +605,7 @@ export default function App() {
     }
   };
   const edit = (action: 'split' | 'clear' | 'trim' | 'fade') => {
-    if (!pRef.current || recording) return;
+    if (!pRef.current?.selection || recording || busy) return;
     try {
       pause();
       const id =
@@ -750,6 +756,16 @@ export default function App() {
       } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
         history(e.shiftKey);
+      } else if (
+        (e.key === 'Delete' || e.key === 'Backspace') &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.isComposing &&
+        canEdit
+      ) {
+        e.preventDefault();
+        edit('clear');
       } else if (e.key === 'Escape') setMenu(null);
       else if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
@@ -853,6 +869,18 @@ export default function App() {
     project?.tracks.find((track) => track.role === 'recording')?.id ||
     project?.tracks[0]?.id ||
     '';
+  const selectionTrack = project?.tracks.find((track) => track.id === selectionTrackId),
+    selectedRegion = selectionTrack?.clips.find((clip) => clip.id === project?.selection?.clipId),
+    selectedRegionRange =
+      selectedRegion && selectionTrack ? clipSelection(selectionTrack, selectedRegion) : null,
+    wholeRegionSelected =
+      !!project?.selection &&
+      !!selectedRegionRange &&
+      Math.abs(project.selection.start - selectedRegionRange.start) < 1e-7 &&
+      Math.abs(project.selection.end - selectedRegionRange.end) < 1e-7;
+  const deleteSelectionLabel = wholeRegionSelected
+    ? t('删除片段', 'Delete region')
+    : t('删除选中音频', 'Delete selected audio');
   const undoLabel = [t('撤销', 'Undo'), editLabel(project?.undo.at(-1)?.label, locale)]
       .filter(Boolean)
       .join(' · '),
@@ -1470,6 +1498,13 @@ export default function App() {
                   {t('编辑选区', 'Edit selection')} ▾
                 </button>
                 <button
+                  disabled={!canEdit}
+                  onClick={() => edit('clear')}
+                  title={`${deleteSelectionLabel} (Delete / Backspace) · ${t('可撤销', 'Undo available')}`}
+                >
+                  {deleteSelectionLabel}
+                </button>
+                <button
                   className={snap ? 'active' : ''}
                   aria-pressed={snap}
                   onClick={() => setSnap(!snap)}
@@ -1513,6 +1548,7 @@ export default function App() {
               playing={playing}
               counting={counting}
               locked={recording || !!busy}
+              mixLocked={!!busy}
               armedTrackId={armedTrack?.id}
               activeRecording={recording ? session.current : null}
               onArm={(id) => setArmedTrackId(armedTrackId === id ? '' : id)}
@@ -1544,8 +1580,8 @@ export default function App() {
                 : project.selection
                   ? `${t('选区', 'Selection')} ${musicalLabel(project.selection.start, project, locale)}—${musicalLabel(project.selection.end, project, locale)}`
                   : t(
-                      'Space 播放 · R 录音 · 拖动选区',
-                      'Space to play · R to record · Drag to select',
+                      '单击定位 · 拖动选范围 · 双击选整段',
+                      'Click to seek · Drag for a range · Double-click for a whole region',
                     )}
             </span>
             <span>
@@ -1591,7 +1627,7 @@ export default function App() {
                 {
                   [
                     t('在选区边界切分', 'Split at selection edges'),
-                    t('清空选区', 'Clear selection'),
+                    deleteSelectionLabel,
                     t('仅保留选区', 'Keep only selection'),
                     t('添加短淡入淡出', 'Add short fades'),
                   ][i]

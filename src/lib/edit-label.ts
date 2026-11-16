@@ -4,7 +4,7 @@ export function editLabel(label: string | undefined, locale: Locale): string {
   if (!label) return '';
   const labels: Record<string, [string, string]> = {
     split: ['分割片段', 'Split region'],
-    clear: ['清除选区', 'Clear selection'],
+    clear: ['删除选中音频', 'Delete selected audio'],
     trim: ['保留选区', 'Trim to selection'],
     fade: ['添加淡入淡出', 'Add fades'],
     'trim region': ['裁剪片段', 'Trim region'],
