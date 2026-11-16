@@ -47,6 +47,8 @@ import { DraftNumber } from './components/DraftNumber';
 import { editLabel } from './lib/edit-label';
 import { Icon } from './components/Icon';
 import { Brand } from './components/Brand';
+import { useAudioDevices } from './hooks/useAudioDevices';
+import { recordingRouteKey, useRecordingOffset } from './hooks/useRecordingOffset';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>(
@@ -87,16 +89,27 @@ export default function App() {
   const [waveforms, setWaveforms] = useState(new Map<string, Waveform>()),
     [menu, setMenu] = useState<{ x: number; y: number } | null>(null),
     [editingTrack, setEditingTrack] = useState('');
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]),
-    [device, setDevice] = useState(localStorage.getItem('dripping.inputDevice') || ''),
-    [channels, setChannels] = useState(localStorage.getItem('dripping.inputChannels') || '0'),
+  const [channels, setChannels] = useState(localStorage.getItem('dripping.inputChannels') || '0'),
     [countIn, setCountIn] = useState(4),
-    [latency, setLatency] = useState(Number(localStorage.getItem('dripping.latency') || 0)),
     [monitor, setMonitor] = useState(false),
     [meter, setMeter] = useState(0);
   const [inputStatus, setInputStatus] = useState(''),
     [probing, setProbing] = useState(false),
+    [checkingInput, setCheckingInput] = useState(false),
     [inputClipped, setInputClipped] = useState(false);
+  const audioDevices = useAudioDevices({ locked: recording || !!busy || probing || checkingInput }),
+    { devices, inputId: device, outputId } = audioDevices,
+    { latency, setLatency, savedForRoute } = useRecordingOffset(
+      devices,
+      device,
+      outputId,
+      channels,
+      devices.length > 0 &&
+        !audioDevices.routing &&
+        !['detecting', 'permission-needed', 'deferred', 'unavailable'].includes(
+          audioDevices.status,
+        ),
+    );
   const [armedTrackId, setArmedTrackId] = useState('');
   const armedTrack = project?.tracks.find((t) => t.id === armedTrackId && t.role === 'recording');
   const [recoveries, setRecoveries] = useState<RecordingSession[]>([]),
@@ -662,7 +675,20 @@ export default function App() {
       await finalize();
       return;
     }
-    if (!pRef.current?.score || pRef.current.score.tempoMissing || busy) return;
+    if (audioDevices.status === 'permission-needed') {
+      show('settings');
+      return;
+    }
+    if (
+      !pRef.current?.score ||
+      pRef.current.score.tempoMissing ||
+      busy ||
+      audioDevices.routing ||
+      audioDevices.status === 'detecting' ||
+      devices.length === 0 ||
+      selectedInputUnavailable
+    )
+      return;
     const p = pRef.current,
       target = p.tracks.find((t) => t.id === armedTrackId && t.role === 'recording');
     if (!target) {
@@ -776,17 +802,12 @@ export default function App() {
     return () => window.removeEventListener('keydown', key);
   });
   useEffect(() => {
-    localStorage.setItem('dripping.inputDevice', device);
     localStorage.setItem('dripping.inputChannels', channels);
     setInputStatus('');
   }, [device, channels]);
   useEffect(() => {
-    if (modal === 'settings')
-      navigator.mediaDevices
-        ?.enumerateDevices()
-        .then((list) => setDevices(list.filter((d) => d.kind === 'audioinput')))
-        .catch((e) => report(String(e)));
-  }, [modal, report]);
+    if (modal === 'settings') void audioDevices.refresh();
+  }, [modal, audioDevices.refresh]);
   const testInput = async () => {
     try {
       setProbing(true);
@@ -823,19 +844,6 @@ export default function App() {
       setBusy('');
     }
   };
-  const refreshDevices = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      stream.getTracks().forEach((t) => t.stop());
-      setDevices(
-        (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'),
-      );
-    } catch (e) {
-      report(String(e));
-    }
-  };
   const restoreRecording = async (s: RecordingSession) => {
     try {
       setBusy(t('恢复录音…', 'Recovering take…'));
@@ -862,6 +870,71 @@ export default function App() {
   const pdfVisible =
     !!project && (!!project.pdfSource || !!project.scoreConversion) && (!project.score || viewPdf);
   const tempoReady = !!project?.score && !project.score.tempoMissing;
+  const deviceControlsLocked = probing || checkingInput || audioDevices.routing,
+    inputDevices = devices.filter((item) => item.kind === 'audioinput'),
+    outputDevices = devices.filter((item) => item.kind === 'audiooutput'),
+    selectedInputUnavailable =
+      !!device &&
+      inputDevices.some((item) => item.label) &&
+      !inputDevices.some((item) => item.deviceId === device),
+    inputName =
+      inputDevices.find((item) => item.deviceId === device)?.label ||
+      (device
+        ? t('所选输入不可用', 'Selected input unavailable')
+        : t('系统默认输入', 'System default input')),
+    outputName =
+      outputDevices.find((item) => item.deviceId === outputId)?.label ||
+      (outputId
+        ? t('所选输出不可用', 'Selected output unavailable')
+        : t('系统默认输出', 'System default output')),
+    routingStatus = {
+      detecting: t('正在检测音频设备…', 'Detecting audio devices…'),
+      automatic: t('已自动配对输入和输出', 'Input and output paired automatically'),
+      manual: t(
+        '使用手动选择；不会自动覆盖',
+        'Using your manual choices; automatic switching is off',
+      ),
+      'permission-needed': t(
+        '首次使用请授权，之后插入设备即可自动检测',
+        'Allow audio access once to detect connected devices automatically',
+      ),
+      'no-device': t(
+        '未发现 AE-20 / AE-30，可手动选择其他音频设备',
+        'No AE-20 / AE-30 found; you can select other audio devices manually',
+      ),
+      'multiple-devices': t(
+        '发现多台乐器，请手动选择输入和输出',
+        'Multiple instruments found; select input and output manually',
+      ),
+      'input-only': t(
+        '已选择乐器输入；未找到唯一对应输出，请手动选择',
+        'Instrument input selected; choose an output because no unique match was found',
+      ),
+      'output-unsupported': t(
+        '当前浏览器不能切换输出，请在系统声音设置中选择 AE-20',
+        'This browser cannot switch outputs. Select your instrument in system sound settings',
+      ),
+      deferred: t(
+        '输入检测或录音期间保持当前设备，结束后再处理设备变化',
+        'Keeping current devices during input checks or recording; changes will apply afterwards',
+      ),
+      'input-disconnected': t(
+        '所选输入已断开，请重新连接或手动选择',
+        'Selected input disconnected; reconnect it or choose another input',
+      ),
+      'output-disconnected': t(
+        '所选输出已断开，现使用系统默认输出',
+        'Selected output disconnected; using the system default output',
+      ),
+      'switch-failed': t(
+        '设备切换失败；输出仍以当前设备显示为准',
+        'Device switch failed; the output shown below is the applied route',
+      ),
+      unavailable: t(
+        '此浏览器无法访问音频设备，请使用支持录音的 HTTPS 页面',
+        'Audio devices are unavailable; use a recording-capable browser on HTTPS',
+      ),
+    }[audioDevices.status];
   const canEdit = tempoReady && !!project?.selection && !recording && !busy;
   const selectionTrackId =
     project?.selection?.trackId ||
@@ -1336,7 +1409,16 @@ export default function App() {
                     ? armedTrack.name
                     : t('先新增或待命一条录音轨', 'Add or arm a recording track first')
                 }
-                disabled={!!busy || !tempoReady || (!recording && !armedTrack)}
+                disabled={
+                  !!busy ||
+                  !tempoReady ||
+                  (!recording &&
+                    (!armedTrack ||
+                      audioDevices.routing ||
+                      audioDevices.status === 'detecting' ||
+                      (devices.length === 0 && audioDevices.status !== 'permission-needed') ||
+                      selectedInputUnavailable))
+                }
                 onClick={() => record(false)}
               >
                 <span />
@@ -1429,7 +1511,8 @@ export default function App() {
               </select>
             </div>
             <button
-              aria-label={t('音频输入', 'Audio input')}
+              aria-label={t('音频设备', 'Audio devices')}
+              title={`${inputName} → ${outputName} · ${routingStatus}`}
               className={`input-button ${recording ? 'live' : ''}`}
               disabled={recording || !!busy}
               onClick={() => show('settings')}
@@ -1440,7 +1523,7 @@ export default function App() {
                   ? counting
                     ? t('预备拍', 'Count in')
                     : t('正在录音', 'Recording')
-                  : t('音频输入', 'Audio input')}
+                  : t('音频设备', 'Audio devices')}
               </span>
               <i style={{ '--level': `${Math.min(100, meter * 200)}%` } as React.CSSProperties} />
             </button>
@@ -1687,7 +1770,7 @@ export default function App() {
       {modal === 'settings' && (
         <Modal
           feedback={modalFeedback}
-          title={t('音频输入', 'Audio input')}
+          title={t('音频设备', 'Audio devices')}
           onClose={() => setModal(null)}
         >
           <p className="muted">
@@ -1696,30 +1779,95 @@ export default function App() {
               'Recording captures the selected input. Use headphones to keep speaker playback out of your microphone.',
             )}
           </p>
-          <button onClick={refreshDevices}>
-            {t('授权并刷新设备', 'Allow microphone & refresh devices')}
-          </button>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={audioDevices.autoConnect}
+              disabled={deviceControlsLocked}
+              onChange={(e) => audioDevices.setAutoConnect(e.target.checked)}
+            />
+            {t(
+              '插入 AE-20 / AE-30 时自动选择输入和输出',
+              'Automatically select input and output when an AE-20 / AE-30 connects',
+            )}
+          </label>
+          <p role="status" className="muted">
+            {routingStatus}
+          </p>
+          {audioDevices.error && <p role="alert">{audioDevices.error}</p>}
+          <div className="input-test">
+            <button disabled={deviceControlsLocked} onClick={() => void audioDevices.authorize()}>
+              {t('授权并检测音频设备', 'Allow audio access & detect devices')}
+            </button>
+            <button disabled={deviceControlsLocked} onClick={() => void audioDevices.refresh()}>
+              {t('重新检测', 'Refresh devices')}
+            </button>
+            {typeof (navigator.mediaDevices as MediaDevices & { selectAudioOutput?: unknown })
+              ?.selectAudioOutput === 'function' && (
+              <button
+                disabled={deviceControlsLocked || !audioDevices.supportsOutputSelection}
+                onClick={() => void audioDevices.authorizeOutput()}
+              >
+                {t('授权输出设备', 'Allow an output device')}
+              </button>
+            )}
+          </div>
+          <p className="audio-route-summary">
+            {t('当前输入：', 'Current input: ')}
+            {inputName}
+            <br />
+            {t('当前输出：', 'Current output: ')}
+            {outputName}
+          </p>
           <label className="field">
             {t('输入设备', 'Input device')}
-            <select disabled={probing} value={device} onChange={(e) => setDevice(e.target.value)}>
+            <select
+              aria-label={t('输入设备', 'Input device')}
+              disabled={deviceControlsLocked}
+              value={device}
+              onChange={(e) => void audioDevices.selectInput(e.target.value)}
+            >
               <option value="">{t('系统默认', 'System default')}</option>
-              {device && !devices.some((d) => d.deviceId === device) && (
+              {device && !inputDevices.some((d) => d.deviceId === device) && (
                 <option value={device}>
                   {t('所选设备不可用 · 请刷新', 'Selected input unavailable · refresh devices')}
                 </option>
               )}
-              {devices.map((d, i) => (
+              {inputDevices.map((d, i) => (
                 <option value={d.deviceId} key={d.deviceId}>
                   {d.label || `${t('音频输入', 'Audio input')} ${i + 1}`}
                 </option>
               ))}
             </select>
           </label>
+          <label className="field">
+            {t('输出设备（伴奏和监听）', 'Output device (backing and monitoring)')}
+            <select
+              aria-label={t('输出设备', 'Output device')}
+              disabled={deviceControlsLocked || !audioDevices.supportsOutputSelection}
+              value={outputId}
+              onChange={(e) => void audioDevices.selectOutput(e.target.value)}
+            >
+              <option value="">{t('系统默认', 'System default')}</option>
+              {outputId && !outputDevices.some((item) => item.deviceId === outputId) && (
+                <option value={outputId}>
+                  {t('所选输出不可用', 'Selected output unavailable')}
+                </option>
+              )}
+              {outputDevices
+                .filter((item) => item.deviceId !== 'default')
+                .map((item, i) => (
+                  <option key={item.deviceId} value={item.deviceId}>
+                    {item.label || `${t('音频输出', 'Audio output')} ${i + 1}`}
+                  </option>
+                ))}
+            </select>
+          </label>
           <div className="field-row">
             <label className="field">
               {t('输入通道', 'Input channels')}
               <select
-                disabled={probing}
+                disabled={deviceControlsLocked}
                 value={channels}
                 onChange={(e) => setChannels(e.target.value)}
               >
@@ -1740,15 +1888,23 @@ export default function App() {
             </label>
           </div>
           <div className="input-test">
-            <button disabled={probing} onClick={testInput}>
+            <button disabled={deviceControlsLocked} onClick={testInput}>
               {probing ? t('连接中…', 'Connecting…') : t('测试连接', 'Test connection')}
             </button>
             {inputStatus && <span role="status">{inputStatus}</span>}
           </div>
-          <InputMeter device={device} channels={channels} locale={locale} onError={report} />
+          <InputMeter
+            device={device}
+            channels={channels}
+            locale={locale}
+            onError={report}
+            disabled={probing || audioDevices.routing}
+            onRunningChange={setCheckingInput}
+          />
           <label className="field">
             {t('录音向前补偿（毫秒）', 'Shift recording earlier (milliseconds)')}
             <DraftNumber
+              key={recordingRouteKey(devices, device, outputId, channels)}
               label={t('录音向前补偿（毫秒）', 'Shift recording earlier (milliseconds)')}
               value={latency}
               min={-500}
@@ -1759,18 +1915,41 @@ export default function App() {
               )}
               onCommit={(value) => {
                 setLatency(value);
-                localStorage.setItem('dripping.latency', String(value));
               }}
             />
           </label>
+          <p className="muted">
+            {savedForRoute
+              ? t(
+                  '已恢复这组输入、输出和通道的补偿设置。',
+                  'Restored the saved correction for this input, output and channel combination.',
+                )
+              : t(
+                  '这组设备尚未保存补偿。更换输入或输出后，不沿用其他设备的设置。',
+                  'No correction saved for this route. Changing input or output does not reuse another route’s correction.',
+                )}{' '}
+            {t(
+              '自动选设备不等于自动测量延迟。当前网页无法取得完整的输入硬件时间戳，因此不会声称已自动校准。补偿只调整新录音的位置，不消除现场监听延迟。',
+              'Automatic device selection does not measure latency. This page lacks complete input hardware timestamps and does not claim automatic calibration. Correction moves new recordings; it does not remove live monitoring delay.',
+            )}
+          </p>
           <label className="check">
             <input
               type="checkbox"
               checked={monitor}
               onChange={(e) => setMonitor(e.target.checked)}
             />
-            {t('监听输入（建议使用耳机）', 'Monitor input (use headphones)')}
+            {t(
+              '录音时经浏览器回放输入声（耳机监听）',
+              'Play input through the browser while recording (headphones)',
+            )}
           </label>
+          <p className="muted">
+            {t(
+              '已直接听到 AE-20 的声音时，可关闭此项，避免听到第二份延迟回放。关闭后仍会正常录音。',
+              'If you already hear the AE-20 directly, leave this off to avoid a second delayed copy. Recording still works with monitoring off.',
+            )}
+          </p>
           <p className="muted">
             {t(
               '浏览器可用通道由设备和驱动决定。首次使用音频接口时，请先录一小段核对通道及时间偏移。',

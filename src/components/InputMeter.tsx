@@ -8,11 +8,15 @@ export function InputMeter({
   channels,
   locale,
   onError,
+  disabled = false,
+  onRunningChange,
 }: {
   device: string;
   channels: string;
   locale: Locale;
   onError: (message: string) => void;
+  disabled?: boolean;
+  onRunningChange?: (running: boolean) => void;
 }) {
   const t = (zh: string, en: string) => (locale === 'zh' ? zh : en);
   const selected = channels.split(',').map(Number);
@@ -22,6 +26,10 @@ export function InputMeter({
     [starting, setStarting] = useState(false),
     [levels, setLevels] = useState<number[]>([]);
   const [clipped, setClipped] = useState(false);
+  useEffect(() => {
+    onRunningChange?.(running || starting);
+  }, [running, starting, onRunningChange]);
+  useEffect(() => () => onRunningChange?.(false), [onRunningChange]);
   const stop = () => {
     generation.current++;
     probe.current?.close();
@@ -84,7 +92,10 @@ export function InputMeter({
     <div className="input-meter-panel">
       <div className="input-meter-heading">
         <span>{t('所选通道电平', 'Selected input levels')}</span>
-        <button disabled={starting} onClick={() => (running ? stop() : void start())}>
+        <button
+          disabled={starting || (disabled && !running)}
+          onClick={() => (running ? stop() : void start())}
+        >
           {starting
             ? t('连接中…', 'Connecting…')
             : running

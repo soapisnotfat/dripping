@@ -38,7 +38,11 @@ To remove a whole region, double-click it and choose **Delete region** above the
 
 Choose **+ Recording track** to create and arm a track, or use an existing recording track’s **R** button to make it the recording target. The target appears below the playback time; only one track can be armed.
 
-In **Audio input**, choose your device and channels. **Test connection** reports device settings; **Check input levels** displays the selected channels while you play, without saving a take or monitoring input. Set the count-in and timing correction before recording.
+In **Audio devices**, choose your input, output, and channels. With **Automatically select input and output** enabled, connecting an AE-20 or AE-30 selects its audio input and matching output. Allow audio access once so the browser can expose device names. This uses USB audio, not MIDI. If there are multiple possible matches, select the devices manually; a manual selection turns automatic switching off until you enable it again.
+
+Output switching requires a browser with `AudioContext.setSinkId`. Otherwise select your instrument as the system sound output. The panel shows the applied output, and reports denied or unsupported switches. Device changes wait until recording and input-level checks finish. If an input disconnects, reconnect or select another input before recording; the app does not silently use the computer microphone.
+
+**Test connection** reports device settings; **Check input levels** displays the selected channels while you play, without saving a take or monitoring input. Set the count-in and timing correction before recording. Corrections are saved separately for each input/output/channel combination and restored on reconnect. A positive value shifts new recordings earlier; it does not change existing takes or remove live monitoring delay. Automatic device selection is not automatic latency calibration: the page does not have complete input hardware timestamps. See [audio routing and timing](audio-devices.md).
 
 Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage. After an interrupted recording, it can recover audio chunks that were saved before the interruption.
 
