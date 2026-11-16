@@ -4,6 +4,10 @@ A browser workspace for practicing and recording music with sheet music and back
 
 [Open Dripping](https://soapisnotfat.github.io/dripping/) · [User guide](docs/user-guide.md) · [Development](docs/development.md) · [Report a bug](https://github.com/soapisnotfat/dripping/issues)
 
+![Dripping workspace with the Morning Drops score, transport, and audio tracks](docs/images/workspace.png)
+
+*The included [Morning Drops exercise](src/lib/demo.ts), with generated backing and demonstration audio.*
+
 ## Try it
 
 Open the app and choose **Try an example**. The included *Morning Drops* exercise has a score and generated backing and demonstration tracks, so no files or account are needed.
