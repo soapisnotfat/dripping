@@ -14,6 +14,8 @@ Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
     gain.gain.value = Number.isFinite(requestedPeak)
       ? Math.max(0, Math.min(1.2, requestedPeak))
       : 0.1;
+    const fixture = window as Window & { recordingTestInputGain?: GainNode };
+    fixture.recordingTestInputGain = gain;
     input.connect(gain).connect(stream);
     input.start();
     const track = stream.stream.getAudioTracks()[0],
@@ -22,6 +24,7 @@ Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
       input.stop();
       input.disconnect();
       gain.disconnect();
+      if (fixture.recordingTestInputGain === gain) delete fixture.recordingTestInputGain;
       stop();
     };
     return stream.stream;

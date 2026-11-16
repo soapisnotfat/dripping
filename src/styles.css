@@ -806,9 +806,11 @@ button[aria-pressed='true'] {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: #bd656448;
+  background: color-mix(in srgb, var(--paper) 88%, var(--red));
   border-inline: 1px solid var(--red);
   pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
 }
 .recording-region span {
   font-size: 9px;
@@ -816,6 +818,36 @@ button[aria-pressed='true'] {
   padding: 6px;
   display: block;
   white-space: nowrap;
+}
+.recording-waveform {
+  position: absolute;
+  top: 22px;
+  pointer-events: none;
+}
+.recording-level {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 9px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.recording-level meter {
+  width: 45px;
+  height: 8px;
+  accent-color: var(--clip-color);
+}
+.recording-level output {
+  min-width: 56px;
+}
+.recording-level.is-clipped,
+.recording-level.is-clipped strong {
+  color: var(--red);
+}
+.recording-level.is-clipped meter {
+  accent-color: var(--red);
 }
 .fade-in,
 .fade-out {

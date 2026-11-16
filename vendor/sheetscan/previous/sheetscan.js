@@ -1,4 +1,4 @@
-// ../../sheetscan/web/node_modules/pdfjs-dist/build/pdf.mjs
+// ../sheetscan/web/node_modules/pdfjs-dist/build/pdf.mjs
 var e = typeof process == "object" && process + "" == "[object process]" && !process.versions.nw && !(process.versions.electron && process.type && process.type !== "browser"), t = [
 	Infinity,
 	Infinity,
@@ -16726,7 +16726,7 @@ var Aa = class e {
 		}), u;
 	}
 };
-// src/input.js
+// web/src/input.js
 globalThis._pdfjsTestingUtils = { HighlightOutliner: ea }, globalThis.pdfjsLib = {
 	AbortException: N,
 	AnnotationEditorLayer: Ca,
@@ -16808,50 +16808,50 @@ function Pa(e) {
 function Q(e) {
 	if (e?.aborted) throw Pa(e);
 }
-async function* Fa(e, t) {
+async function* Fa(e, t, { maxWidth: n } = {}) {
 	Q(t);
-	let n = await e.arrayBuffer();
+	let r = await e.arrayBuffer();
 	Q(t);
-	let r = Xr({ data: n }), i, a, o = !1, s = () => a ??= r.destroy(), c = () => {
-		i?.cancel(), s().catch(() => {});
+	let i = Xr({ data: r }), a, o, s = !1, c = () => o ??= i.destroy(), l = () => {
+		a?.cancel(), c().catch(() => {});
 	};
-	t?.addEventListener("abort", c, { once: !0 }), t?.aborted && c();
+	t?.addEventListener("abort", l, { once: !0 }), t?.aborted && l();
 	try {
 		Q(t);
-		let e = await r.promise;
-		for (let n = 1; n <= e.numPages; n++) {
+		let e = await i.promise;
+		for (let r = 1; r <= e.numPages; r++) {
 			Q(t);
-			let r = await e.getPage(n);
+			let i = await e.getPage(r);
 			Q(t);
-			let a = r.getViewport({ scale: ja / 72 }), o = Object.assign(document.createElement("canvas"), {
-				width: a.width,
-				height: a.height
-			}), s = o.getContext("2d");
-			s.fillStyle = "#fff", s.fillRect(0, 0, o.width, o.height), i = r.render({
-				canvasContext: s,
-				canvas: o,
-				viewport: a,
+			let o = i.getViewport({ scale: 1 }), s = i.getViewport({ scale: Math.min(ja / 72, n ? n / o.width : Infinity) }), c = Object.assign(document.createElement("canvas"), {
+				width: s.width,
+				height: s.height
+			}), l = c.getContext("2d");
+			l.fillStyle = "#fff", l.fillRect(0, 0, c.width, c.height), a = i.render({
+				canvasContext: l,
+				canvas: c,
+				viewport: s,
 				intent: "print"
 			});
 			try {
-				await i.promise;
+				await a.promise;
 			} finally {
-				i = null;
+				a = null;
 			}
 			Q(t);
-			let { items: c, styles: l } = await r.getTextContent();
+			let { items: u, styles: d } = await i.getTextContent();
 			Q(t);
-			let u = await Na(o, c.filter((e) => e.str?.trim()).map((e) => {
-				let t = F.transform(a.transform, e.transform);
+			let f = await Na(c, u.filter((e) => e.str?.trim()).map((e) => {
+				let t = F.transform(s.transform, e.transform);
 				return {
 					str: e.str,
 					x: t[4],
 					y: t[5],
 					h: Math.hypot(t[2], t[3]),
-					w: e.width * a.scale,
+					w: e.width * s.scale,
 					source: "pdf-text",
 					fontName: e.fontName,
-					fontFamily: l[e.fontName]?.fontFamily,
+					fontFamily: d[e.fontName]?.fontFamily,
 					raw: {
 						str: e.str,
 						transform: [...e.transform],
@@ -16860,16 +16860,20 @@ async function* Fa(e, t) {
 					}
 				};
 			}));
-			t?.aborted && URL.revokeObjectURL(u.url), Q(t), yield u;
+			t?.aborted && URL.revokeObjectURL(f.url), Q(t), yield {
+				...f,
+				page: r,
+				pageCount: e.numPages
+			};
 		}
 	} catch (e) {
-		throw o = !0, t?.aborted ? Pa(t) : e;
+		throw s = !0, t?.aborted ? Pa(t) : e;
 	} finally {
-		t?.removeEventListener("abort", c);
+		t?.removeEventListener("abort", l);
 		try {
-			await s();
+			await c();
 		} catch (e) {
-			if (!o && !t?.aborted) throw e;
+			if (!s && !t?.aborted) throw e;
 		}
 	}
 }
@@ -16880,151 +16884,565 @@ async function Ia(e) {
 	});
 	return r.getContext("2d").drawImage(t, 0, 0, r.width, r.height), Na(r);
 }
-async function La(e, t = () => {}, { signal: n } = {}) {
-	let r = [];
+async function La(e, t = () => {}, { signal: n, maxWidth: r, onPage: i = () => {} } = {}) {
+	let a = [];
 	try {
-		for (let i of e) if (Q(n), i.type === "application/pdf" || /\.pdf$/i.test(i.name)) for await (let e of Fa(i, n)) t(r.push(e));
+		for (let [o, s] of Array.from(e).entries()) if (Q(n), s.type === "application/pdf" || /\.pdf$/i.test(s.name)) for await (let e of Fa(s, n, { maxWidth: r })) e.fileIndex = o, t(a.push(e)), i(e);
 		else {
-			let e = await Ia(i);
-			r.push(e), Q(n), t(r.length);
+			let e = await Ia(s);
+			Object.assign(e, {
+				fileIndex: o,
+				page: 1,
+				pageCount: 1
+			}), a.push(e), i(e), Q(n), t(a.length);
 		}
-		return Q(n), r;
+		return Q(n), a;
 	} catch (e) {
-		throw r.forEach((e) => URL.revokeObjectURL(e.url)), n?.aborted ? Pa(n) : e;
+		throw a.forEach((e) => URL.revokeObjectURL(e.url)), n?.aborted ? Pa(n) : e;
 	}
 }
-// src/ocr.js
-var Ra = "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.esm.min.js", za;
-async function Ba() {
-	let e = await import(
-		/* @vite-ignore */
-		Ra
-), t = await (e.default ?? e).createWorker(["eng", "deu"]);
-	return await t.setParameters({ tessedit_pageseg_mode: "11" }), t;
-}
-var Va = Promise.resolve();
-function Ha(e) {
-	return Va = Va.catch(() => {}).then(() => Ga(e));
-}
-function Ua(e, t) {
-	return Va = Va.catch(() => {}).then(() => Wa(e, t));
-}
-async function Wa(e, [t, n, r, i]) {
-	if (r <= t || i <= n) return null;
-	let a = await (za ??= Ba()), o = await createImageBitmap(new Blob([e.png], { type: "image/png" })), s = document.createElement("canvas");
-	s.width = Math.round((r - t) * 4) + 48, s.height = Math.round((i - n) * 4) + 48;
-	let c = s.getContext("2d", { willReadFrequently: !0 });
-	c.fillStyle = "#fff", c.fillRect(0, 0, s.width, s.height), c.drawImage(o, t, n, r - t, i - n, 24, 24, s.width - 48, s.height - 48), o.close();
-	let l = c.getImageData(0, 0, s.width, s.height), u = new Int32Array(s.width * s.height), d = [], f = (e) => {
-		let t = e * 4;
-		return (l.data[t] + l.data[t + 1] + l.data[t + 2]) / 3 < 160;
-	};
-	for (let e = 0; e < u.length; e++) {
-		if (u[e] || !f(e)) continue;
-		let t = d.length + 1, n = [e], r = {
-			id: t,
-			left: s.width,
-			right: 0,
-			top: s.height,
-			bottom: 0,
-			area: 0
-		};
-		for (u[e] = t; n.length;) {
-			let e = n.pop(), i = e % s.width, a = Math.floor(e / s.width);
-			r.left = Math.min(r.left, i), r.right = Math.max(r.right, i + 1), r.top = Math.min(r.top, a), r.bottom = Math.max(r.bottom, a + 1), r.area++;
-			for (let e = -1; e <= 1; e++) for (let r = -1; r <= 1; r++) {
-				let o = i + r, c = a + e, l = c * s.width + o;
-				o >= 0 && o < s.width && c >= 0 && c < s.height && !u[l] && f(l) && (u[l] = t, n.push(l));
-			}
-		}
-		d.push(r);
+// web/src/runtime-assets.json
+var Ra = {
+	"ort/ort.wasm.min.mjs": {
+		sha256: "c21d9c326d453a4a61398270c804d5979e118540597cb0c07f7b3d64e6098234",
+		bytes: 53725,
+		group: "ort"
+	},
+	"ort/ort-wasm-simd-threaded.mjs": {
+		sha256: "30ed0b5cd1182ede931fea448afb567d4dc705ec957af09f108a2be5f770dac3",
+		bytes: 24738,
+		group: "ort"
+	},
+	"ort/ort-wasm-simd-threaded.wasm": {
+		sha256: "4b884c203b0fa48d057be3332c65513ff85aa3c5bddd6946acc0fab7ecda001d",
+		bytes: 14848852,
+		group: "ort"
+	},
+	"pyodide/pyodide.mjs": {
+		sha256: "6f1d60f7bf529beb300f0f47983c921d3982363640ba20af0e38efdddbc66109",
+		bytes: 17931,
+		group: "python"
+	},
+	"pyodide/pyodide.asm.mjs": {
+		sha256: "f7cdc8ece80678ceb712f8e65ebe6d3a83203a180c399865f49612a051693635",
+		bytes: 1250344,
+		group: "python"
+	},
+	"pyodide/pyodide.asm.wasm": {
+		sha256: "cc36e3cab04fdfc9a63ff13eb52eae2b911bf46c025cc7b281f394bd3de1d5e6",
+		bytes: 9598218,
+		group: "python"
+	},
+	"pyodide/python_stdlib.zip": {
+		sha256: "fa1957e5777068fc4f7437f96d860ae2fbe9c19732ba06c84e004ec16dd7dd7a",
+		bytes: 2545637,
+		group: "python"
+	},
+	"pyodide/pyodide-lock.json": {
+		sha256: "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010",
+		bytes: 119077,
+		group: "python"
+	},
+	"pyodide/numpy-2.4.6-cp314-cp314-pyemscripten_2026_0_wasm32.whl": {
+		sha256: "a292c1f5d7d8a2208cd5e94fc467604c131cabcd2fc14fed6eefde121e7fabdf",
+		bytes: 2960568,
+		group: "python"
+	},
+	"pyodide/opencv_python-4.11.0.86-cp314-cp314-pyemscripten_2026_0_wasm32.whl": {
+		sha256: "469a8ba6758ec4e0bce12436da977a1db3a953e320927c3f55ca6233a5d20acf",
+		bytes: 10675764,
+		group: "python"
+	},
+	"pyodide/pillow-12.2.0-cp314-cp314-pyemscripten_2026_0_wasm32.whl": {
+		sha256: "e29838b7a756e4ee0f27a9cfa9a387ee0dfa2e9dd44be2dd595130b9f9d93ac3",
+		bytes: 1037806,
+		group: "python"
+	},
+	"pyodide/typing_extensions-4.15.0-py3-none-any.whl": {
+		sha256: "4fec68770a05408e668a4fa53d6bf4f0f684b9dacf820c7c5d6e97d3ad225e29",
+		bytes: 44613,
+		group: "python"
+	},
+	"tesseract/tesseract.esm.min.js": {
+		sha256: "64871d76c75609fd5413b88a8171e2ef40deedd77d5875ba23df104b2d05eb29",
+		bytes: 63220,
+		group: "ocr"
+	},
+	"tesseract/worker.min.js": {
+		sha256: "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d",
+		bytes: 111307,
+		group: "ocr"
+	},
+	"tesseract/tesseract.min.js.LICENSE.txt": {
+		sha256: "cdf963ced7d25a0f98901a547647b4d6e2dbe0197fd78c87a059a87b0e542fe2",
+		bytes: 149,
+		group: "ocr"
+	},
+	"tesseract/worker.min.js.LICENSE.txt": {
+		sha256: "45f54171aeaa1d10c0c1a66f374b7bba1f02472b1487fbe892eec04f840002ac",
+		bytes: 466,
+		group: "ocr"
+	},
+	"tesseract/core/tesseract-core-lstm.wasm.js": {
+		sha256: "eef5f8b2f8e20e150680b20adaec4a60babafee3adbe8a94583c81fee46e8680",
+		bytes: 3896484,
+		group: "ocr"
+	},
+	"tesseract/core/tesseract-core-simd-lstm.wasm.js": {
+		sha256: "c58b46a4c796c0b8afccf77591d5b875b6896b45d402bbce8caa6f5362447b38",
+		bytes: 3899472,
+		group: "ocr"
+	},
+	"tesseract/core/tesseract-core-relaxedsimd-lstm.wasm.js": {
+		sha256: "861a536cf9ef8e63cb644d57bab39c388f37f7d6b6f60024b741c5f6b39a59b3",
+		bytes: 3905767,
+		group: "ocr"
+	},
+	"tesseract/lang/eng.traineddata.gz": {
+		sha256: "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91",
+		bytes: 2952873,
+		group: "ocr"
+	},
+	"tesseract/lang/deu.traineddata.gz": {
+		sha256: "306c4280d0cbed46fbff727486bd43b92730181bae80f56941a091f363bdf28b",
+		bytes: 1333102,
+		group: "ocr"
+	},
+	"ort/LICENSE": {
+		sha256: "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c",
+		bytes: 1073,
+		group: "notice"
+	},
+	"tesseract/LICENSE.md": {
+		sha256: "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+		bytes: 11357,
+		group: "notice"
+	},
+	"tesseract/core/LICENSE": {
+		sha256: "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+		bytes: 11358,
+		group: "notice"
+	},
+	"pyodide/LICENSE": {
+		sha256: "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+		bytes: 16725,
+		group: "notice"
+	},
+	"tesseract/lang/LICENSE": {
+		sha256: "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+		bytes: 11358,
+		group: "notice"
+	},
+	"python/LICENSE": {
+		sha256: "b0e25a78cffb43f4d92de8b61ccfa1f1f98ecbc22330b54b5251e7b6ba010231",
+		bytes: 13804,
+		group: "notice"
+	},
+	"ort/ThirdPartyNotices.txt": {
+		sha256: "143764b952fdb1a7c69ce653bfba74a7744d6a8a573bfb73e235fba356c83de3",
+		bytes: 338088,
+		group: "notice"
 	}
-	let p = d.filter((e) => e.area >= 20 && e.bottom - e.top >= (s.height - 48) * .25).sort((e, t) => e.left - t.left), m = p.length >= 2 && p.length <= 3 && p.every((e) => e.right - e.left >= 4 && e.bottom - e.top >= (s.height - 48) * .25), h = [];
-	try {
-		for (let [e, t] of [
-			[7, !1],
-			[7, !0],
-			[13, !0]
-		]) {
-			let n = new ImageData(new Uint8ClampedArray(l.data), l.width, l.height);
-			if (t) for (let e = 0; e < n.data.length; e += 4) {
-				let t = (n.data[e] + n.data[e + 1] + n.data[e + 2]) / 3 >= 160 ? 255 : 0;
-				n.data[e] = n.data[e + 1] = n.data[e + 2] = t;
-			}
-			c.putImageData(n, 0, 0), await a.setParameters({
-				tessedit_pageseg_mode: String(e),
-				tessedit_char_whitelist: "0123456789"
-			});
-			let { data: r } = await a.recognize(s), i = r.text.replace(/\s/g, "");
-			/^\d{1,3}$/.test(i) && +i >= 2 && +i <= 256 && r.confidence >= 55 && h.push({
-				value: +i,
-				score: r.confidence,
-				mode: e
+}, za = {
+	"segnet.onnx": "6ed36640db4ef5d223098b6d5efe4eda97c66b24a2c72faab8a018c749003a8d",
+	"encoder.onnx": "ee5767286c60dc3d567fe72b6560e7285261ede1535b4215153c199ab3057559",
+	"decoder.onnx": "99a6ac39770616bc1a20d6c409bb85fbbe21ba47f972984f9ef834fb5741b96f",
+	"homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709"
+}, Ba = {
+	"segnet.onnx": 57311361,
+	"encoder.onnx": 52861122,
+	"decoder.onnx": 47356003
+}, Va = globalThis.fetch.bind(globalThis), Ha = async (e) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", e)), (e) => e.toString(16).padStart(2, "0")).join(""), Ua = (e) => {
+	if (e?.aborted) throw e.reason ?? new DOMException("Download cancelled", "AbortError");
+}, Wa = (e) => /\.wasm$/.test(e) ? "application/wasm" : /\.m?js$/.test(e) ? "text/javascript" : /\.json$/.test(e) ? "application/json" : "application/octet-stream";
+function Ga(e, t, n = "RESOURCE_DOWNLOAD_FAILED", r = 1) {
+	let i = /* @__PURE__ */ Error(`${t}: ${new URL(e).pathname}`);
+	return Object.assign(i, {
+		code: n,
+		resourceURL: String(e),
+		attempts: r
+	}), i;
+}
+function Ka(e, { signal: t, onProgress: n = () => {}, idleTimeoutMs: r = 45e3, totalTimeoutMs: i = 18e5 } = {}) {
+	let a = e, o = t, s = (e) => {
+		t?.aborted || n(e);
+	}, c = !1, l = /* @__PURE__ */ new Map(), u = (e) => new URL("runtime/" + e, a).href;
+	function d(e) {
+		let t = new URL(e).pathname.split("/runtime/")[1];
+		if (t && Ra[t]) return Ra[t];
+		let n = new URL(e).pathname.split("/").at(-1);
+		return za[n] ? {
+			sha256: za[n],
+			bytes: Ba[n]
+		} : null;
+	}
+	async function f(e, { signal: t = o, onBytes: n = () => {} } = {}) {
+		e = new URL(e, a).href;
+		let c = d(e);
+		if (!c) throw Ga(e, "Unpinned recognition resource", "UNPINNED_RESOURCE");
+		Ua(t);
+		let l;
+		try {
+			l = await caches.open("omr-assets-v1");
+		} catch {
+			s({
+				phase: "downloading",
+				resourceURL: e,
+				warning: "CACHE_UNAVAILABLE",
+				text: "Browser cache unavailable; downloading this resource for the current attempt."
 			});
 		}
-		if (m) for (let e of [!1, !0]) {
-			let t = [], n = [];
-			for (let r of p) {
-				let i = document.createElement("canvas");
-				i.width = r.right - r.left + 48, i.height = r.bottom - r.top + 48;
-				let o = i.getContext("2d", { willReadFrequently: !0 });
-				o.fillStyle = "#fff", o.fillRect(0, 0, i.width, i.height);
-				let c = o.getImageData(0, 0, i.width, i.height);
-				for (let e = r.top; e < r.bottom; e++) for (let t = r.left; t < r.right; t++) {
-					let n = e * s.width + t;
-					if (u[n] !== r.id) continue;
-					let a = ((e - r.top + 24) * i.width + t - r.left + 24) * 4;
-					c.data.set(l.data.subarray(n * 4, n * 4 + 4), a);
+		if (l) {
+			let r;
+			try {
+				r = await l.match(e);
+			} catch {}
+			if (r) {
+				try {
+					let i = await r.arrayBuffer();
+					if ((!c.bytes || i.byteLength === c.bytes) && await Ha(i) === c.sha256) return Ua(t), n(i.byteLength, i.byteLength), s({
+						phase: "downloading",
+						resourceURL: e,
+						resource: new URL(e).pathname,
+						done: i.byteLength,
+						total: i.byteLength,
+						cached: !0,
+						text: "Using downloaded resource."
+					}), i;
+				} catch {
+					Ua(t);
 				}
-				if (o.putImageData(c, 0, 0), e) {
-					let e = o.getImageData(0, 0, i.width, i.height);
-					for (let t = 0; t < e.data.length; t += 4) {
-						let n = (e.data[t] + e.data[t + 1] + e.data[t + 2]) / 3 >= 160 ? 255 : 0;
-						e.data[t] = e.data[t + 1] = e.data[t + 2] = n;
-					}
-					o.putImageData(e, 0, 0);
-				}
-				await a.setParameters({
-					tessedit_pageseg_mode: "10",
-					tessedit_char_whitelist: "0123456789"
+				await l.delete(e).catch(() => {}), s({
+					phase: "downloading",
+					resourceURL: e,
+					warning: "CACHE_CHECKSUM_MISMATCH",
+					text: "A cached resource is incomplete or damaged; downloading it again."
 				});
-				let { data: d } = await a.recognize(i);
-				t.push(d.text.trim()), n.push(d.confidence);
 			}
-			let r = t.join(""), i = Math.min(...n);
-			t.every((e) => /^\d$/.test(e)) && +r >= 2 && +r <= 256 && i >= 55 && h.push({
-				value: +r,
-				score: i,
-				mode: "separate-glyphs"
-			});
 		}
-	} finally {
-		await a.setParameters({
-			tessedit_pageseg_mode: "11",
-			tessedit_char_whitelist: ""
+		let u;
+		for (let a = 1; a <= 3; a++) {
+			Ua(t);
+			let o = new AbortController(), d = () => o.abort(t.reason);
+			t?.addEventListener("abort", d, { once: !0 });
+			let f, p = () => {
+				clearTimeout(f), f = setTimeout(() => o.abort(Ga(e, "Download stopped making progress", "RESOURCE_IDLE_TIMEOUT", a)), r);
+			};
+			p();
+			let m = setTimeout(() => o.abort(Ga(e, "Download exceeded its maximum duration", "RESOURCE_TOTAL_TIMEOUT", a)), i);
+			try {
+				let r = await Va(e, {
+					signal: o.signal,
+					cache: "no-cache"
+				});
+				if (!r.ok) throw Ga(e, `HTTP ${r.status}`, "RESOURCE_HTTP_ERROR", a);
+				let i = r.body.getReader(), u = [], d = c.bytes || Number(r.headers.get("content-length")) || 0, f = 0;
+				for (;;) {
+					let { value: t, done: r } = await i.read();
+					if (r) break;
+					p(), u.push(t), f += t.length, n(f, d), s({
+						phase: "downloading",
+						resourceURL: e,
+						resource: new URL(e).pathname,
+						done: f,
+						total: d,
+						attempt: a,
+						maxAttempts: 3,
+						text: `Downloading ${new URL(e).pathname.split("/").at(-1)}…`
+					});
+				}
+				let m = await new Blob(u).arrayBuffer();
+				if (c.bytes && m.byteLength !== c.bytes || await Ha(m) !== c.sha256) throw Ga(e, "Downloaded resource checksum mismatch", "RESOURCE_CHECKSUM_MISMATCH", a);
+				if (Ua(t), l) try {
+					await l.put(e, new Response(m, { headers: {
+						"Content-Type": Wa(e),
+						"Content-Length": String(m.byteLength),
+						"X-Content-SHA256": c.sha256
+					} }));
+				} catch {
+					s({
+						phase: "downloading",
+						resourceURL: e,
+						warning: "CACHE_WRITE_FAILED",
+						text: "Resource is ready. Browser storage could not keep an offline copy."
+					});
+				}
+				return m;
+			} catch (n) {
+				Ua(t), o.signal.reason?.resourceURL && (n = o.signal.reason), u = n?.resourceURL ? n : Ga(e, n?.message || "Network request failed", "RESOURCE_DOWNLOAD_FAILED", a), a < 3 && s({
+					phase: "downloading",
+					resourceURL: e,
+					resource: new URL(e).pathname,
+					attempt: a,
+					maxAttempts: 3,
+					retrying: !0,
+					text: `Download interrupted. Retrying ${new URL(e).pathname.split("/").at(-1)} (${a + 1}/3)…`
+				});
+			} finally {
+				clearTimeout(f), clearTimeout(m), t?.removeEventListener("abort", d);
+			}
+		}
+		throw u;
+	}
+	async function p(e) {
+		let t = Object.entries(Ra).filter(([, t]) => t.group === e).map(([e]) => e);
+		for (let e = 0; e < t.length; e += 2) await Promise.all(t.slice(e, e + 2).map((e) => f(u(e))));
+	}
+	function m() {
+		c || (c = !0, globalThis.fetch = async (e, t) => {
+			let n = typeof e == "string" ? e : e instanceof URL ? e.href : e.url;
+			if (!d(n)) return Va(e, t);
+			let r = new URL(n, a).href, i = l.get(r);
+			i || (i = f(r, { signal: t?.signal ?? o }), l.set(r, i), i.finally(() => l.delete(r)).catch(() => {}));
+			let s = await i;
+			return new Response(s, { headers: {
+				"Content-Type": Wa(n),
+				"Content-Length": String(s.byteLength)
+			} });
 		});
 	}
-	let g = /* @__PURE__ */ new Map();
-	for (let e of h) g.set(e.value, (g.get(e.value) ?? 0) + 1);
-	let _ = [...g].sort((e, t) => t[1] - e[1])[0];
-	return _ && _[1] >= 2 ? {
-		value: _[0],
-		agreement: _[1],
-		observations: h
-	} : null;
+	async function h(e) {
+		let t = u(e);
+		await f(t);
+		let n;
+		for (let e = 1; e <= 3; e++) {
+			Ua(o);
+			try {
+				return await import(
+					/* @vite-ignore */
+					t + (e === 1 ? "" : `?retry=${e}`)
+);
+			} catch (r) {
+				n = Ga(t, r.message || "Module loading failed", "RESOURCE_MODULE_FAILED", e);
+			}
+		}
+		throw n;
+	}
+	return {
+		assetBytes: f,
+		prepareResources: p,
+		importResource: h,
+		runtimeURL: u,
+		installResourceFetch: m
+	};
 }
-async function Ga(e) {
-	let { data: t } = await (await (za ??= Ba())).recognize(e.url, {}, { blocks: !0 });
-	return (t.blocks ?? []).flatMap((e) => e.paragraphs).flatMap((e) => e.lines).flatMap((e) => e.words).filter((e) => e.confidence > 55 && /\p{L}|^-+$|=|^\d{2,3}\)?$/u.test(e.text)).map(({ text: e, bbox: t }) => ({
-		str: e,
-		x: t.x0,
-		w: t.x1 - t.x0,
-		y: t.y1,
-		h: t.y1 - t.y0
-	}));
+// web/src/ocr.js
+function qa(e) {
+	let { prepareResources: t, runtimeURL: n } = e, r, i, a = !1, o = 0, s = /* @__PURE__ */ new Map(), c = () => new DOMException("Text recognition cancelled", "AbortError");
+	function l() {
+		a = !0, i?.terminate(), i = void 0, r = void 0, m = Promise.resolve();
+		for (let e of s.values()) e.reject(c());
+		s.clear();
+	}
+	function u(e, t) {
+		if (a) return Promise.reject(c());
+		let n = String(++o);
+		return new Promise((r, a) => {
+			s.set(n, {
+				resolve: r,
+				reject: a
+			}), i.postMessage({
+				workerId: "owned-ocr",
+				jobId: n,
+				action: e,
+				payload: t
+			});
+		});
+	}
+	async function d(e) {
+		if (e instanceof Uint8Array) return e;
+		let t = await new Promise((t) => e.toBlob(t, "image/png"));
+		return new Uint8Array(await t.arrayBuffer());
+	}
+	async function f() {
+		if (await t("ocr"), a) throw c();
+		i = new Worker(n("tesseract/worker.min.js")), i.onmessage = ({ data: e }) => {
+			let t = s.get(e.jobId);
+			t && e.status !== "progress" && (s.delete(e.jobId), e.status === "resolve" ? t.resolve({ data: e.data }) : t.reject(Object.assign(Error(String(e.data)), {
+				code: "OCR_WORKER_FAILED",
+				resourceURL: n("tesseract/worker.min.js")
+			})));
+		}, i.onerror = (e) => {
+			let t = Object.assign(Error(e.message || "Text recognition worker failed"), {
+				code: "OCR_WORKER_FAILED",
+				resourceURL: e.filename || n("tesseract/worker.min.js")
+			});
+			for (let e of s.values()) e.reject(t);
+			s.clear();
+		}, await u("load", { options: {
+			lstmOnly: !0,
+			corePath: n("tesseract/core/"),
+			logging: !1
+		} }), await u("loadLanguage", {
+			langs: await Promise.all(["eng", "deu"].map(async (t) => ({
+				code: t,
+				data: new Uint8Array(await e.assetBytes(n("tesseract/lang/" + t + ".traineddata.gz")))
+			}))),
+			options: {
+				cacheMethod: "none",
+				gzip: !0,
+				lstmOnly: !0
+			}
+		}), await u("initialize", {
+			langs: ["eng", "deu"],
+			oem: 1,
+			config: {}
+		});
+		let r = {
+			setParameters: (e) => u("setParameters", { params: e }),
+			recognize: async (e, t = {}, n = { text: !0 }) => u("recognize", {
+				image: await d(e),
+				options: t,
+				output: n
+			})
+		};
+		return await r.setParameters({ tessedit_pageseg_mode: "11" }), r;
+	}
+	function p() {
+		if (!r) {
+			let e = f();
+			r = e, e.catch(() => {
+				r === e && (r = void 0);
+			});
+		}
+		return r;
+	}
+	let m = Promise.resolve();
+	function h(e) {
+		return m = m.catch(() => {}).then(() => v(e));
+	}
+	function g(e, t) {
+		return m = m.catch(() => {}).then(() => _(e, t));
+	}
+	async function _(e, [t, n, r, i]) {
+		if (r <= t || i <= n) return null;
+		let a = await p(), o = await createImageBitmap(new Blob([e.png], { type: "image/png" })), s = document.createElement("canvas");
+		s.width = Math.round((r - t) * 4) + 48, s.height = Math.round((i - n) * 4) + 48;
+		let c = s.getContext("2d", { willReadFrequently: !0 });
+		c.fillStyle = "#fff", c.fillRect(0, 0, s.width, s.height), c.drawImage(o, t, n, r - t, i - n, 24, 24, s.width - 48, s.height - 48), o.close();
+		let l = c.getImageData(0, 0, s.width, s.height), u = new Int32Array(s.width * s.height), d = [], f = (e) => {
+			let t = e * 4;
+			return (l.data[t] + l.data[t + 1] + l.data[t + 2]) / 3 < 160;
+		};
+		for (let e = 0; e < u.length; e++) {
+			if (u[e] || !f(e)) continue;
+			let t = d.length + 1, n = [e], r = {
+				id: t,
+				left: s.width,
+				right: 0,
+				top: s.height,
+				bottom: 0,
+				area: 0
+			};
+			for (u[e] = t; n.length;) {
+				let e = n.pop(), i = e % s.width, a = Math.floor(e / s.width);
+				r.left = Math.min(r.left, i), r.right = Math.max(r.right, i + 1), r.top = Math.min(r.top, a), r.bottom = Math.max(r.bottom, a + 1), r.area++;
+				for (let e = -1; e <= 1; e++) for (let r = -1; r <= 1; r++) {
+					let o = i + r, c = a + e, l = c * s.width + o;
+					o >= 0 && o < s.width && c >= 0 && c < s.height && !u[l] && f(l) && (u[l] = t, n.push(l));
+				}
+			}
+			d.push(r);
+		}
+		let m = d.filter((e) => e.area >= 20 && e.bottom - e.top >= (s.height - 48) * .25).sort((e, t) => e.left - t.left), h = m.length >= 2 && m.length <= 3 && m.every((e) => e.right - e.left >= 4 && e.bottom - e.top >= (s.height - 48) * .25), g = [];
+		try {
+			for (let [e, t] of [
+				[7, !1],
+				[7, !0],
+				[13, !0]
+			]) {
+				let n = new ImageData(new Uint8ClampedArray(l.data), l.width, l.height);
+				if (t) for (let e = 0; e < n.data.length; e += 4) {
+					let t = (n.data[e] + n.data[e + 1] + n.data[e + 2]) / 3 >= 160 ? 255 : 0;
+					n.data[e] = n.data[e + 1] = n.data[e + 2] = t;
+				}
+				c.putImageData(n, 0, 0), await a.setParameters({
+					tessedit_pageseg_mode: String(e),
+					tessedit_char_whitelist: "0123456789"
+				});
+				let { data: r } = await a.recognize(s), i = r.text.replace(/\s/g, "");
+				/^\d{1,3}$/.test(i) && +i >= 2 && +i <= 256 && r.confidence >= 55 && g.push({
+					value: +i,
+					score: r.confidence,
+					mode: e
+				});
+			}
+			if (h) for (let e of [!1, !0]) {
+				let t = [], n = [];
+				for (let r of m) {
+					let i = document.createElement("canvas");
+					i.width = r.right - r.left + 48, i.height = r.bottom - r.top + 48;
+					let o = i.getContext("2d", { willReadFrequently: !0 });
+					o.fillStyle = "#fff", o.fillRect(0, 0, i.width, i.height);
+					let c = o.getImageData(0, 0, i.width, i.height);
+					for (let e = r.top; e < r.bottom; e++) for (let t = r.left; t < r.right; t++) {
+						let n = e * s.width + t;
+						if (u[n] !== r.id) continue;
+						let a = ((e - r.top + 24) * i.width + t - r.left + 24) * 4;
+						c.data.set(l.data.subarray(n * 4, n * 4 + 4), a);
+					}
+					if (o.putImageData(c, 0, 0), e) {
+						let e = o.getImageData(0, 0, i.width, i.height);
+						for (let t = 0; t < e.data.length; t += 4) {
+							let n = (e.data[t] + e.data[t + 1] + e.data[t + 2]) / 3 >= 160 ? 255 : 0;
+							e.data[t] = e.data[t + 1] = e.data[t + 2] = n;
+						}
+						o.putImageData(e, 0, 0);
+					}
+					await a.setParameters({
+						tessedit_pageseg_mode: "10",
+						tessedit_char_whitelist: "0123456789"
+					});
+					let { data: d } = await a.recognize(i);
+					t.push(d.text.trim()), n.push(d.confidence);
+				}
+				let r = t.join(""), i = Math.min(...n);
+				t.every((e) => /^\d$/.test(e)) && +r >= 2 && +r <= 256 && i >= 55 && g.push({
+					value: +r,
+					score: i,
+					mode: "separate-glyphs"
+				});
+			}
+		} finally {
+			await a.setParameters({
+				tessedit_pageseg_mode: "11",
+				tessedit_char_whitelist: ""
+			});
+		}
+		let _ = /* @__PURE__ */ new Map();
+		for (let e of g) _.set(e.value, (_.get(e.value) ?? 0) + 1);
+		let v = [..._].sort((e, t) => t[1] - e[1])[0];
+		return v && v[1] >= 2 ? {
+			value: v[0],
+			agreement: v[1],
+			observations: g
+		} : null;
+	}
+	async function v(e) {
+		let { data: t } = await (await p()).recognize(new Uint8Array(e.png), {}, { blocks: !0 });
+		return (t.blocks ?? []).flatMap((e) => e.paragraphs).flatMap((e) => e.lines).flatMap((e) => e.words).filter((e) => e.confidence > 55 && /\p{L}|^-+$|=|^\d{2,3}\)?$/u.test(e.text)).map(({ text: e, bbox: t }) => ({
+			str: e,
+			x: t.x0,
+			w: t.x1 - t.x0,
+			y: t.y1,
+			h: t.y1 - t.y0
+		}));
+	}
+	return {
+		ocr: h,
+		readNumber: g,
+		close: l
+	};
 }
-// src/metadata.js
-var Ka = {
+var Ja;
+function Ya() {
+	if (!Ja) {
+		let e = new URL(".", "" + import.meta.url);
+		Ja = qa(Ka(/\/(?:src|assets)\/$/.test(e.pathname) ? new URL("..", e).href : e.href));
+	}
+	return Ja;
+}
+var Xa = (...e) => Ya().readNumber(...e), Za = {
 	whole: 4,
 	half: 2,
 	quarter: 1,
@@ -17032,25 +17450,25 @@ var Ka = {
 	"16th": .25,
 	"32nd": .125,
 	"64th": .0625
-}, qa = {
+}, Qa = {
 	quarter: "q",
 	half: "h",
 	eighth: "e"
 };
-function Ja({ bpm: e, unit: t, dotted: n = !1 }) {
-	return e > 0 && Ka[t] ? e * Ka[t] * (n ? 1.5 : 1) : null;
+function $a({ bpm: e, unit: t, dotted: n = !1 }) {
+	return e > 0 && Za[t] ? e * Za[t] * (n ? 1.5 : 1) : null;
 }
-function Ya(e, { bpm: t, unit: n, dotted: r = !1, words: i }) {
+function eo(e, { bpm: t, unit: n, dotted: r = !1, words: i }) {
 	let a = (t, n) => Object.assign(e.createElement(t), n == null ? {} : { textContent: String(n) }), o = a("direction");
 	o.setAttribute("placement", "above"), i && o.appendChild(a("direction-type")).append(a("words", i));
-	let s = Ja({
+	let s = $a({
 		bpm: t,
 		unit: n,
 		dotted: r
 	});
 	return s != null && (o.appendChild(a("direction-type")).appendChild(a("metronome")).append(a("beat-unit", n), ...r ? [a("beat-unit-dot")] : [], a("per-minute", t)), o.appendChild(a("sound")).setAttribute("tempo", String(Number(s.toFixed(8))))), o;
 }
-function Xa(e, t, n, r) {
+function to(e, t, n, r) {
 	let [i, a, o, s] = r.map(Math.round), c = o - i, l = s - a, u = new Uint8Array(c * l), d = new Uint8Array(c * l), f = [];
 	for (let n = 0; n < l; n++) for (let r = 0; r < c; r++) {
 		let o = ((a + n) * t + i + r) * 4;
@@ -17089,7 +17507,7 @@ function Xa(e, t, n, r) {
 		h: l
 	};
 }
-function Za(e, t) {
+function no(e, t) {
 	let [n, r, i, a] = t.map(Math.round), o = i - n, s = a - r, c = new Uint8Array(o * s), l = [];
 	for (let t = 0; t < o * s; t++) {
 		let i = t % o, a = Math.floor(t / o);
@@ -17114,7 +17532,7 @@ function Za(e, t) {
 	}
 	return l;
 }
-function Qa(e, t, n) {
+function ro(e, t, n) {
 	let { x: r, y: i, w: a, h: o } = e;
 	if (a < .25 * n || a > 2.3 * n || o < 1.3 * n || o > 3.7 * n) return null;
 	let s = (e, n) => t.ink[(Math.round(n) - t.top) * t.w + Math.round(e) - t.left] ?? 0, c = -1, l = 0;
@@ -17126,7 +17544,7 @@ function Qa(e, t, n) {
 	if (l < .65 * o || c < r + .4 * a) return null;
 	let u = i + Math.round(.6 * o), d = i + o, f = Math.min(r + a, c + Math.max(1, Math.round(.12 * n))), p = 0;
 	for (let e = u; e < d; e++) for (let t = r; t < f; t++) p += s(t, e);
-	let m = p / ((f - r) * (d - u)), h = Za(s, [
+	let m = p / ((f - r) * (d - u)), h = no(s, [
 		r - 1,
 		u - 1,
 		f + 1,
@@ -17148,9 +17566,9 @@ function Qa(e, t, n) {
 		stemX: c
 	};
 }
-var $a = /* @__PURE__ */ new WeakMap();
-async function eo(e) {
-	return $a.has(e) || $a.set(e, (async () => {
+var io = /* @__PURE__ */ new WeakMap();
+async function ao(e) {
+	return io.has(e) || io.set(e, (async () => {
 		let t = await createImageBitmap(new Blob([e.png], { type: "image/png" })), n = document.createElement("canvas");
 		n.width = t.width, n.height = t.height;
 		let r = n.getContext("2d", { willReadFrequently: !0 });
@@ -17159,10 +17577,10 @@ async function eo(e) {
 			width: n.width,
 			height: n.height
 		};
-	})()), $a.get(e);
+	})()), io.get(e);
 }
-async function to(e) {
-	let { data: t, width: n, height: r } = await eo(e), i = [];
+async function oo(e) {
+	let { data: t, width: n, height: r } = await ao(e), i = [];
 	for (let e = 0; e < r; e++) {
 		let r = 0, a = 0, o = 0, s = 0, c = 0;
 		for (let i = 0; i < n; i++) {
@@ -17191,8 +17609,8 @@ async function to(e) {
 	}
 	return a;
 }
-async function no(e, t) {
-	let n = await eo(e), r = [];
+async function so(e, t) {
+	let n = await ao(e), r = [];
 	for (let e = 0; e < t.length; e++) {
 		let [i, a, o, s] = t[e], c = (s - a) / 4;
 		if (c < 3) continue;
@@ -17203,7 +17621,7 @@ async function no(e, t) {
 			Math.max(0, Math.round(a - .1 * c))
 		];
 		if (l[3] <= l[1]) continue;
-		let u = Xa(n.data, n.width, n.height, l), d = u.components, f = d.filter((e) => e.w >= .5 * c && e.w <= 2 * c && e.h >= 1 && e.h <= .3 * c && e.w >= 2.5 * e.h);
+		let u = to(n.data, n.width, n.height, l), d = u.components, f = d.filter((e) => e.w >= .5 * c && e.w <= 2 * c && e.h >= 1 && e.h <= .3 * c && e.w >= 2.5 * e.h);
 		for (let t = 0; t < f.length; t++) for (let i = t + 1; i < f.length; i++) {
 			let a = f[t], o = f[i];
 			if (a.y > o.y && ([a, o] = [o, a]), Math.abs(a.x - o.x) > .18 * c || Math.min(a.w, o.w) / Math.max(a.w, o.w) < .7 || o.y - a.y - a.h < .13 * c || o.y - a.y > .95 * c) continue;
@@ -17214,7 +17632,7 @@ async function no(e, t) {
 				o.y + o.h
 			];
 			(s[1] + s[3]) / 2;
-			let l = d.filter((e) => e.x + e.w < s[0] - .03 * c && s[0] - (e.x + e.w) < 2.3 * c && Math.abs(e.y + e.h - s[3]) < 1.15 * c).map((e) => Qa(e, u, c)).filter(Boolean).sort((e, t) => s[0] - e.glyphBox[2] - (s[0] - t.glyphBox[2]));
+			let l = d.filter((e) => e.x + e.w < s[0] - .03 * c && s[0] - (e.x + e.w) < 2.3 * c && Math.abs(e.y + e.h - s[3]) < 1.15 * c).map((e) => ro(e, u, c)).filter(Boolean).sort((e, t) => s[0] - e.glyphBox[2] - (s[0] - t.glyphBox[2]));
 			if (!l.length) continue;
 			let p = l[0], m = d.filter((e) => e.x > s[2] && e.x - s[2] < 5 * c && e.h >= .65 * c && e.h <= 2.7 * c && e.w >= .12 * c && e.w <= 4.2 * c && Math.abs(e.y + e.h - s[3]) < 1.25 * c).sort((e, t) => e.x - t.x);
 			if (!m.length || m[0].x - s[2] > 1.3 * c) continue;
@@ -17250,13 +17668,13 @@ async function no(e, t) {
 	}
 	return r;
 }
-async function ro(e, t, n, { readTempoNumber: r = Ua } = {}) {
+async function co(e, t, n, { readTempoNumber: r = Xa } = {}) {
 	let i = JSON.parse(n.querySelector("miscellaneous-field[name=\"staff-layout\"]")?.textContent ?? "[]"), a = e.map((e, n) => (t?.[n] ?? e.text ?? []).map((e) => ({
 		...e,
 		requiresUnitGlyph: !0
 	}))), o = [];
 	for (let t = 0; t < e.length; t++) {
-		if (i[t]?.length || (i[t] = await to(e[t]), o.push({
+		if (i[t]?.length || (i[t] = await oo(e[t]), o.push({
 			page: t,
 			kind: "staff-evidence",
 			source: "horizontal-five-line-image",
@@ -17270,7 +17688,7 @@ async function ro(e, t, n, { readTempoNumber: r = Ua } = {}) {
 			});
 			continue;
 		}
-		let n = await no(e[t], i[t]);
+		let n = await so(e[t], i[t]);
 		o.push({
 			page: t,
 			kind: "tempo-image-scan",
@@ -17309,7 +17727,7 @@ async function ro(e, t, n, { readTempoNumber: r = Ua } = {}) {
 			}), !s) continue;
 			let [c, l, u, d] = i.numberBox;
 			a[t] = a[t].filter((e) => !/^\s*(?:\d{1,3}|[^\s=]{0,3}\s*=\s*\d{2,3})\s*$/.test(e.str) || Math.min(e.x + e.w, u) - Math.max(e.x, c) < .5 * e.w || Math.min(e.y, d) - Math.max(e.y - e.h, l) < .4 * e.h), a[t].push({
-				str: `${qa[i.unit]}${i.dotted ? "." : ""}=${n.value}`,
+				str: `${Qa[i.unit]}${i.dotted ? "." : ""}=${n.value}`,
 				x: i.x,
 				y: i.y,
 				h: i.h,
@@ -17329,7 +17747,7 @@ async function ro(e, t, n, { readTempoNumber: r = Ua } = {}) {
 		sourceAudit: o
 	};
 }
-function io(e, t, n) {
+function lo(e, t, n) {
 	let r = [...e.querySelectorAll("score-partwise > part")], i = [...e.querySelectorAll("part-list > score-part")];
 	if (e.querySelector("score-partwise > defaults > concert-score")) return {
 		status: "preserved",
@@ -17432,8 +17850,8 @@ function io(e, t, n) {
 		evidence: o
 	};
 }
-// src/annotate.js
-var ao = /^([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|omit|no|m|M|\d|[#b♯♭+°ø△()\-,])*)(?:\/([A-G])([#b♯♭]?))?$/, oo = {
+// web/src/annotate.js
+var uo = /^([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|omit|no|m|M|\d|[#b♯♭+°ø△()\-,])*)(?:\/([A-G])([#b♯♭]?))?$/, fo = {
 	"": "major",
 	m: "minor",
 	min: "minor",
@@ -17459,12 +17877,12 @@ var ao = /^([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|omit|no|m|M|\d|[#b♯
 	m7b5: "half-diminished",
 	ø: "half-diminished",
 	5: "power"
-}, so = {
+}, po = {
 	"#": 1,
 	"♯": 1,
 	b: -1,
 	"♭": -1
-}, co = {
+}, mo = {
 	"": "#",
 	"": "b",
 	"": "q",
@@ -17498,7 +17916,7 @@ var ao = /^([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|omit|no|m|M|\d|[#b♯
 	"𝅘𝅥𝅯": "n16",
 	"𝅘𝅥𝅰": "n32",
 	"𝅘𝅥𝅱": "n64"
-}, lo = {
+}, ho = {
 	q: "quarter",
 	h: "half",
 	e: "eighth",
@@ -17506,8 +17924,8 @@ var ao = /^([A-G])([#b♯♭]?)((?:maj|min|dim|aug|sus|add|omit|no|m|M|\d|[#b♯
 	n16: "16th",
 	n32: "32nd",
 	n64: "64th"
-}, uo = /(?:\b(q|h|e|w|n16|n32|n64)\s*(\.?))?\s*=\s*(?:c(?:irc)?a\.?\s*)?(\d{2,3})(?!\d)/, fo = /* @__PURE__ */ RegExp("\\b(grave|largo|larghetto|lento|adagio|andante|andantino|moderato|allegretto|allegro|vivace|presto|prestissimo)\\b", "i");
-function po(e) {
+}, go = /(?:\b(q|h|e|w|n16|n32|n64)\s*(\.?))?\s*=\s*(?:c(?:irc)?a\.?\s*)?(\d{2,3})(?!\d)/, _o = /* @__PURE__ */ RegExp("\\b(grave|largo|larghetto|lento|adagio|andante|andantino|moderato|allegretto|allegro|vivace|presto|prestissimo)\\b", "i");
+function vo(e) {
 	let t = "", n = e.map((e) => {
 		t && (t += " ");
 		let n = t.length;
@@ -17517,21 +17935,21 @@ function po(e) {
 			end: t.length
 		};
 	}), r = [];
-	for (let i of t.matchAll(new RegExp(uo.source, "g"))) {
+	for (let i of t.matchAll(new RegExp(go.source, "g"))) {
 		if (+i[3] <= 0) continue;
-		let t = n.filter((e) => e.end > i.index && e.start < i.index + i[0].length), a = t.map((e) => e.token), o = t[0], s = i[1] ? i.index + i[0].indexOf(i[1]) : -1, c = t.some((e) => (e.token.unitProofs ?? []).some((t) => e.start + t.at === s && t.unit === lo[i[1]])), l = o.token.x + o.token.w * Math.max(0, i.index - o.start) / o.token.str.length, u = e.filter((e) => fo.test(e.str) && e.x <= l && l - e.x - e.w < 3 * e.h).at(-1);
+		let t = n.filter((e) => e.end > i.index && e.start < i.index + i[0].length), a = t.map((e) => e.token), o = t[0], s = i[1] ? i.index + i[0].indexOf(i[1]) : -1, c = t.some((e) => (e.token.unitProofs ?? []).some((t) => e.start + t.at === s && t.unit === ho[i[1]])), l = o.token.x + o.token.w * Math.max(0, i.index - o.start) / o.token.str.length, u = e.filter((e) => _o.test(e.str) && e.x <= l && l - e.x - e.w < 3 * e.h).at(-1);
 		r.push({
 			tokens: [.../* @__PURE__ */ new Set([...a, ...u ? [u] : []])],
 			x: l,
 			bpm: +i[3],
-			unit: lo[i[1]] ?? null,
+			unit: ho[i[1]] ?? null,
 			dotted: !!i[2],
 			unitEvidence: i[1] ? c ? "source-glyph" : "explicit-unit-text" : "unknown",
 			words: u?.str.replace(/\(?\s*\S?\.?\s*=.*$/, "").trim()
 		});
 	}
 	if (!r.length) {
-		let t = e.find((e) => fo.test(e.str));
+		let t = e.find((e) => _o.test(e.str));
 		t && r.push({
 			tokens: [t],
 			x: t.x,
@@ -17543,16 +17961,16 @@ function po(e) {
 	}
 	return r;
 }
-function mo(e) {
+function yo(e) {
 	let t = /* @__PURE__ */ new Set(), n = [];
 	for (let r of e) {
-		let i = co[r.str.trim()];
-		if (!lo[i]) continue;
+		let i = mo[r.str.trim()];
+		if (!ho[i]) continue;
 		let a = e.filter((e) => e !== r && e.x >= r.x + r.w - .15 * r.h && Math.abs(e.y - r.y) < .35 * Math.max(e.h, r.h)).sort((e, t) => e.x - t.x), o = r.x + r.w, s = !1, c = [r], l;
 		for (let e of a) {
 			if (e.x - o > .55 * r.h) break;
 			let t = e.str.trim();
-			if (!s && (co[t] === "." || t === ".")) s = !0, c.push(e), o = e.x + e.w;
+			if (!s && (mo[t] === "." || t === ".")) s = !0, c.push(e), o = e.x + e.w;
 			else {
 				/^=\s*(?:c(?:irc)?a\.?\s*)?(?:\d{2,3})?$/.test(t) && (l = e, c.push(e));
 				break;
@@ -17575,13 +17993,13 @@ function mo(e) {
 	let r = [...e.filter((e) => !t.has(e)), ...n].map((e) => {
 		let t = "", n = e.sourceBeat || e.tempoEvidence ? [{
 			at: 0,
-			unit: e.tempoEvidence?.unit ?? lo[e.str.match(/^(q|h|e|w|n16|n32|n64)/)?.[0]]
+			unit: e.tempoEvidence?.unit ?? ho[e.str.match(/^(q|h|e|w|n16|n32|n64)/)?.[0]]
 		}] : [];
 		for (let r of e.str) {
-			let e = co[r] ?? (/[\uE000-\uF8FF]/u.test(r) ? "" : r);
-			lo[co[r]] && n.push({
+			let e = mo[r] ?? (/[\uE000-\uF8FF]/u.test(r) ? "" : r);
+			ho[mo[r]] && n.push({
 				at: t.length,
-				unit: lo[co[r]]
+				unit: ho[mo[r]]
 			}), t += e;
 		}
 		return {
@@ -17615,7 +18033,7 @@ function mo(e) {
 		let t = e.str.replace(/\s+/g, "");
 		return {
 			...e,
-			str: ao.test(t) ? t : e.str.replace(/\s+/g, " ").trim(),
+			str: uo.test(t) ? t : e.str.replace(/\s+/g, " ").trim(),
 			unitProofs: e.unitProofs.map((t) => ({
 				...t,
 				at: e.str.slice(0, t.at).replace(/\s+/g, " ").trimStart().length
@@ -17629,15 +18047,15 @@ function $(e, t, n, r = {}) {
 	for (let [e, t] of Object.entries(r)) i.setAttribute(e, t);
 	return i;
 }
-function ho(e, [, t, n, r, i, a], o) {
+function bo(e, [, t, n, r, i, a], o) {
 	let s = $(e, "harmony"), c = s.appendChild($(e, "root"));
-	if (c.append($(e, "root-step", t)), n && c.append($(e, "root-alter", so[n])), s.append($(e, "kind", oo[r] ?? "other", { text: r })), i) {
+	if (c.append($(e, "root-step", t)), n && c.append($(e, "root-alter", po[n])), s.append($(e, "kind", fo[r] ?? "other", { text: r })), i) {
 		let t = s.appendChild($(e, "bass"));
-		t.append($(e, "bass-step", i)), a && t.append($(e, "bass-alter", so[a]));
+		t.append($(e, "bass-step", i)), a && t.append($(e, "bass-alter", po[a]));
 	}
 	return o && s.append($(e, "offset", o)), s;
 }
-var go = (e) => {
+var xo = (e) => {
 	let t = /-p(\d+)-(\d+)-(\d+)$/.exec(e ?? "");
 	return t && {
 		page: +t[1],
@@ -17645,7 +18063,7 @@ var go = (e) => {
 		y: +t[3]
 	};
 };
-function _o(e, t, n = {}) {
+function So(e, t, n = {}) {
 	let r = e.querySelector("miscellaneous-field[name=\"staff-layout\"]"), i = n.layout ?? JSON.parse(r?.textContent ?? "[]"), a = r?.parentNode;
 	r?.remove(), a && !a.children.length && a.remove();
 	let o = {
@@ -17653,14 +18071,14 @@ function _o(e, t, n = {}) {
 		lyrics: 0,
 		chords: 0,
 		tempo: 0
-	}, s = [...n.sourceAudit ?? []], c = io(e, t, i);
+	}, s = [...n.sourceAudit ?? []], c = lo(e, t, i);
 	o.instrument = c, s.push({
 		kind: "instrument",
 		...c
 	});
 	let l = i.findIndex((e) => e?.length), u = /* @__PURE__ */ new Map();
 	for (let t of e.querySelectorAll("note[id]")) {
-		let e = go(t.getAttribute("id")), n = e && i[e.page];
+		let e = xo(t.getAttribute("id")), n = e && i[e.page];
 		if (!n?.length || t.querySelector(":scope > chord, :scope > grace")) continue;
 		let r = ([, t, , n]) => Math.max(t - e.y, e.y - n, 0), a = n.reduce((e, t, i) => r(t) < r(n[e]) ? i : e, 0), o = `${e.page}/${a}`;
 		u.set(o, [...u.get(o) ?? [], {
@@ -17705,7 +18123,7 @@ function _o(e, t, n = {}) {
 		let g = /* @__PURE__ */ new Map();
 		for (let t of h) {
 			t.sort((e, t) => e.x - t.x);
-			let i = c(t[0]), a = n.map((e, t) => [i - e[3], t]).filter(([e]) => e > 0).sort((e, t) => e[0] - t[0])[0], f = n.map((e, t) => [e[1] - i, t]).filter(([e]) => e > 0).sort((e, t) => e[0] - t[0])[0], p = (e) => (n[e][3] - n[e][1]) / 4, m = f && (!a || f[0] < a[0]), h = po(t);
+			let i = c(t[0]), a = n.map((e, t) => [i - e[3], t]).filter(([e]) => e > 0).sort((e, t) => e[0] - t[0])[0], f = n.map((e, t) => [e[1] - i, t]).filter(([e]) => e > 0).sort((e, t) => e[0] - t[0])[0], p = (e) => (n[e][3] - n[e][1]) / 4, m = f && (!a || f[0] < a[0]), h = vo(t);
 			if (h.length) {
 				let i = /* @__PURE__ */ new Set();
 				for (let t of h) {
@@ -17741,7 +18159,7 @@ function _o(e, t, n = {}) {
 						continue;
 					}
 					let g = u.get(`${r}/${h[1]}`) ?? [], _ = g.length ? g.reduce((e, n) => Math.abs(n.x - t.x) < Math.abs(e.x - t.x) ? n : e) : null, v = _?.el.parentNode, y = _?.el, b = "source-coordinate", x = t.tokens.some((e) => e.tempoEvidence?.staff === 0) && t.x <= n[0][0] + 16 * p(0);
-					!v && x && r === l && h[1] === 0 && e.querySelectorAll("score-partwise > part").length === 1 && (v = e.querySelector("score-partwise > part > measure"), y = v?.querySelector(":scope > note"), b = "opening-source-first-staff"), v ? ([...v.querySelectorAll(":scope > direction > direction-type > metronome")].some((e) => +e.querySelector("per-minute")?.textContent === t.bpm && e.querySelector("beat-unit")?.textContent === t.unit && !!e.querySelector("beat-unit-dot") === t.dotted) || (v.insertBefore(Ya(e, t), y ?? null), o.tempo++, s.push({
+					!v && x && r === l && h[1] === 0 && e.querySelectorAll("score-partwise > part").length === 1 && (v = e.querySelector("score-partwise > part > measure"), y = v?.querySelector(":scope > note"), b = "opening-source-first-staff"), v ? ([...v.querySelectorAll(":scope > direction > direction-type > metronome")].some((e) => +e.querySelector("per-minute")?.textContent === t.bpm && e.querySelector("beat-unit")?.textContent === t.unit && !!e.querySelector("beat-unit-dot") === t.dotted) || (v.insertBefore(eo(e, t), y ?? null), o.tempo++, s.push({
 						kind: "tempo",
 						page: r,
 						staff: h[1],
@@ -17752,7 +18170,7 @@ function _o(e, t, n = {}) {
 						bpm: t.bpm,
 						unit: t.unit,
 						dotted: t.dotted,
-						quarterBpm: Ja(t),
+						quarterBpm: $a(t),
 						source: t.tokens.map((e) => ({
 							str: e.str,
 							x: e.x,
@@ -17772,14 +18190,14 @@ function _o(e, t, n = {}) {
 				}
 				if (t.splice(0, t.length, ...t.filter((e) => !i.has(e))), !t.length) continue;
 			}
-			let _ = u.get(`${r}/${f?.[1]}`) ?? [], v = t.map((e) => ao.exec(e.str)), y = v.filter(Boolean).length;
+			let _ = u.get(`${r}/${f?.[1]}`) ?? [], v = t.map((e) => uo.exec(e.str)), y = v.filter(Boolean).length;
 			if (m) {
 				if (f[0] > 8 * p(f[1]) || y < Math.min(2, t.length)) continue;
 				let n = t.filter((e, t) => v[t]).map((e) => e.h).sort((e, t) => e - t), r = n[n.length >> 1];
 				t.forEach((t, n) => {
 					if (!v[n] || !_.length || Math.abs(t.h - r) > .12 * r) return;
 					let { anchor: i, offset: a } = d(_, t.x, p(f[1]));
-					i.el.parentNode.insertBefore(ho(e, v[n], a), i.el), o.chords++;
+					i.el.parentNode.insertBefore(bo(e, v[n], a), i.el), o.chords++;
 				});
 			} else if (a[0] < 10 * p(a[1]) && y < .5 * t.length) {
 				let n = t.flatMap((e) => {
@@ -17816,9 +18234,9 @@ function _o(e, t, n = {}) {
 	let p = f.querySelector(":scope > miscellaneous");
 	return p ||= f.appendChild($(e, "miscellaneous")), p.querySelector("miscellaneous-field[name=\"metadata-audit\"]")?.remove(), p.append($(e, "miscellaneous-field", JSON.stringify(s), { name: "metadata-audit" })), o.metadataAudit = s, o;
 }
-// src/converter.js
-var vo = "v13-woodwind-pdf";
-function yo() {
+// web/src/converter.js
+var Co = "v13-woodwind-pdf", wo = "v14-static-runtime";
+function To() {
 	let e = typeof WebAssembly.Suspending == "function", t = globalThis.crossOriginIsolated && typeof SharedArrayBuffer == "function";
 	return {
 		jspi: e,
@@ -17826,7 +18244,36 @@ function yo() {
 		supported: e || !!t
 	};
 }
-function bo(e = {}) {
+async function Eo(e, { signal: t, onProgress: n = () => {}, onPage: r = () => {}, maxWidth: i = 1400 } = {}) {
+	let a = await La(e, (e) => n({
+		phase: "preview",
+		page: e
+	}), {
+		signal: t,
+		maxWidth: i,
+		onPage: ({ png: e, width: t, height: n, fileIndex: i, page: a, pageCount: o }) => r({
+			png: e,
+			width: t,
+			height: n,
+			fileIndex: i,
+			page: a,
+			pageCount: o
+		})
+	});
+	try {
+		return { pages: a.map(({ png: e, width: t, height: n, fileIndex: r, page: i, pageCount: a }) => ({
+			png: e,
+			width: t,
+			height: n,
+			fileIndex: r,
+			page: i,
+			pageCount: a
+		})) };
+	} finally {
+		a.forEach((e) => URL.revokeObjectURL(e.url));
+	}
+}
+function Do(e = {}) {
 	let t = null;
 	return {
 		async convert(n, r = {}) {
@@ -17836,7 +18283,7 @@ function bo(e = {}) {
 			let a = r.signal ?? e.signal, o = () => i.abort(a.reason);
 			a?.aborted && o(), a?.addEventListener("abort", o, { once: !0 });
 			try {
-				return await xo(n, {
+				return await Oo(n, {
 					...e,
 					...r,
 					signal: i.signal
@@ -17853,112 +18300,120 @@ function bo(e = {}) {
 		}
 	};
 }
-async function xo(e, { signal: t, onProgress: n = () => {}, printedTuplets: r = !0, forceSharedMemory: i = !1 } = {}) {
-	let a = yo(), o = () => t?.reason?.name === "AbortError" ? t.reason : new DOMException("Score conversion cancelled", "AbortError"), s = () => {
-		if (t?.aborted) throw o();
+async function Oo(e, { signal: t, onProgress: n = () => {}, printedTuplets: r = !0, forceSharedMemory: i = !1, modelBase: a } = {}) {
+	let o = new URL(".", "" + import.meta.url), s = qa(Ka(/\/(?:src|assets)\/$/.test(o.pathname) ? new URL("..", o).href : o.href, {
+		signal: t,
+		onProgress: n
+	})), c = To(), l = () => t?.reason?.name === "AbortError" ? t.reason : new DOMException("Score conversion cancelled", "AbortError"), u = () => {
+		if (t?.aborted) throw l();
 	};
-	if (s(), !a.supported || i && !a.sharedMemory) {
+	if (u(), !c.supported || i && !c.sharedMemory) {
 		let e = /* @__PURE__ */ Error("Score conversion requires WebAssembly JSPI or a cross-origin isolated page with shared memory");
 		throw e.code = "UNSUPPORTED_BROWSER", e;
 	}
 	if (e = Array.from(e), !e.length) throw Error("Choose at least one score PDF or image");
-	let c = performance.now(), l = [], u, d, f, p, m, h = new Promise((e, t) => {
-		p = t;
+	let d = performance.now(), f = [], p, m, h, g, _, v = new Promise((e, t) => {
+		g = t;
 	});
-	h.catch(() => {});
-	let g = () => {
-		let e = o();
-		u?.terminate(), d?.terminate(), f?.reject(e), p(e);
+	v.catch(() => {});
+	let y = () => {
+		let e = l();
+		p?.terminate(), m?.terminate(), s.close(), h?.reject(e), g(e);
 	};
-	t?.addEventListener("abort", g, { once: !0 });
-	let _ = (e) => Promise.race([e, h]);
+	t?.addEventListener("abort", y, { once: !0 });
+	let b = (e) => Promise.race([e, v]);
 	try {
 		n({
 			phase: "rendering",
 			text: "Preparing score pages…"
-		}), s(), m = La(e, (e) => n({
+		}), u(), _ = La(e, (e) => n({
 			phase: "rendering",
 			page: e
-		}), { signal: t }), m.then((e) => {
+		}), { signal: t }), _.then((e) => {
 			t?.aborted && e.forEach((e) => URL.revokeObjectURL(e.url));
 		}).catch(() => {});
-		let o = await _(m);
-		l.push(...o.map((e) => e.url)), s();
-		let p = Promise.all(o.map((e) => e.text.length ? e.text : Ha(e)));
-		p.catch(() => {}), u = new Worker(new URL(
+		let o = await b(_);
+		f.push(...o.map((e) => e.url)), u();
+		let l = Promise.all(o.map((e) => e.text.length ? e.text : s.ocr(e)));
+		l.catch(() => {}), p = new Worker(new URL(
 			/* @vite-ignore */
-			new URL("assets/omr.worker-CDNZgvbS.js", import.meta.url).href,
+			new URL("assets/omr.worker-BpOy0LhA.js", import.meta.url).href,
 			"" + import.meta.url
 		), { type: "module" });
-		let h = (e, t = []) => new Promise((n, r) => {
-			f = {
+		let g = (e, t = []) => new Promise((n, r) => {
+			h = {
 				resolve: n,
 				reject: r
-			}, u.postMessage(e, t);
+			}, p.postMessage(e, t);
 		});
-		u.onmessage = ({ data: e }) => {
-			e.type === "error" ? f?.reject(Error(e.text)) : e.type === "result" || e.type === "rests-repaired" ? f?.resolve(e) : n({
+		p.onmessage = ({ data: e }) => {
+			e.type === "error" ? h?.reject(Object.assign(Error(e.text), {
+				code: e.code,
+				resourceURL: e.resourceURL,
+				attempts: e.attempts
+			})) : e.type === "result" || e.type === "rests-repaired" ? h?.resolve(e) : n({
 				phase: "recognizing",
 				...e
 			});
-		}, u.onerror = (e) => f?.reject(Error(e.message || "Score recognition worker failed"));
-		let g = null;
-		if (!a.jspi || i) {
+		}, p.onerror = (e) => h?.reject(Error(e.message || "Score recognition worker failed"));
+		let v = null;
+		if (!c.jspi || i) {
 			let e = new MessageChannel();
-			d = new Worker(new URL(
+			m = new Worker(new URL(
 				/* @vite-ignore */
-				new URL("assets/ort.worker-D_2t0jH_.js", import.meta.url).href,
+				new URL("assets/ort.worker-NabkGbRB.js", import.meta.url).href,
 				"" + import.meta.url
-			), { type: "module" }), d.onerror = (e) => f?.reject(Error(e.message || "Recognition network worker failed")), d.postMessage({ port: e.port1 }, [e.port1]), g = e.port2;
+			), { type: "module" }), m.onerror = (e) => h?.reject(Error(e.message || "Recognition network worker failed")), m.postMessage({ port: e.port1 }, [e.port1]), v = e.port2;
 		}
 		n({
 			phase: "recognizing",
 			text: "Reading score…"
-		}), s();
-		let v = await _(h({
+		}), u();
+		let y = await b(g({
 			pages: o.map((e) => e.png),
 			printedTuplets: r,
-			port: g
-		}, g ? [g] : [])), y = new DOMParser().parseFromString(v.xml, "application/xml");
-		if (y.querySelector("parsererror")) throw Error("Recognition returned invalid MusicXML");
-		let b = JSON.parse(y.querySelector("miscellaneous-field[name=\"numeric-sources\"]")?.textContent ?? "[]"), x = [];
-		for (let e of b) {
+			port: v,
+			modelBase: a
+		}, v ? [v] : [])), x = new DOMParser().parseFromString(y.xml, "application/xml");
+		if (x.querySelector("parsererror")) throw Error("Recognition returned invalid MusicXML");
+		let S = JSON.parse(x.querySelector("miscellaneous-field[name=\"numeric-sources\"]")?.textContent ?? "[]"), C = [];
+		for (let e of S) {
 			if (!e.numberBox || !o[e.page]) continue;
-			let t = await _(Ua(o[e.page], e.numberBox));
-			t && t.value !== e.count && x.push({
+			let t = await b(s.readNumber(o[e.page], e.numberBox));
+			t && t.value !== e.count && C.push({
 				sourceId: e.sourceId,
 				count: t.value,
 				reading: t
 			});
 		}
-		x.length && (v = {
-			...v,
-			...await _(h({
+		C.length && (y = {
+			...y,
+			...await b(g({
 				op: "repair-rests",
-				xml: v.xml,
-				changes: x
+				xml: y.xml,
+				changes: C
 			}))
-		}, y = new DOMParser().parseFromString(v.xml, "application/xml")), n({
+		}, x = new DOMParser().parseFromString(y.xml, "application/xml")), n({
 			phase: "text",
 			text: "Reading printed text…"
 		});
-		let S = await _(ro(o, await _(p), y));
-		_o(y, S.text.map(mo), S), s();
-		let C = JSON.parse(y.querySelector("miscellaneous-field[name=\"conversion-audit\"]")?.textContent ?? "{}");
-		return C.metadata = JSON.parse(y.querySelector("miscellaneous-field[name=\"metadata-audit\"]")?.textContent ?? "[]"), {
-			musicxml: new XMLSerializer().serializeToString(y),
-			audit: C,
+		let w = await b(co(o, await b(l), x, { readTempoNumber: s.readNumber }));
+		So(x, w.text.map(yo), w), u();
+		let T = JSON.parse(x.querySelector("miscellaneous-field[name=\"conversion-audit\"]")?.textContent ?? "{}");
+		return T.metadata = JSON.parse(x.querySelector("miscellaneous-field[name=\"metadata-audit\"]")?.textContent ?? "[]"), {
+			musicxml: new XMLSerializer().serializeToString(x),
+			audit: T,
 			rasters: o.map(({ png: e, width: t, height: n }) => ({
 				png: e,
 				width: t,
 				height: n
 			})),
-			recognizerVersion: vo,
-			bridge: v.bridge,
-			milliseconds: performance.now() - c
+			recognizerVersion: Co,
+			bridge: y.bridge,
+			milliseconds: performance.now() - d
 		};
 	} finally {
-		t?.aborted && await m?.catch(() => {}), t?.removeEventListener("abort", g), u?.terminate(), d?.terminate(), l.forEach((e) => URL.revokeObjectURL(e));
+		t?.aborted && await _?.catch(() => {}), t?.removeEventListener("abort", y), p?.terminate(), m?.terminate(), s.close(), f.forEach((e) => URL.revokeObjectURL(e));
 	}
 }
-export { vo as RECOGNIZER_VERSION, yo as capabilities, xo as convertScore, bo as createScoreConverter };
+export { Co as RECOGNIZER_VERSION, wo as SDK_VERSION, To as capabilities, Oo as convertScore, Do as createScoreConverter, Eo as renderPreview };

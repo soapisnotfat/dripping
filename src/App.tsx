@@ -49,6 +49,7 @@ import { Icon } from './components/Icon';
 import { Brand } from './components/Brand';
 import { useAudioDevices } from './hooks/useAudioDevices';
 import { recordingRouteKey, useRecordingOffset } from './hooks/useRecordingOffset';
+import { LiveWaveform } from './lib/live-waveform';
 
 export default function App() {
   const [locale, setLocale] = useState<Locale>(
@@ -115,6 +116,7 @@ export default function App() {
   const [recoveries, setRecoveries] = useState<RecordingSession[]>([]),
     [update, setUpdate] = useState<ServiceWorker | null>(null);
   const recorder = useRef<PCMRecorder | null>(null),
+    liveWaveform = useRef<LiveWaveform | null>(null),
     session = useRef<RecordingSession | null>(null),
     finishing = useRef(false),
     saveQueue = useRef(Promise.resolve()),
@@ -253,6 +255,7 @@ export default function App() {
       setEditingTrack('');
       setArmedTrackId('');
       setInputClipped(false);
+      liveWaveform.current = null;
       localStorage.setItem('dripping.lastProject', p.id);
       const needsSave = (durable.current.get(p.id) ?? -1) < p.revision;
       setSaved(needsSave ? 'saving' : 'saved');
@@ -479,6 +482,7 @@ export default function App() {
       } finally {
         recorder.current?.close();
         recorder.current = null;
+        liveWaveform.current = null;
         session.current = null;
         finishing.current = false;
         setCounting(false);
@@ -705,14 +709,21 @@ export default function App() {
       setBusy(t('连接音频输入…', 'Connecting audio input…'));
       await transport.ctx.resume();
       setInputClipped(false);
+      setMeter(0);
+      const waveform = new LiveWaveform();
+      liveWaveform.current = waveform;
       const rec = new PCMRecorder(transport.ctx);
       recorder.current = rec;
       const inputChannels = channels.split(',').map(Number),
         input = await rec.open(device, inputChannels);
       rec.setMonitoring(monitor);
       rec.onMeter = (peak, _peaks, clipped) => {
+        if (recorder.current !== rec) return;
         setMeter(peak);
         if (clipped) setInputClipped(true);
+      };
+      rec.onWaveform = (packet) => {
+        if (recorder.current === rec) waveform.append(packet);
       };
       rec.onError = (message) => {
         report(message);
@@ -758,6 +769,7 @@ export default function App() {
     } catch (e) {
       recorder.current?.close();
       recorder.current = null;
+      liveWaveform.current = null;
       session.current = null;
       transport.pause();
       setPlaying(false);
@@ -1633,7 +1645,11 @@ export default function App() {
               locked={recording || !!busy}
               mixLocked={!!busy}
               armedTrackId={armedTrack?.id}
-              activeRecording={recording ? session.current : null}
+              activeRecording={recording || finishing.current ? session.current : null}
+              liveWaveform={liveWaveform.current}
+              inputPeak={meter}
+              inputClipped={inputClipped}
+              savingRecording={!recording && finishing.current}
               onArm={(id) => setArmedTrackId(armedTrackId === id ? '' : id)}
               onSeek={seek}
               onSelect={select}

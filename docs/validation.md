@@ -6,6 +6,17 @@ This is a historical record of checks at successive development revisions, begin
 
 Generated-input desktop checks do not establish physical audio capture, latency calibration, mobile memory limits, or universal score compatibility. The [limits below](#limits-to-keep-visible) remain relevant. The current PDF package and recognizer identity are recorded in [pin.json](../vendor/sheetscan/pin.json); the v13 integration receipts below describe the earlier recognition package.
 
+## Deterministic PDF metadata integration
+
+The `v15-notation-metadata` package pins combined source [33dd064](https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74). It integrates bounded work for [#36](https://github.com/soapisnotfat/dripping/issues/36) and [#41](https://github.com/soapisnotfat/dripping/issues/41); both broader issues remain open.
+
+- Reproduced duplicate opening clefs when first-measure metadata and a zero-onset clef occupy separate MusicXML `attributes` blocks. The narrow pipeline guard preserves existing opening declarations, later courtesy clefs and genuine changes. The source integrity suite passes 25 tests, including four new cases. This does not establish the cause of the private screenshot's duplicate tempo report.
+- A frozen source-authored matrix covers 72 instrument/guard cases, 14 tempo cases and one local-transition check in Chromium. Explicit single-part Soprano/Tenor/Baritone Saxophone headers can establish transposition under the same safety guards as Alto Saxophone; explicit native transposes, concert-score declarations, multipart or contradictory names remain preserved/unknown as appropriate. No image-glyph classifier or model training changed.
+- Host regressions use XML actually emitted by that browser harness: written pitches remain C5/D5/E5 while sounding pitches are verified for all four Saxophone families, and explicit-zero native imports remain unchanged. Retained-runtime preparation tests exercise distinct current/previous manifests and reject corrupt cached bytes.
+- The original seven-note Tenor Saxophone PDF in [the qualification fixture](../tests/fixtures/pdf-metadata/README.md) was converted by the actual v14/v15 SDKs in Chromium. v14 emitted two G2 clefs at P1/measure1/onset0; v15 emitted one. All seven authored pitch/duration/grace/tie signatures and quarter=96 were preserved, while v15 added the expected explicit Tenor transpose. Candidate JSPI and forced shared-memory outputs agreed. This reproduces the bounded opening-clef defect, not the private screenshot's tempo symptom.
+- Actual App `ScoreView`/OSMD rendering displayed all seven candidate Tenor notes and all three source-emitted Baritone notes without uncaught browser errors. Their written-note hit boxes matched no-transpose rendering controls, and host parser tests independently verify sounding pitch and explicit-zero preservation.
+- ONNX weights, model archive hashes, homr.zip, runtime locks/notices and glyph classifiers are unchanged. The older v13 whole-score accuracy receipts below are historical results, not a fresh accuracy certificate for this metadata package.
+
 ## Initial release, 2026-11-14
 
 ### Automated checks

@@ -1,0 +1,54 @@
+{
+  "provenance": {
+    "description": "Original fixture XML emitted by the SheetScan browser woodwind metadata harness, not private user material",
+    "license": "CC0-1.0",
+    "sourceCommit": "ddf8c5c97af754741214198048526af863c57486",
+    "harness": "bench/test_woodwind_metadata.mjs",
+    "browser": "156.0.8078.79",
+    "metadataSourceSHA256": "41f5b668689d03b93df5b26ebf444707502f294bb25e9303fbc29b4fc406ae80"
+  },
+  "cases": [
+    {
+      "id": "soprano-header",
+      "status": "applied",
+      "reason": null,
+      "transpose": [-1, -2],
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name><score-instrument id=\"P1-source-soprano\"><instrument-name>Soprano Saxophone</instrument-name></score-instrument></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>-1</diatonic><chromatic>-2</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    },
+    {
+      "id": "alto-header",
+      "status": "applied",
+      "reason": null,
+      "transpose": [-5, -9],
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name><score-instrument id=\"P1-source-alto\"><instrument-name>Alto Saxophone</instrument-name></score-instrument></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>-5</diatonic><chromatic>-9</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    },
+    {
+      "id": "tenor-header",
+      "status": "applied",
+      "reason": null,
+      "transpose": [-8, -14],
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name><score-instrument id=\"P1-source-tenor\"><instrument-name>Tenor Saxophone</instrument-name></score-instrument></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>-8</diatonic><chromatic>-14</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    },
+    {
+      "id": "baritone-header",
+      "status": "applied",
+      "reason": null,
+      "transpose": [-12, -21],
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name><score-instrument id=\"P1-source-baritone\"><instrument-name>Baritone Saxophone</instrument-name></score-instrument></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>-12</diatonic><chromatic>-21</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    },
+    {
+      "id": "tenor-explicit-0",
+      "status": "preserved",
+      "reason": "explicit-transpose",
+      "transpose": null,
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>0</diatonic><chromatic>0</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    },
+    {
+      "id": "baritone-explicit-0",
+      "status": "preserved",
+      "reason": "explicit-transpose",
+      "transpose": null,
+      "musicxml": "<score-partwise version=\"4.0\"><part-list><score-part id=\"P1\"><part-name>Voice</part-name></score-part></part-list><part id=\"P1\"><measure number=\"0\" implicit=\"yes\"><attributes><divisions>12</divisions><key><fifths>1</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef><transpose><diatonic>0</diatonic><chromatic>0</chromatic></transpose></attributes><note id=\"pickup-0-p0-180-225\"><pitch><step>C</step><octave>5</octave></pitch><duration>12</duration><voice>1</voice><type>half</type></note></measure><measure number=\"1\"><note id=\"body-0-p0-420-225\"><pitch><step>D</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note><note id=\"body-0-p0-520-225\"><pitch><step>E</step><octave>5</octave></pitch><duration>24</duration><voice>1</voice><type>half</type></note></measure></part></score-partwise>"
+    }
+  ]
+}

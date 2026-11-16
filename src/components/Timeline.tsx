@@ -5,6 +5,8 @@ import { clipSelection, timelineFollowLeft } from '../lib/timeline';
 import { clamp } from '../lib/types';
 import { TrimHandles } from './TrimHandles';
 import { clipSourceTime } from '../lib/clip-time';
+import { RecordingWaveform } from './RecordingWaveform';
+import { recordingWaveformBounds, type LiveWaveform } from '../lib/live-waveform';
 
 export type Waveform = { peaks: Float32Array; duration: number };
 const LABEL = 190;
@@ -22,7 +24,14 @@ type Props = {
   locked: boolean;
   mixLocked?: boolean;
   armedTrackId?: string;
-  activeRecording: Pick<RecordingSession, 'trackId' | 'start'> | null;
+  activeRecording:
+    | (Pick<RecordingSession, 'trackId' | 'start'> &
+        Partial<Pick<RecordingSession, 'speed' | 'latencyMs'>>)
+    | null;
+  liveWaveform?: LiveWaveform | null;
+  inputPeak?: number;
+  inputClipped?: boolean;
+  savingRecording?: boolean;
   onArm: (id: string) => void;
   onSeek: (seconds: number) => void;
   onSelect: (selection: Selection | null) => void;
@@ -92,6 +101,10 @@ export function Timeline({
   mixLocked = locked,
   armedTrackId,
   activeRecording,
+  liveWaveform,
+  inputPeak = 0,
+  inputClipped = false,
+  savingRecording = false,
   onArm,
   onSeek,
   onSelect,
@@ -121,6 +134,10 @@ export function Timeline({
       : project.selection;
   const duration = Math.max(projectDuration(project), recording ? position + 5 : 0),
     width = Math.max(640, duration * scale + 40);
+  const captureBounds = activeRecording
+      ? recordingWaveformBounds(activeRecording, liveWaveform || { frameCount: 0, sampleRate: 1 })
+      : null,
+    inputDb = inputPeak > 0 ? 20 * Math.log10(inputPeak) : -Infinity;
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -285,6 +302,21 @@ export function Timeline({
                   onChange={(e) => onTrack(track.id, { volume: Number(e.target.value) })}
                 />
               </div>
+              {activeRecording?.trackId === track.id && (
+                <div className={`recording-level ${inputClipped ? 'is-clipped' : ''}`}>
+                  <span>{t('输入电平', 'Input level')}</span>
+                  <meter
+                    aria-label={`${t('录音输入电平', 'Recording input level')} ${track.name}`}
+                    min="-60"
+                    max="0"
+                    value={Math.max(-60, Math.min(0, inputDb))}
+                  />
+                  <output>
+                    {Number.isFinite(inputDb) ? `${inputDb.toFixed(1)} dBFS` : '−∞ dBFS'}
+                  </output>
+                  {inputClipped && <strong role="status">{t('输入过载', 'Input clipped')}</strong>}
+                </div>
+              )}
             </div>
             <div
               className={`track-lane ${track.mute ? 'is-muted' : ''}`}
@@ -478,11 +510,31 @@ export function Timeline({
                 <div
                   className="recording-region"
                   style={{
-                    left: activeRecording.start * scale,
-                    width: Math.max(4, (position - activeRecording.start) * scale),
+                    left: (captureBounds?.start ?? activeRecording.start) * scale,
+                    width: Math.max(
+                      4,
+                      ((liveWaveform?.frameCount ? captureBounds!.end : activeRecording.start) -
+                        (captureBounds?.start ?? activeRecording.start)) *
+                        scale,
+                    ),
                   }}
                 >
-                  <span>{counting ? t('预备拍', 'Count-in') : t('正在录音', 'Recording')}</span>
+                  <span>
+                    {savingRecording
+                      ? t('正在保存录音…', 'Saving take…')
+                      : counting
+                        ? t('预备拍', 'Count-in')
+                        : t('正在录音', 'Recording')}
+                  </span>
+                  {liveWaveform && (
+                    <RecordingWaveform
+                      waveform={liveWaveform}
+                      capture={activeRecording}
+                      scale={scale}
+                      viewport={scroller}
+                      locale={locale}
+                    />
+                  )}
                 </div>
               )}
               {selection &&

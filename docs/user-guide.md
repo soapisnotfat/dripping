@@ -46,6 +46,8 @@ Output switching requires a browser with `AudioContext.setSinkId`. Otherwise sel
 
 Dripping captures the selected input separately from playback and preserves the original take when you edit or replace a passage. After an interrupted recording, it can recover audio chunks that were saved before the interruption.
 
+While recording, the target track shows a growing waveform of the captured input and a live input-level meter in dBFS. Silence appears as a flat line; loud peaks appear taller. Stereo input has separate waveforms for its two channels. A red warning is retained when the input approaches clipping. Count-in does not add audio to the waveform. The preview follows the same practice-speed and timing-correction placement as the saved take.
+
 During recording, use each track's **M** (Mute), **S** (Solo), and volume fader to change what you hear immediately. These controls do not change the dry input being recorded. The recording target stays silent during capture; changing the target or editing audio waits until recording stops.
 
 ## Save and restore a project
