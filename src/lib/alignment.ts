@@ -52,6 +52,13 @@ export function scoreFeatures(score:Score,hop=.1):Features {
   return {values,energy,frames,hop,duration};
 }
 
+function soundingWindow(features:Features):{features:Features;offset:number}{
+  const first=features.energy.findIndex(value=>value>0);let end=features.frames;
+  while(end>first&&features.energy[end-1]===0)end--;
+  if(first<0)throw Error('谱面没有可匹配音符 / The score has no pitched notes to match');
+  return {offset:first*features.hop,features:{...features,values:features.values.slice(first*12,end*12),energy:features.energy.slice(first,end),frames:end-first,duration:(end-first)*features.hop}};
+}
+
 export function dtw(reference:Features,audio:Features,compareBacking=false):{path:[number,number][];cost:number;coverage:number} {
   const m=reference.frames,n=audio.frames;
   if(m*n>20_000_000)throw Error('匹配范围过大，请先裁短素材 / Alignment input is too long');
@@ -107,8 +114,11 @@ function pathAnchors(path:[number,number][],ref:Features,audio:Features,toQ:(tim
 }
 export function alignToScore(score:Score,audio:Features):Alignment {
   if(score.tempoMissing)throw Error('先输入明确谱面速度 / Enter the score tempo first');
-  const reference=scoreFeatures(score,audio.hop),result=dtw(reference,audio),map=tempoMap(score);
-  const anchors=pathAnchors(result.path,reference,audio,t=>secondsToQ(t,map),score.totalQ);
+  // A trimmed recording need not contain leading/trailing written rests. Keep
+  // internal rests as structure, and restore the original musical q offset when
+  // converting the matched window back to score positions.
+  const window=soundingWindow(scoreFeatures(score,audio.hop)),reference=window.features,result=dtw(reference,audio),map=tempoMap(score);
+  const anchors=pathAnchors(result.path,reference,audio,t=>secondsToQ(t+window.offset,map),score.totalQ);
   const warnings:string[]=[];
   if(result.cost>.55)warnings.push('旋律匹配较弱，请试听或使用示范轨辅助 / Weak melody match; review or use a demonstration track');
   if(result.coverage<.65)warnings.push('速度差异较大，检查是否为同一版本 / Large tempo differences; check the arrangement');
