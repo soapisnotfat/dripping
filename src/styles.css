@@ -36,3 +36,5 @@
 .musical-endpoint{display:grid;gap:4px;color:var(--muted)}.musical-position{display:flex;align-items:center;gap:5px}.selection-editor .musical-position select{width:86px;max-width:86px}.selection-editor .musical-position input{width:59px}.musical-position>span{font-size:10px;color:var(--muted)}
 
 .score-tempo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 20px;color:var(--muted);font-size:12px}.score-tempo input{width:76px}.score-tempo span{color:var(--ink)}
+
+.draft-number{display:grid;gap:5px}.draft-number small{font-size:11px;color:var(--red);line-height:1.5}.export-status{font-size:11px;color:var(--accent);line-height:1.6;overflow-wrap:anywhere;min-height:1.6em}
