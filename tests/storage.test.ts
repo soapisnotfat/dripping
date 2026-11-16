@@ -29,4 +29,12 @@ describe('local persistence and recovery',()=>{
     expect(await getProject(p.id)).toBeUndefined();await expect(getAsset(a.id)).rejects.toThrow('Missing project asset');
     await saveProject(p,[a]);expect((await getProject(p.id))!.name).toBe('Latest draft');expect(await(await getAsset(a.id)).blob.arrayBuffer()).toEqual(await a.blob.arrayBuffer());
   });
+  it('backs up unsaved audio from the current project without marking the draft persisted',async()=>{
+    const p=newProject('Saved before failure');await saveProject(p);const a:Asset={id:crypto.randomUUID(),projectId:p.id,name:'unsaved.wav',type:'audio/wav',blob:new Blob([new Uint8Array([3,5,7,9])]) as unknown as globalThis.Blob},draft={...p,name:'Unsaved region',assetIds:[a.id]};
+    draft.tracks=[{id:'track',name:'Aligned',role:'backing',sourceAssetId:a.id,clips:[{id:'new-region',assetId:a.id,label:'Aligned',start:0,end:1,sourceStart:0,rate:1,gain:1,fadeIn:0,fadeOut:0}],volume:1,pan:0,mute:false,solo:false,offset:0,color:0}];
+    await expect(exportProject(draft)).rejects.toThrow('Missing project asset');
+    const restored=await importProject(await exportProject(draft,[a]));expect(restored.tracks[0].clips[0].id).toBe('new-region');expect(await(await getAsset(restored.assetIds[0])).blob.arrayBuffer()).toEqual(await a.blob.arrayBuffer());
+    expect((await getProject(p.id))!.name).toBe('Saved before failure');await expect(getAsset(a.id)).rejects.toThrow('Missing project asset');
+    await expect(exportProject(draft,[{...a,projectId:'another-project'}])).rejects.toThrow('Missing project asset');
+  });
 });
