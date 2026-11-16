@@ -18,7 +18,7 @@ await writeFile('dist/index.html',index.replace('<head>',`<head><meta http-equiv
 const paths=(await files('dist')).filter(p=>p!=='_headers'&&!p.startsWith('vendor/sheetscan/'));
 const hash=createHash('sha256');
 for(const p of paths)hash.update(await readFile('dist/'+p));
-const cache='dripping-'+hash.digest('hex').slice(0,12),pin=JSON.parse(await readFile('vendor/sheetscan/pin.json','utf8')); 
+const cache='dripping-'+hash.digest('hex').slice(0,12),pin=JSON.parse(await readFile('vendor/sheetscan/pin.json','utf8'));
 await writeFile('dist/sw.js',`const PREFIX='dripping-'+encodeURIComponent(new URL(self.registration.scope).pathname)+'-',CACHE=PREFIX+${JSON.stringify(cache)},DEMAND=PREFIX+${JSON.stringify('score-'+pin.version)},FILES=${JSON.stringify(paths)};
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(p=>new URL(p,self.registration.scope).href)))));
 self.addEventListener('message',e=>{if(e.data==='ACTIVATE_UPDATE')self.skipWaiting()});
