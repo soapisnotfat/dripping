@@ -7,8 +7,15 @@ import { referencePCM, metronomePCM } from './reference';
 import { scoreTempoProject } from './score-time';
 import { audibleTrackIds } from './mix';
 
+type OutputAudioContext = AudioContext & {
+  setSinkId?: (deviceId: string) => Promise<void>;
+  readonly sinkId?: string | { type: string };
+};
+
 export class Transport {
   private context?: AudioContext;
+  private outputQueue = Promise.resolve();
+  private routedOutputId = '';
   readonly pcm = new Map<string, PCM>();
   private rendered = new Map<string, { key: string; buffer: AudioBuffer }>();
   private nodes: AudioBufferSourceNode[] = [];
@@ -44,6 +51,37 @@ export class Transport {
       this.meterData = this.meters.map((meter) => new Float32Array(meter.fftSize));
     }
     return this.context;
+  }
+  get supportsOutputSelection() {
+    const context = this.context as OutputAudioContext | undefined,
+      prototype = typeof AudioContext === 'undefined' ? undefined : AudioContext.prototype;
+    return (
+      typeof (context?.setSinkId ?? (prototype as OutputAudioContext)?.setSinkId) === 'function'
+    );
+  }
+  get outputDeviceId() {
+    const sink = (this.context as OutputAudioContext | undefined)?.sinkId;
+    return typeof sink === 'string' ? sink : this.routedOutputId;
+  }
+  setOutputDevice(deviceId: string): Promise<void> {
+    // Serialize hot-plug/manual changes: an earlier slow switch must not win last.
+    const task = this.outputQueue.then(async () => {
+      if (!this.context && !deviceId) return;
+      if (!this.supportsOutputSelection) {
+        if (deviceId)
+          throw Error(
+            '浏览器不支持选择音频输出，请在系统声音设置中切换 / Choose the output in system sound settings; this browser cannot select an audio output',
+          );
+        return;
+      }
+      const context = this.ctx as OutputAudioContext;
+      if (this.outputDeviceId === deviceId) return;
+      await context.setSinkId!(deviceId);
+      this.routedOutputId = deviceId;
+    });
+    // A denied or disconnected device must not prevent a later route change.
+    this.outputQueue = task.catch(() => {});
+    return task;
   }
   setOutputGain(db: number) {
     if (this.context)
