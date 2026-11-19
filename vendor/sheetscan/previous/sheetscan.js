@@ -1,4 +1,4 @@
-// ../../sheetscan-issue36/web/node_modules/pdfjs-dist/build/pdf.mjs
+// node_modules/pdfjs-dist/build/pdf.mjs
 var e = typeof process == "object" && process + "" == "[object process]" && !process.versions.nw && !(process.versions.electron && process.type && process.type !== "browser"), t = [
 	Infinity,
 	Infinity,
@@ -18282,7 +18282,7 @@ function wo(e, t, n = {}) {
 	return p ||= f.appendChild($(e, "miscellaneous")), p.querySelector("miscellaneous-field[name=\"metadata-audit\"]")?.remove(), p.append($(e, "miscellaneous-field", JSON.stringify(s), { name: "metadata-audit" })), o.metadataAudit = s, o;
 }
 // src/converter.js
-var To = "v15-notation-metadata", Eo = "v15-notation-metadata";
+var To = "v16-source-grace-slurs", Eo = "v16-source-grace-slurs";
 function Do() {
 	let e = typeof WebAssembly.Suspending == "function", t = globalThis.crossOriginIsolated && typeof SharedArrayBuffer == "function";
 	return {
@@ -18384,7 +18384,7 @@ async function Ao(e, { signal: t, onProgress: n = () => {}, printedTuplets: r = 
 		let l = Promise.all(o.map((e) => e.text.length ? e.text : s.ocr(e)));
 		l.catch(() => {}), p = new Worker(new URL(
 			/* @vite-ignore */
-			new URL("assets/omr.worker-D1Pjj4dr.js", import.meta.url).href,
+			new URL("assets/omr.worker-DoShRPtY.js", import.meta.url).href,
 			"" + import.meta.url
 		), { type: "module" });
 		let g = (e, t = []) => new Promise((n, r) => {
