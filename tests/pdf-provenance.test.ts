@@ -13,6 +13,7 @@ import {
   importProject,
 } from '../src/lib/storage';
 import type { Asset } from '../src/lib/types';
+import { unrecognizedPdfPages } from '../src/lib/pdf-project';
 vi.stubGlobal('crypto', webcrypto);
 vi.stubGlobal('Blob', Blob);
 const fixture = () => {
@@ -59,6 +60,30 @@ describe('browser score conversion persistence', () => {
         await assets[index].blob.arrayBuffer(),
       );
     expect((await getProject(p.id))!.scoreConversion).toEqual(p.scoreConversion);
+    expect(await unrecognizedPdfPages(restored.id, c.auditAssetId)).toEqual([]);
+  });
+  it('reports pages skipped by the Worker after a project is restored', async () => {
+    const { p, assets } = fixture();
+    const skipped = { kind: 'staff-evidence', source: 'horizontal-five-line-image' };
+    assets[2].blob = new Blob([
+      JSON.stringify({
+        pages: [{}, {}, {}],
+        recognition: {
+          metadata: [
+            { ...skipped, page: 2, count: 0 },
+            { ...skipped, page: 0, count: 2 },
+            { kind: 'tempo-image-scan', page: 1, regionCount: 0 },
+            { ...skipped, page: 2, count: 0 },
+            { ...skipped, page: 3, count: 0 },
+          ],
+        },
+      }),
+    ]) as unknown as globalThis.Blob;
+    await saveProject(p, assets);
+    const restored = await importProject(await exportProject(p));
+    expect(await unrecognizedPdfPages(restored.id, restored.scoreConversion!.auditAssetId)).toEqual(
+      [1, 3],
+    );
   });
   it('rejects a backup whose conversion references omit source data', async () => {
     const { p, assets } = fixture();

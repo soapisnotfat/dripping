@@ -32,7 +32,7 @@ import { probeInput } from './lib/input';
 import { peaks } from './lib/audio';
 import { demoFiles } from './lib/demo';
 import { ScoreView, type CursorMode } from './components/ScoreView';
-import { PdfSource } from './components/PdfSource';
+import { PdfRecognitionNotice, PdfSource } from './components/PdfSource';
 import { Timeline, type Waveform } from './components/Timeline';
 import { Modal, ImportDialog, AlignmentDialog, ExportDialog } from './components/dialogs';
 import { pdfFiles, attachPdfScore, pdfFailure } from './lib/pdf-project';
@@ -1352,6 +1352,14 @@ export default function App() {
                   <p key={note}>{note}</p>
                 ))}
               </details>
+            )}
+            {!!project.scoreConversion && pdfActivity?.projectId !== project.id && (
+              <PdfRecognitionNotice
+                key={project.scoreConversion.auditAssetId}
+                auditAssetId={project.scoreConversion.auditAssetId}
+                projectId={project.id}
+                locale={locale}
+              />
             )}
             {(project.pdfSource || project.scoreConversion) && project.score && (
               <button

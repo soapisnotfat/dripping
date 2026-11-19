@@ -15,6 +15,33 @@ export async function pdfFiles(project: Project): Promise<File[]> {
     }),
   );
 }
+export async function unrecognizedPdfPages(
+  projectId: string,
+  auditAssetId: string,
+): Promise<number[]> {
+  const asset = await getAsset(auditAssetId);
+  if (asset.projectId !== projectId) throw Error('PDF conversion audit project mismatch');
+  const audit: { pages?: unknown[]; recognition?: { metadata?: unknown[] } } | null = JSON.parse(
+    await asset.blob.text(),
+  );
+  if (!Array.isArray(audit?.pages) || !Array.isArray(audit.recognition?.metadata)) return [];
+  const unread = new Set<number>();
+  for (const record of audit.recognition.metadata) {
+    const item = record as { kind?: string; source?: string; page?: number } | null;
+    // SheetScan records this fallback only when the Worker returned no staff layout for the page.
+    if (
+      item?.kind === 'staff-evidence' &&
+      item.source === 'horizontal-five-line-image' &&
+      typeof item.page === 'number' &&
+      Number.isInteger(item.page) &&
+      item.page >= 0 &&
+      item.page < audit.pages.length
+    )
+      unread.add(item.page + 1);
+  }
+  return [...unread].sort((a, b) => a - b);
+}
+
 export function attachPdfScore(
   project: Project,
   sourceId: string,
