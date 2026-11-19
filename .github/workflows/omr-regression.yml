@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   browser-regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +45,8 @@ jobs:
           key: sheetscan-models-${{ hashFiles('vendor/sheetscan/pin.json') }}
       - run: npm ci
       - run: python -m pip install -r tests/omr/requirements.txt
-      - run: python -m playwright install --with-deps --only-shell chromium
+      # This hosted image already has Chromium's system libraries.
+      - run: python -m playwright install --only-shell chromium
       - run: |
           if [ -n "$OMR_BASE_REF" ]; then
             npm run test:omr -- --base-ref "$OMR_BASE_REF"
