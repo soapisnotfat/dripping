@@ -9,7 +9,7 @@ The original MusicXML files are the reference answers. Verovio 6.4.1 engraved th
 | Dancing in the River | Flute | 9 | 34 | 4/4, rests and changes of note value |
 | Danza del Venado | Soprano recorder | 16 | 48 | 2/4 and octave treble clef |
 | Es wird scho glei dumpa | B-flat clarinet | 21 | 63 | 3/4, pickup, lyrics and written-to-sounding transposition |
-| St. Patrick's Day in the Morning | Fife edition | 20 | 96 | 6/8, dotted tempo and repeats |
+| St. Patrick's Day in the Morning | Fife edition | 20 | 96 | 6/8, eighth-note tempo and repeats |
 | Charles Wallaces Q.S. | Fife edition | 18 | 114 | 2/4 and triplets |
 | Homojanka Kolo | Piccolo edition | 24 | 98 | Key changes, triplets and two pages |
 

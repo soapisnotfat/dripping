@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "manifestSha256": "df208a8eaad7e1bcb5feffce79815c675162837de0da18e3cf396ba207ad21b4",
+  "manifestSha256": "2a9acb392c963789093dc4a538702cbf9dfd1e7dc5b359603891498ec1acdb93",
   "appCommit": "8ca941ad9f2f29b769aca21b33629d688c71d785",
   "pinSha256": "88faa753c8df86a630811624121eedbe1bd227f67a7bad5643ea159ce5153807",
   "sdkVersion": "v15-notation-metadata",
@@ -347,34 +347,13 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              [
-                "A",
-                "0"
-              ],
-              [
-                "B",
-                "0"
-              ],
-              [
-                "C",
-                "0"
-              ],
-              [
-                "D",
-                "0"
-              ],
-              [
-                "E",
-                "0"
-              ],
-              [
-                "F",
-                "0"
-              ],
-              [
-                "G",
-                "0"
-              ]
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
             ],
             "observed": null
           }
@@ -389,34 +368,13 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              [
-                "A",
-                "0"
-              ],
-              [
-                "B",
-                "0"
-              ],
-              [
-                "C",
-                "0"
-              ],
-              [
-                "D",
-                "0"
-              ],
-              [
-                "E",
-                "0"
-              ],
-              [
-                "F",
-                "0"
-              ],
-              [
-                "G",
-                "0"
-              ]
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
             ],
             "observed": null
           }
@@ -431,34 +389,13 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              [
-                "A",
-                "0"
-              ],
-              [
-                "B",
-                "0"
-              ],
-              [
-                "C",
-                "0"
-              ],
-              [
-                "D",
-                "0"
-              ],
-              [
-                "E",
-                "0"
-              ],
-              [
-                "F",
-                "0"
-              ],
-              [
-                "G",
-                "0"
-              ]
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
             ],
             "observed": null
           }
@@ -473,34 +410,13 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              [
-                "A",
-                "0"
-              ],
-              [
-                "B",
-                "0"
-              ],
-              [
-                "C",
-                "0"
-              ],
-              [
-                "D",
-                "0"
-              ],
-              [
-                "E",
-                "0"
-              ],
-              [
-                "F",
-                "0"
-              ],
-              [
-                "G",
-                "0"
-              ]
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
             ],
             "observed": null
           }
@@ -582,6 +498,60 @@
       ],
       "workerSha256": "95db8fceba2bdaaed0053b6be02a5fd2a6803c844bc568a06bb17a859b4a2dc4",
       "finalSha256": "c8ac20ffe43d5875711a2c29d32f2571561795f0c257cb74fdd1a0c07954b05f",
+      "discrepancies": []
+    },
+    "treble-octave": {
+      "observedSdk": "v17-source-beams",
+      "strictCoreEvents": {
+        "correct": 8,
+        "truth": 24,
+        "reading": 24
+      },
+      "graceEvents": {
+        "correct": 0,
+        "truth": 0,
+        "reading": 0
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "42ba7be47625a20bc899ab25cbeba29be2fdb07c655167da95d939299d5b4d1e"
+        }
+      ],
+      "workerSha256": "080ee811683594bf3862b2f274ec526b37d63f97a302efb5784839edc4df425b",
+      "finalSha256": "f3217010a20c14bdc91cfb003c95628576d83589d447a850e5625eb31f7487ff",
+      "discrepancies": []
+    },
+    "opening-repeats": {
+      "observedSdk": "v17-source-beams",
+      "strictCoreEvents": {
+        "correct": 1,
+        "truth": 16,
+        "reading": 16
+      },
+      "graceEvents": {
+        "correct": 0,
+        "truth": 0,
+        "reading": 0
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "b9f5a6997649e682bab025985a51776a36db418c779403c6f2ff20945a1f7bf7"
+        },
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-2.png",
+          "sha256": "840f75a245924f4ce4d4e693bdeebfad9d8e13e3d6f7a2b2cf98d90a5cf47524"
+        }
+      ],
+      "workerSha256": "14341fa3d888996caa1c79d07be41f22823a43fc507488345d91721f30307e36",
+      "finalSha256": "681718436a9282300c020ddae48d444ce534a62b5f29619e36cc20533bb450a8",
       "discrepancies": []
     }
   }
