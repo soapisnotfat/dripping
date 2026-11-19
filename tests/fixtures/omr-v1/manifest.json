@@ -90,6 +90,52 @@
       },
       "staffBoxes": [[0, 73, 149, 130]],
       "marks": []
+    },
+    {
+      "id": "grace-tie",
+      "family": "natural-carry-exercise",
+      "kind": "pdf",
+      "issues": [
+        35
+      ],
+      "source": {
+        "file": "grace-tie.pdf",
+        "sha256": "21259dc3eaecb45bacdbe67ce0d68601667513b175eb7eb50bbfc238d1e92498"
+      },
+      "truth": {
+        "file": "grace-tie.musicxml",
+        "sha256": "0d3ab993f2926d5a2cf0d87ba3c38af07f8e617cc47dcc978723c3f561b0908e"
+      },
+      "inventory": {
+        "measures": 4,
+        "events": 16,
+        "graces": 1,
+        "slurs": 0,
+        "ties": 2
+      }
+    },
+    {
+      "id": "grace-slur-upper",
+      "family": "natural-carry-exercise",
+      "kind": "pdf",
+      "issues": [
+        35
+      ],
+      "source": {
+        "file": "grace-slur-upper.pdf",
+        "sha256": "23b74148af795797998508b0a4e5f52b1ccc00ee7e7927b60ac3fcfe4f1bee07"
+      },
+      "truth": {
+        "file": "grace-slur-upper.musicxml",
+        "sha256": "4f4988695fa3bfb2c4bc01b31f937d751b3021053b67a678c94522883f8d79e1"
+      },
+      "inventory": {
+        "measures": 4,
+        "events": 16,
+        "graces": 1,
+        "slurs": 1,
+        "ties": 0
+      }
     }
   ]
 }

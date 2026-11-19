@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "manifestSha256": "9e45d67f784addd897ff201e4755de3341c9b8d910d080fee6c26e6f334bb785",
+  "manifestSha256": "92559e1d4d63eaba0ec9d82a5bb29611a6ac73a633b76e86481fc005131b8c6c",
   "appCommit": "8ca941ad9f2f29b769aca21b33629d688c71d785",
   "pinSha256": "88faa753c8df86a630811624121eedbe1bd227f67a7bad5643ea159ce5153807",
   "sdkVersion": "v15-notation-metadata",
@@ -43,126 +43,7 @@
       ],
       "workerSha256": "62d17eadd67e2028e9dc20d3f1e6943341ca5e33f02d529a9aa6d53bb490ec5a",
       "finalSha256": "8496339efe412904deabe3ad0acf5a7cef1f68954483065346be132558a2a1a7",
-      "discrepancies": [
-        {
-          "category": "attack",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "pitch": ["F", "0", "4"]
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["F", "0", "4"],
-            "playbackTies": ["stop"],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["F", "0", "4"],
-            "playbackTies": [],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "grace-playback-tie",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "staff": "1",
-            "voice": "1",
-            "onset": "0",
-            "graceOrder": 1,
-            "pitch": ["F", "0", "4"],
-            "type": "start"
-          },
-          "count": 1
-        },
-        {
-          "category": "slur",
-          "operation": "missing",
-          "item": {
-            "kind": "span",
-            "start": {
-              "part": 1,
-              "measure": 2,
-              "staff": "1",
-              "voice": "1",
-              "onset": "0",
-              "graceOrder": 1,
-              "pitch": ["F", "0", "4"]
-            },
-            "end": {
-              "part": 1,
-              "measure": 2,
-              "staff": "1",
-              "voice": "1",
-              "onset": "0",
-              "graceOrder": null,
-              "pitch": ["F", "0", "4"]
-            }
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "staff": "1",
-            "voice": "1",
-            "onset": "0",
-            "graceOrder": 1,
-            "pitch": ["F", "0", "4"],
-            "type": "start"
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "staff": "1",
-            "voice": "1",
-            "onset": "0",
-            "graceOrder": null,
-            "pitch": ["F", "0", "4"],
-            "type": "stop"
-          },
-          "count": 1
-        }
-      ]
+      "discrepancies": []
     },
     "tie-controls": {
       "strictCoreEvents": {
@@ -820,6 +701,52 @@
     },
     "tuplet-no-digit": {
       "numbers": [],
+      "discrepancies": []
+    },
+    "grace-tie": {
+      "strictCoreEvents": {
+        "correct": 16,
+        "truth": 16,
+        "reading": 16
+      },
+      "graceEvents": {
+        "correct": 1,
+        "truth": 1,
+        "reading": 1
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "f21cbbc73d2febed20f94b674a0c1503f261571421aa79b99eb64982dc34fdf3"
+        }
+      ],
+      "workerSha256": "15132dc8cb34680feb1b4a18a16cab850e0cf19ecf2e193fc6d37a347799ce95",
+      "finalSha256": "38918489aa62cf417d7fb729290d7999d816bd66efb8bd0392c30f09987ab5c0",
+      "discrepancies": []
+    },
+    "grace-slur-upper": {
+      "strictCoreEvents": {
+        "correct": 15,
+        "truth": 16,
+        "reading": 16
+      },
+      "graceEvents": {
+        "correct": 1,
+        "truth": 1,
+        "reading": 1
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "c79a2dd56b7fd021f73e254f64fccffd3aa60d6fcb645acdac81528ad824c82d"
+        }
+      ],
+      "workerSha256": "8228327b7ce1a56b6cc2155d5c4d47f6b6f1250c268eca0d34936b21c8e4cf76",
+      "finalSha256": "e95ae54785a6e27f298e729c4b9c73fd0403ef72e06113038de9c8f207ef30c9",
       "discrepancies": []
     }
   }
