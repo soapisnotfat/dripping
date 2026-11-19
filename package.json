@@ -9,11 +9,12 @@
     "build": "node scripts/prepare-sheetscan.mjs && tsc -b && vite build && node scripts/build-notices.mjs && node scripts/build-sw.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
+    "test:omr": "python3 -B -m unittest discover -s tests/omr && node scripts/prepare-sheetscan.mjs && python3 -B tests/omr/run.py",
     "test:watch": "vitest",
     "check": "tsc -b",
     "predev": "node scripts/prepare-sheetscan.mjs",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,css}\" \"tests/**/*.{ts,tsx,html}\" \"scripts/**/*.mjs\" \"*.{json,ts,html}\" \".github/**/*.yml\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,css}\" \"tests/**/*.{ts,tsx,html}\" \"scripts/**/*.mjs\" \"*.{json,ts,html}\" \".github/**/*.yml\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,css}\" \"tests/**/*.{ts,tsx,html,js,mjs}\" \"scripts/**/*.mjs\" \"*.{json,ts,html}\" \".github/**/*.yml\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,css}\" \"tests/**/*.{ts,tsx,html,js,mjs}\" \"scripts/**/*.mjs\" \"*.{json,ts,html}\" \".github/**/*.yml\""
   },
   "engines": {
     "node": ">=22.12.0"

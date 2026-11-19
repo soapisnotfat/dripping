@@ -1,0 +1,62 @@
+name: OMR regression
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'vendor/sheetscan/**'
+      - 'scripts/prepare-sheetscan.mjs'
+      - 'tests/fixtures/omr-v1/**'
+      - 'tests/omr/**'
+      - 'package*.json'
+      - '.github/workflows/omr-regression.yml'
+  pull_request:
+    paths:
+      - 'vendor/sheetscan/**'
+      - 'scripts/prepare-sheetscan.mjs'
+      - 'tests/fixtures/omr-v1/**'
+      - 'tests/omr/**'
+      - 'package*.json'
+      - '.github/workflows/omr-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: tests/omr/requirements.txt
+      - uses: actions/cache@v4
+        with:
+          path: .cache/sheetscan
+          key: sheetscan-models-${{ hashFiles('vendor/sheetscan/pin.json') }}
+      - run: npm ci
+      - run: python -m pip install -r tests/omr/requirements.txt
+      # This hosted image already has Chromium's system libraries.
+      - run: python -m playwright install --only-shell chromium
+      - run: |
+          if [ -n "$OMR_BASE_REF" ]; then
+            npm run test:omr -- --base-ref "$OMR_BASE_REF"
+          else
+            npm run test:omr
+          fi
+        env:
+          OMR_BASE_REF: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: omr-regression-report
+          path: test-results/omr/

@@ -20,6 +20,7 @@ npm run dev
 | `npm run format` | Format first-party source, tests, scripts, and configuration |
 | `npm run format:check` | Check that formatting without writing changes |
 | `npm test` | Run the Vitest unit and regression suite |
+| `npm run test:omr` | Run the frozen PDF recognition and tuplet test set in Chromium. See [setup and baseline](../tests/fixtures/omr-v1/README.md). |
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run build` | Prepare resources, check TypeScript, build the site, then generate notices and offline cache |
 | `npm run preview` | Serve the existing production build locally |
