@@ -18282,7 +18282,7 @@ function wo(e, t, n = {}) {
 	return p ||= f.appendChild($(e, "miscellaneous")), p.querySelector("miscellaneous-field[name=\"metadata-audit\"]")?.remove(), p.append($(e, "miscellaneous-field", JSON.stringify(s), { name: "metadata-audit" })), o.metadataAudit = s, o;
 }
 // src/converter.js
-var To = "v17-source-beams", Eo = "v17-source-beams";
+var To = "v18-source-headers", Eo = "v18-source-headers";
 function Do() {
 	let e = typeof WebAssembly.Suspending == "function", t = globalThis.crossOriginIsolated && typeof SharedArrayBuffer == "function";
 	return {
@@ -18384,7 +18384,7 @@ async function Ao(e, { signal: t, onProgress: n = () => {}, printedTuplets: r = 
 		let l = Promise.all(o.map((e) => e.text.length ? e.text : s.ocr(e)));
 		l.catch(() => {}), p = new Worker(new URL(
 			/* @vite-ignore */
-			new URL("assets/omr.worker-C-dYkLfI.js", import.meta.url).href,
+			new URL("assets/omr.worker-D-fFHLs_.js", import.meta.url).href,
 			"" + import.meta.url
 		), { type: "module" });
 		let g = (e, t = []) => new Promise((n, r) => {

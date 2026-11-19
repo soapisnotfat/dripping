@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "cohort": "independent-woodwind",
+  "evaluatorSource": "https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74/bench",
+  "evaluators": {
+    "practice_metrics.py": "82dc2a42bd7e96401c8f5c2178e9c1b7effa2280946ac7c06dffbd07748c316b",
+    "qualification_v1.py": "53b22ef564bc8b8d62e2170203d17f3a922e58f7b3dcaa7659cfe5b4d33b9ebc"
+  },
+  "cases": [
+    {
+      "id": "dancing-in-the-river",
+      "family": "moran-flute",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "dancing-in-the-river.pdf",
+        "sha256": "5629cc7f953c3d0c504f035bc1b1d17b53ae5b70985b61635851ad856b88ff6c"
+      },
+      "truth": {
+        "file": "dancing-in-the-river.musicxml",
+        "sha256": "ae23cdc1b622be9d97285d5811e372588584efbc3f05a6d8ffddf8ca75773a69"
+      },
+      "inventory": {
+        "measures": 9,
+        "events": 34,
+        "graces": 0,
+        "slurs": 0,
+        "ties": 6
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "5825241",
+        "title": "Dancing in the River",
+        "instrument": "flute",
+        "composer": "Brandon Moran",
+        "archivePath": "./mxl/8/29/QmQK6pMfTWxfcsGFZQzoGkW7aD51WFTbR9o4akDSVvzt4i.mxl",
+        "metadataPath": "./metadata/7/5825241.json",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Bravura",
+          "scale": 45,
+          "systemMaxPerPage": 0,
+          "pages": 1
+        },
+        "renderedEvents": 34
+      }
+    },
+    {
+      "id": "danza-del-venado",
+      "family": "trad-mexican-recorder",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "danza-del-venado.pdf",
+        "sha256": "941e2c265078bf06ffe10a854b59bc4ab1a26b7f6149d20a8c0069e7665e13ad"
+      },
+      "truth": {
+        "file": "danza-del-venado.musicxml",
+        "sha256": "64e2e0b31d4c0aa417ebdb090b792aecc0902d162a78ce721e456494a45d9669"
+      },
+      "inventory": {
+        "measures": 16,
+        "events": 48,
+        "graces": 0,
+        "slurs": 0,
+        "ties": 0
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "68923",
+        "title": "Danza del Venado",
+        "instrument": "soprano recorder",
+        "composer": "Tradicional de México",
+        "archivePath": "./mxl/8/22/QmQGQ59JZ2ekzs6t9S7faHW5aZCFZuDeatnCfVAtVjwNEW.mxl",
+        "metadataPath": "./metadata/4/68923.json",
+        "license": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Leipzig",
+          "scale": 50,
+          "systemMaxPerPage": 0,
+          "pages": 1
+        },
+        "renderedEvents": 48
+      }
+    },
+    {
+      "id": "es-wird-scho-glei-dumpa",
+      "family": "trad-austrian-carol",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "es-wird-scho-glei-dumpa.pdf",
+        "sha256": "72179b559e5be12ed48a13dfbcd21a9b47882b89de4f5da559abc7a7b94f5130"
+      },
+      "truth": {
+        "file": "es-wird-scho-glei-dumpa.musicxml",
+        "sha256": "8cc3bd865d91c6edd4b27d4c4ffcd3d57dfe846471fec620ef7c6e549b58752d"
+      },
+      "inventory": {
+        "measures": 21,
+        "events": 63,
+        "graces": 0,
+        "slurs": 8,
+        "ties": 0
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "76181",
+        "title": "Es wird scho glei dumpa",
+        "instrument": "B-flat clarinet",
+        "composer": null,
+        "archivePath": "./mxl/8/29/QmQK1pEGwFYu1k12AdD5uumxpj3V9rXvqMuR5WebhZ6w3y.mxl",
+        "metadataPath": "./metadata/0/76181.json",
+        "license": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Leland",
+          "scale": 52,
+          "systemMaxPerPage": 0,
+          "pages": 1
+        },
+        "renderedEvents": 63
+      }
+    },
+    {
+      "id": "st-patricks-day-in-the-morning",
+      "family": "historic-fife",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "st-patricks-day-in-the-morning.pdf",
+        "sha256": "45d489dfbb3feffef7ca91da376d2924505b821a14e6d46af31997e57b9ef8c0"
+      },
+      "truth": {
+        "file": "st-patricks-day-in-the-morning.musicxml",
+        "sha256": "34014d67457d689929ce0338f2c21b08f1f01aec6e9dd767af21d9456c268175"
+      },
+      "inventory": {
+        "measures": 20,
+        "events": 96,
+        "graces": 0,
+        "slurs": 1,
+        "ties": 0
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "5026584",
+        "title": "St. Patrick's Day in the Morning",
+        "instrument": "fife",
+        "composer": null,
+        "archivePath": "./mxl/8/13/QmQcDqir2xmchVMpdgHYF8Rxbb7wMzN8baca2KHB9RZtZ2.mxl",
+        "metadataPath": "./metadata/1/5026584.json",
+        "license": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Bravura",
+          "scale": 45,
+          "systemMaxPerPage": 0,
+          "pages": 1
+        },
+        "renderedEvents": 96
+      }
+    },
+    {
+      "id": "charles-wallaces-qs",
+      "family": "historic-fife",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "charles-wallaces-qs.pdf",
+        "sha256": "c7b9a221bdcddc9faab829f9f0935611c6996ee6d1ab86ad3a66decebf94fb31"
+      },
+      "truth": {
+        "file": "charles-wallaces-qs.musicxml",
+        "sha256": "0c32a9b348f327b50699c647dcced81dad696722a6be7068e7f40ab78146512c"
+      },
+      "inventory": {
+        "measures": 18,
+        "events": 114,
+        "graces": 0,
+        "slurs": 4,
+        "ties": 4
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "4606139",
+        "title": "Charles Wallaces Q.S.",
+        "instrument": "fife",
+        "composer": "Donated by Chr.Wallace Pres. N.A. of C.W.M. Co.I.120th O.V.I. Denver Col. 1905",
+        "archivePath": "./mxl/8/13/QmQcj239GjQyzLDcsQ17Xi4bwjkei8HJoXKzUP2zKKdc8x.mxl",
+        "metadataPath": "./metadata/9/4606139.json",
+        "license": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Leipzig",
+          "scale": 50,
+          "systemMaxPerPage": 0,
+          "pages": 1
+        },
+        "renderedEvents": 114
+      }
+    },
+    {
+      "id": "homojanka-kolo",
+      "family": "historic-fife",
+      "kind": "pdf",
+      "issues": [
+        30
+      ],
+      "source": {
+        "file": "homojanka-kolo.pdf",
+        "sha256": "790d2543b6142a0b94f4d9e87c38677d97afa567660fce096f4e4c49de64a1d2"
+      },
+      "truth": {
+        "file": "homojanka-kolo.musicxml",
+        "sha256": "d9bfedcebd137ed6b47f71e0c36b8ed0e19725318da4b4eea960d5bd0f708cf3"
+      },
+      "inventory": {
+        "measures": 24,
+        "events": 98,
+        "graces": 0,
+        "slurs": 0,
+        "ties": 0
+      },
+      "provenance": {
+        "dataset": "PDMX 2025-06-01",
+        "record": "10.5281/zenodo.15571083",
+        "scoreId": "5012981",
+        "title": "Homojanka Kolo",
+        "instrument": "piccolo",
+        "composer": null,
+        "archivePath": "./mxl/8/49/QmQVwx9uD2ZBhXoSnHQBcUjdW94WsVLwBLA6u6NkRHeskS.mxl",
+        "metadataPath": "./metadata/7/5012981.json",
+        "license": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "licenseConflict": false,
+        "engraving": {
+          "font": "Leland",
+          "scale": 50,
+          "systemMaxPerPage": 2,
+          "pages": 2
+        },
+        "renderedEvents": 98
+      }
+    }
+  ]
+}

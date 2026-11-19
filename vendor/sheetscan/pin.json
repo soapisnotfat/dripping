@@ -1,16 +1,16 @@
 {
-  "version": "v17-source-beams",
-  "recognizerVersion": "v17-source-beams",
-  "sourceCommit": "1a247d7c69cd0162cf3602b78c915c29f62110f1",
-  "source": "https://github.com/soapisnotfat/sheetscan/tree/1a247d7c69cd0162cf3602b78c915c29f62110f1",
+  "version": "v18-source-headers",
+  "recognizerVersion": "v18-source-headers",
+  "sourceCommit": "ff8e263f12410f45d327d2aadfcc95370e6a7f48",
+  "source": "https://github.com/soapisnotfat/sheetscan/tree/ff8e263f12410f45d327d2aadfcc95370e6a7f48",
   "license": "AGPL-3.0",
   "modelBase": "../v13-woodwind-pdf/",
   "files": {
     "Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
     "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
     "Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
-    "SOURCE.txt": "f32d6d6107e4435214554c1ce97b5f89232244b6839175729177a4578bd2698f",
-    "assets/omr.worker-C-dYkLfI.js": "ad9809cf7789b6280d6b70a2823d3350d3d48142acaffabb0eb0ae222389c5ca",
+    "SOURCE.txt": "1712ba42f233f63844d4fac32626b5ba3c029e8c315670b0abc582085fc2c473",
+    "assets/omr.worker-D-fFHLs_.js": "a123979e5a10865c42f7b226816a9082b4fbcb2ef78c147c657740398d928fb6",
     "assets/ort.worker-NabkGbRB.js": "12c459c669fb963710753cc3ac28791136f5469ab657f5cf01dbf310ba0b2b0e",
     "homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709",
     "licenses/accidental-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
@@ -28,7 +28,7 @@
     "licenses/tuplet-fonts/manifest.json": "4d57191638e3aa440f3392bca825bd78c9ac1601a235d29f1c116bff949c6dc3",
     "runtime-lock.json": "7b2d0ab5642c3117653ee4f2c606ce879aa315fc446d2b8de5d572fa884a9064",
     "runtime-notices.txt": "d8083d42e1371153826a1ca0623020fce497ce56c204e8b78c0d0ca03aaa91e6",
-    "sheetscan.js": "6d48544a2d4a92af296e2726b2d1ec5b10354b85359eb0d4709df534d8183160"
+    "sheetscan.js": "7ee9cf9582a2e82c66638231ea7358f8a7516f5a8178d4730fe49de3363faf89"
   },
   "models": [
     {
@@ -51,18 +51,18 @@
     }
   ],
   "previous": {
-    "version": "v16-source-grace-slurs",
-    "recognizerVersion": "v16-source-grace-slurs",
-    "sourceCommit": "4e597fa70c4a1edb92493292859f9361274c81f0",
-    "source": "https://github.com/soapisnotfat/sheetscan/tree/4e597fa70c4a1edb92493292859f9361274c81f0",
+    "version": "v17-source-beams",
+    "recognizerVersion": "v17-source-beams",
+    "sourceCommit": "1a247d7c69cd0162cf3602b78c915c29f62110f1",
+    "source": "https://github.com/soapisnotfat/sheetscan/tree/1a247d7c69cd0162cf3602b78c915c29f62110f1",
     "license": "AGPL-3.0",
     "modelBase": "../v13-woodwind-pdf/",
     "files": {
       "Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
       "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
       "Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
-      "SOURCE.txt": "e84529d6506af74b3df50917779c2281c17212540704f7ab348639902050d6d2",
-      "assets/omr.worker-DoShRPtY.js": "357718d817139d2aff44e506c5c41fc09044f4f881868d7e1ad5e247d9c55cba",
+      "SOURCE.txt": "f32d6d6107e4435214554c1ce97b5f89232244b6839175729177a4578bd2698f",
+      "assets/omr.worker-C-dYkLfI.js": "ad9809cf7789b6280d6b70a2823d3350d3d48142acaffabb0eb0ae222389c5ca",
       "assets/ort.worker-NabkGbRB.js": "12c459c669fb963710753cc3ac28791136f5469ab657f5cf01dbf310ba0b2b0e",
       "homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709",
       "licenses/accidental-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
@@ -80,7 +80,7 @@
       "licenses/tuplet-fonts/manifest.json": "4d57191638e3aa440f3392bca825bd78c9ac1601a235d29f1c116bff949c6dc3",
       "runtime-lock.json": "7b2d0ab5642c3117653ee4f2c606ce879aa315fc446d2b8de5d572fa884a9064",
       "runtime-notices.txt": "d8083d42e1371153826a1ca0623020fce497ce56c204e8b78c0d0ca03aaa91e6",
-      "sheetscan.js": "5d3881d961a8100e9765e38bbd12c65dff4e2cc706116c7b628c38310182472d"
+      "sheetscan.js": "6d48544a2d4a92af296e2726b2d1ec5b10354b85359eb0d4709df534d8183160"
     },
     "models": [
       {

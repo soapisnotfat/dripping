@@ -13,6 +13,8 @@ from xml.etree import ElementTree as ET
 from browser import REPO, launch, read_crops, recognize, serve_sdk
 from suite import FIXTURES, compare_baseline, compare_marks, compare_score, digest, load_manifest
 
+CORPORA = {'regression': FIXTURES, 'woodwind': FIXTURES.with_name('omr-woodwind')}
+
 
 def save(path, data):
     pending = path.with_suffix('.tmp')
@@ -48,12 +50,12 @@ def check_frozen_cases(before, before_baseline, after, after_baseline):
             raise ValueError(f'{identifier}: proposed baseline introduces new allowed discrepancies')
 
 
-def check_pr_base(ref, baseline):
+def check_pr_base(ref, baseline, fixtures=FIXTURES):
     def git(*args):
         return subprocess.check_output(['git', *args], cwd=REPO)
 
     commit = git('rev-parse', '--verify', '--end-of-options', f'{ref}^{{commit}}').decode().strip()
-    prefix = FIXTURES.relative_to(REPO).as_posix()
+    prefix = fixtures.relative_to(REPO).as_posix()
     if not git('ls-tree', commit, '--', f'{prefix}/baseline.json'):
         return  # First version of the suite in this repository.
     previous_manifest = git('show', f'{commit}:{prefix}/manifest.json')
@@ -61,7 +63,7 @@ def check_pr_base(ref, baseline):
     if digest(previous_manifest) != previous_baseline['manifestSha256']:
         raise ValueError('PR base has an inconsistent OMR manifest and baseline')
     check_frozen_cases(json.loads(previous_manifest), previous_baseline,
-                       json.loads((FIXTURES / 'manifest.json').read_bytes()), baseline)
+                       json.loads((fixtures / 'manifest.json').read_bytes()), baseline)
 
 
 def record_case(report, output, case, observed, discrepancies, baseline):
@@ -80,7 +82,7 @@ def failed_case(report, output, case, error):
     print(f'{case["id"]}: {error}', flush=True)
 
 
-def run(cases, report, baseline, output, sdk_root, pin, executable, shared):
+def run(cases, report, baseline, output, sdk_root, pin, executable, shared, fixtures):
     from playwright.sync_api import sync_playwright
 
     with serve_sdk(sdk_root) as origin, sync_playwright() as playwright:
@@ -90,7 +92,7 @@ def run(cases, report, baseline, output, sdk_root, pin, executable, shared):
             crop_cases = [case for case in cases.values() if case['kind'] == 'tuplet-crop']
             if crop_cases:
                 inputs = [dict(id=case['id'], staffBoxes=case['staffBoxes'],
-                               png=b64encode((FIXTURES / case['source']['file']).read_bytes()).decode())
+                               png=b64encode((fixtures / case['source']['file']).read_bytes()).decode())
                           for case in crop_cases]
                 try:
                     marks, modules = read_crops(chromium, origin, sdk_root, pin, inputs)
@@ -119,8 +121,8 @@ def run(cases, report, baseline, output, sdk_root, pin, executable, shared):
                 dest.mkdir()
                 print(f'Recognizing {identifier}', flush=True)
                 try:
-                    stages, receipt = recognize(chromium, origin, pin, FIXTURES / case['source']['file'], dest, shared)
-                    truth = ET.parse(FIXTURES / case['truth']['file']).getroot()
+                    stages, receipt = recognize(chromium, origin, pin, fixtures / case['source']['file'], dest, shared)
+                    truth = ET.parse(fixtures / case['truth']['file']).getroot()
                     comparisons = {name: compare_score(truth, ET.fromstring(xml)) for name, xml in stages.items()}
                     discrepancies = comparisons['final']['discrepancies']
                     data = dict(browserRun=receipt, comparisons=comparisons)
@@ -137,12 +139,14 @@ def main():
     parser.add_argument('--output', type=Path, help='Write results to this new directory')
     parser.add_argument('--shared', action='store_true', help='Use the SDK shared-memory bridge')
     parser.add_argument('--base-ref', help='Check existing references and allowances against this Git revision')
+    parser.add_argument('--corpus', choices=CORPORA, default='regression', help='Choose the frozen score set')
     args = parser.parse_args()
-    cases, manifest_hash = load_manifest()
-    baseline_path = FIXTURES / 'baseline.json'
+    fixtures = CORPORA[args.corpus]
+    cases, manifest_hash = load_manifest(fixtures)
+    baseline_path = fixtures / 'baseline.json'
     baseline = load_baseline(baseline_path, cases, manifest_hash)
     if args.base_ref:
-        check_pr_base(args.base_ref, baseline)
+        check_pr_base(args.base_ref, baseline, fixtures)
     pin_path = REPO / 'vendor' / 'sheetscan' / 'pin.json'
     pin = json.loads(pin_path.read_bytes())
     sdk_root = REPO / 'public' / 'vendor' / 'sheetscan'
@@ -156,7 +160,7 @@ def main():
         root.mkdir(parents=True, exist_ok=True)
         output = Path(tempfile.mkdtemp(prefix='run-', dir=root))
     print(f'OMR report: {output / "report.json"}', flush=True)
-    report = dict(version=1, manifestSha256=manifest_hash, baselineSha256=digest(baseline_path.read_bytes()),
+    report = dict(version=1, corpus=args.corpus, manifestSha256=manifest_hash, baselineSha256=digest(baseline_path.read_bytes()),
                   pinSha256=digest(pin_path.read_bytes()), sdkVersion=pin['version'],
                   sourceCommit=pin['sourceCommit'], models={model['name']: model['sha256'] for model in pin['models']},
                   runtimeLockSha256=pin['files']['runtime-lock.json'], bridge='shared memory' if args.shared else 'jspi',
@@ -164,7 +168,7 @@ def main():
                   status='running', cases={})
     save(output / 'report.json', report)
     try:
-        run(cases, report, baseline, output, sdk_root, pin, args.chromium, args.shared)
+        run(cases, report, baseline, output, sdk_root, pin, args.chromium, args.shared, fixtures)
     except Exception as error:
         report['error'] = str(error)
         report['status'] = 'failed'
@@ -172,6 +176,17 @@ def main():
         raise
     passed = set(report['cases']) == set(cases) and all(row['status'] == 'pass' for row in report['cases'].values())
     report['status'] = 'pass' if passed else 'failed'
+    pdfs = [case for case in cases.values() if case['kind'] == 'pdf']
+    scored = [row['comparisons']['final']['core'] for row in report['cases'].values() if 'comparisons' in row]
+    report['totals'] = {
+        'pdfScores': len(pdfs),
+        'scoredPdfScores': len(scored),
+        'strictEvents': dict(
+            correct=sum(row['events']['correct'] for row in scored),
+            truth=sum(case['inventory']['events'] for case in pdfs),
+            reading=sum(row['events']['reading'] for row in scored),
+        ),
+    }
     save(output / 'report.json', report)
     print(f'OMR test set {report["status"]}: {len(report["cases"])}/{len(cases)} cases reported', flush=True)
     return int(not passed)
