@@ -46,6 +46,24 @@ describe('recognized-score display beaming', () => {
       expect(soundingEvents(parseScore(result.xml))).toEqual(soundingEvents(parseScore(original)));
     }
   });
+  it('retains cross-beat source groups and fills different measures only in the display clone', () => {
+    const explicit =
+      note('eighth', 2, '<beam number="1">begin</beam>') +
+      note('eighth', 2, '<beam number="1">continue</beam>').repeat(3) +
+      note('eighth', 2, '<beam number="1">end</beam>') +
+      note();
+    const plain = '<measure number="2">' + note().repeat(6) + '</measure>';
+    const original = score(explicit).replace('</part>', plain + '</part>');
+    const result = render(original);
+    const measures = Array.from(xml(result.xml).getElementsByTagName('measure'));
+    expect(result.autoBeam).toBe(false);
+    expect(
+      Array.from(measures[0].getElementsByTagName('beam')).map((beam) => beam.textContent),
+    ).toEqual(['begin', 'continue', 'continue', 'continue', 'end']);
+    expect(measures[1].getElementsByTagName('beam')).toHaveLength(6);
+    expect(withoutBeams(result.xml)).toBe(withoutBeams(original));
+    expect(soundingEvents(parseScore(result.xml))).toEqual(soundingEvents(parseScore(original)));
+  });
   it('preserves rests and grace boundaries rather than joining across them', () => {
     const rest =
         '<note><rest/><duration>2</duration><voice>1</voice><type>eighth</type><staff>1</staff></note>',

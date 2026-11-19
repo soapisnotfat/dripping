@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "manifestSha256": "92559e1d4d63eaba0ec9d82a5bb29611a6ac73a633b76e86481fc005131b8c6c",
+  "manifestSha256": "df208a8eaad7e1bcb5feffce79815c675162837de0da18e3cf396ba207ad21b4",
   "appCommit": "8ca941ad9f2f29b769aca21b33629d688c71d785",
   "pinSha256": "88faa753c8df86a630811624121eedbe1bd227f67a7bad5643ea159ce5153807",
   "sdkVersion": "v15-notation-metadata",
@@ -338,278 +338,6 @@
       "finalSha256": "3713313dd7fe4906264c3c8022d4364a4ce0d6e4d416951b36995a85b69fde39",
       "discrepancies": [
         {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "0",
-            "duration": "1/2",
-            "pitch": ["C", "0", "5"],
-            "number": 1,
-            "value": "begin"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1",
-            "duration": "1/2",
-            "pitch": ["E", "0", "5"],
-            "number": 1,
-            "value": "end"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1/2",
-            "duration": "1/2",
-            "pitch": ["D", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "2",
-            "duration": "1/2",
-            "pitch": ["E", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "3/2",
-            "duration": "1/2",
-            "pitch": ["F", "0", "5"],
-            "number": 1,
-            "value": "begin"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": "1",
-            "staff": "1",
-            "onset": "5/2",
-            "duration": "1/2",
-            "pitch": ["D", "0", "5"],
-            "number": 1,
-            "value": "end"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 3,
-            "voice": "1",
-            "staff": "1",
-            "onset": "0",
-            "duration": "1/2",
-            "pitch": ["G", "0", "5"],
-            "number": 1,
-            "value": "begin"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 3,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1",
-            "duration": "1/2",
-            "pitch": ["C", "0", "5"],
-            "number": 1,
-            "value": "end"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 3,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1/2",
-            "duration": "1/2",
-            "pitch": ["F", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 4,
-            "voice": "1",
-            "staff": "1",
-            "onset": "0",
-            "duration": "1/2",
-            "pitch": ["D", "0", "5"],
-            "number": 1,
-            "value": "begin"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 4,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1",
-            "duration": "1/2",
-            "pitch": ["F", "0", "5"],
-            "number": 1,
-            "value": "end"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 4,
-            "voice": "1",
-            "staff": "1",
-            "onset": "1/2",
-            "duration": "1/2",
-            "pitch": ["E", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": "1",
-            "staff": "1",
-            "onset": "0",
-            "duration": "2/5",
-            "pitch": ["C", "0", "5"],
-            "number": 1,
-            "value": "begin"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": "1",
-            "staff": "1",
-            "onset": "2/5",
-            "duration": "2/5",
-            "pitch": ["D", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": "1",
-            "staff": "1",
-            "onset": "4/5",
-            "duration": "2/5",
-            "pitch": ["E", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": "1",
-            "staff": "1",
-            "onset": "6/5",
-            "duration": "2/5",
-            "pitch": ["F", "0", "5"],
-            "number": 1,
-            "value": "continue"
-          },
-          "count": 1
-        },
-        {
-          "category": "beam",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": "1",
-            "staff": "1",
-            "onset": "8/5",
-            "duration": "2/5",
-            "pitch": ["G", "0", "5"],
-            "number": 1,
-            "value": "end"
-          },
-          "count": 1
-        },
-        {
           "category": "key",
           "operation": "different",
           "count": 1,
@@ -619,13 +347,34 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              ["A", "0"],
-              ["B", "0"],
-              ["C", "0"],
-              ["D", "0"],
-              ["E", "0"],
-              ["F", "0"],
-              ["G", "0"]
+              [
+                "A",
+                "0"
+              ],
+              [
+                "B",
+                "0"
+              ],
+              [
+                "C",
+                "0"
+              ],
+              [
+                "D",
+                "0"
+              ],
+              [
+                "E",
+                "0"
+              ],
+              [
+                "F",
+                "0"
+              ],
+              [
+                "G",
+                "0"
+              ]
             ],
             "observed": null
           }
@@ -640,13 +389,34 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              ["A", "0"],
-              ["B", "0"],
-              ["C", "0"],
-              ["D", "0"],
-              ["E", "0"],
-              ["F", "0"],
-              ["G", "0"]
+              [
+                "A",
+                "0"
+              ],
+              [
+                "B",
+                "0"
+              ],
+              [
+                "C",
+                "0"
+              ],
+              [
+                "D",
+                "0"
+              ],
+              [
+                "E",
+                "0"
+              ],
+              [
+                "F",
+                "0"
+              ],
+              [
+                "G",
+                "0"
+              ]
             ],
             "observed": null
           }
@@ -661,13 +431,34 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              ["A", "0"],
-              ["B", "0"],
-              ["C", "0"],
-              ["D", "0"],
-              ["E", "0"],
-              ["F", "0"],
-              ["G", "0"]
+              [
+                "A",
+                "0"
+              ],
+              [
+                "B",
+                "0"
+              ],
+              [
+                "C",
+                "0"
+              ],
+              [
+                "D",
+                "0"
+              ],
+              [
+                "E",
+                "0"
+              ],
+              [
+                "F",
+                "0"
+              ],
+              [
+                "G",
+                "0"
+              ]
             ],
             "observed": null
           }
@@ -682,13 +473,34 @@
             "staff": "1",
             "onset": "0",
             "expected": [
-              ["A", "0"],
-              ["B", "0"],
-              ["C", "0"],
-              ["D", "0"],
-              ["E", "0"],
-              ["F", "0"],
-              ["G", "0"]
+              [
+                "A",
+                "0"
+              ],
+              [
+                "B",
+                "0"
+              ],
+              [
+                "C",
+                "0"
+              ],
+              [
+                "D",
+                "0"
+              ],
+              [
+                "E",
+                "0"
+              ],
+              [
+                "F",
+                "0"
+              ],
+              [
+                "G",
+                "0"
+              ]
             ],
             "observed": null
           }
@@ -747,6 +559,29 @@
       ],
       "workerSha256": "8228327b7ce1a56b6cc2155d5c4d47f6b6f1250c268eca0d34936b21c8e4cf76",
       "finalSha256": "e95ae54785a6e27f298e729c4b9c73fd0403ef72e06113038de9c8f207ef30c9",
+      "discrepancies": []
+    },
+    "beam-controls": {
+      "strictCoreEvents": {
+        "correct": 28,
+        "truth": 28,
+        "reading": 28
+      },
+      "graceEvents": {
+        "correct": 2,
+        "truth": 2,
+        "reading": 2
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "c3016e21dca81309f2a225e23ecd04e105fe923ed3c94de4fd47eec0a94c6d30"
+        }
+      ],
+      "workerSha256": "95db8fceba2bdaaed0053b6be02a5fd2a6803c844bc568a06bb17a859b4a2dc4",
+      "finalSha256": "c8ac20ffe43d5875711a2c29d32f2571561795f0c257cb74fdd1a0c07954b05f",
       "discrepancies": []
     }
   }

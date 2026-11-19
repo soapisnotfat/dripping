@@ -136,6 +136,29 @@
         "slurs": 1,
         "ties": 0
       }
+    },
+    {
+      "id": "beam-controls",
+      "family": "source-beam-exercise",
+      "kind": "pdf",
+      "issues": [
+        34
+      ],
+      "source": {
+        "file": "beam-controls.pdf",
+        "sha256": "a35f8c856d2dbd9fc4022e17f5bc31d5bb7176d9f41bc56ac8eace3582bcaa0d"
+      },
+      "truth": {
+        "file": "beam-controls.musicxml",
+        "sha256": "c5528e6a1d98f3761b33f48ab9c16c94964449b0e3be8f2b339feea06dcf0c51"
+      },
+      "inventory": {
+        "measures": 4,
+        "events": 28,
+        "graces": 2,
+        "slurs": 0,
+        "ties": 0
+      }
     }
   ]
 }

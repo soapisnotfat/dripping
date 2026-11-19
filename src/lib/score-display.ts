@@ -24,11 +24,8 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
   if (project.scoreConversion?.engine !== 'sheetscan' || !original)
     return { xml: original, autoBeam: false };
   const doc = new DOMParser().parseFromString(original, 'application/xml');
-  if (
-    doc.getElementsByTagName('parsererror').length ||
-    doc.getElementsByTagNameNS('*', 'beam').length
-  )
-    return { xml: original, autoBeam: false };
+  if (doc.getElementsByTagName('parsererror').length) return { xml: original, autoBeam: false };
+  const hasSourceBeams = doc.getElementsByTagNameNS('*', 'beam').length > 0;
   let changed = false;
   const mark = (entry: Entry, number: number, text: string) => {
     const beam = entry.note.namespaceURI
@@ -69,7 +66,8 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
   };
   for (const part of Array.from(doc.getElementsByTagNameNS('*', 'part'))) {
     let divisions = 0,
-      compound = false;
+      compound = false,
+      beatLength = 0;
     for (const measure of children(part, 'measure')) {
       let cursor = 0,
         lastOnset = 0,
@@ -92,6 +90,12 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
               types.length === 1 &&
               /^(6|9|12)$/.test(beats[0].textContent?.trim() || '') &&
               types[0].textContent?.trim() === '8';
+            const simple =
+              beats.length === 1 &&
+              types.length === 1 &&
+              /^[234]$/.test(beats[0].textContent?.trim() || '') &&
+              /^[248]$/.test(types[0].textContent?.trim() || '');
+            beatLength = compound ? 1.5 : simple ? 4 / Number(types[0].textContent) : 0;
           }
           continue;
         }
@@ -115,7 +119,7 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
           level = levels[value(item, 'type')] || 0,
           dots = children(item, 'dot').length;
         const expected = level ? (4 / 2 ** (level + 2)) * (2 - 2 ** -dots) : 0,
-          beat = Math.floor((onset + EPS) / 1.5);
+          beat = beatLength ? Math.floor((onset + EPS) / beatLength) : 0;
         const eligible =
           !grace &&
           !chord &&
@@ -127,7 +131,7 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
           duration > 0 &&
           Math.abs(duration - expected) < EPS &&
           onset >= -EPS &&
-          onset + duration <= (beat + 1) * 1.5 + EPS;
+          onset + duration <= (beat + 1) * beatLength + EPS;
         const entry = { note: item, onset, duration, level, eligible, beat };
         if (chord) {
           const prior = lastByVoice.get(key);
@@ -137,9 +141,16 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
         entries.push(entry);
         voices.set(key, entries);
       }
-      // OSMD 2.3.1 splits automatic groups at every denominator beat, so plain
-      // compound eighth-note meters need conventional 3/8 beams in this clone.
-      if (!compound || meterChangedInside || unreliablePosition) continue;
+      // Source groups take precedence within their measure. For other measures,
+      // keep the conventional display grouping even with global auto-beam off.
+      if (
+        measure.getElementsByTagNameNS('*', 'beam').length ||
+        !beatLength ||
+        (!compound && !hasSourceBeams) ||
+        meterChangedInside ||
+        unreliablePosition
+      )
+        continue;
       for (const entries of voices.values()) {
         let run: Entry[] = [];
         const flush = () => {
@@ -164,5 +175,8 @@ export function scoreEngraving(project: Pick<Project, 'scoreXml' | 'scoreConvers
       }
     }
   }
-  return { xml: changed ? new XMLSerializer().serializeToString(doc) : original, autoBeam: true };
+  return {
+    xml: changed ? new XMLSerializer().serializeToString(doc) : original,
+    autoBeam: !hasSourceBeams,
+  };
 }
