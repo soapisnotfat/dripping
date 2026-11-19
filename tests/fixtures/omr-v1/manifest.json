@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "cohort": "disclosed-authored-regression",
+  "evaluatorSource": "https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74/bench",
+  "evaluators": {
+    "practice_metrics.py": "82dc2a42bd7e96401c8f5c2178e9c1b7effa2280946ac7c06dffbd07748c316b",
+    "qualification_v1.py": "53b22ef564bc8b8d62e2170203d17f3a922e58f7b3dcaa7659cfe5b4d33b9ebc"
+  },
+  "cases": [
+    {
+      "id": "grace-slur",
+      "family": "natural-carry-exercise",
+      "kind": "pdf",
+      "issues": [35],
+      "source": {
+        "file": "grace-slur.pdf",
+        "sha256": "374bd496f450353d5464866bac50a2d4067c7c4a94fbd317ee2889080c00afc2"
+      },
+      "truth": {
+        "file": "grace-slur.musicxml",
+        "sha256": "74e3476c823a274de128046c09086f05bdabf7711f133204c6638b4daa5930d0"
+      },
+      "inventory": { "measures": 4, "events": 16, "graces": 1, "slurs": 1, "ties": 0 }
+    },
+    {
+      "id": "tie-controls",
+      "family": "ties-and-slurs-exercise",
+      "kind": "pdf",
+      "issues": [35],
+      "source": {
+        "file": "tie-controls.pdf",
+        "sha256": "32ab9e0adab62f5015d2a00aa5635147b10104bee12958c8b66c929504cf0203"
+      },
+      "truth": {
+        "file": "tie-controls.musicxml",
+        "sha256": "8312c965246cd34d4f54e2b4e909e8bb9b0637b14ceb029634a65e890141dbcf"
+      },
+      "inventory": { "measures": 4, "events": 15, "graces": 2, "slurs": 2, "ties": 2 }
+    },
+    {
+      "id": "quintuplet-score",
+      "family": "five-in-six-eight-exercise",
+      "kind": "pdf",
+      "issues": [31, 32, 34],
+      "source": {
+        "file": "quintuplet-score.pdf",
+        "sha256": "fde46fa2471187ee2abbdcec3f762f26e59ea5dd234fa05482c69dedbe60bbc3"
+      },
+      "truth": {
+        "file": "quintuplet-score.musicxml",
+        "sha256": "a66aec0a3ae52a3960ce45e1a2aafc3f652a6a928785c8c4ffaba6b487c2ed21"
+      },
+      "inventory": { "measures": 4, "events": 18, "graces": 0, "slurs": 0, "ties": 0 }
+    },
+    {
+      "id": "tuplet-fragment",
+      "family": "bravura-fragment-development-crop",
+      "kind": "tuplet-crop",
+      "issues": [32],
+      "source": {
+        "file": "tuplet-fragment.png",
+        "sha256": "e976df39fe759c96f790b9b5c10573a650d935f5688a92094140be7e05ef8294"
+      },
+      "staffBoxes": [[0, 73, 149, 130]],
+      "marks": [{ "staff": 0, "number": 5, "box": [51, 55, 69, 77] }]
+    },
+    {
+      "id": "tuplet-no-digit",
+      "family": "bravura-fragment-development-crop",
+      "kind": "tuplet-crop",
+      "issues": [32],
+      "source": {
+        "file": "tuplet-no-digit.png",
+        "sha256": "b65590a039241a813cdae6de5d0301762be279fe595cea8229b20bd912fac57d"
+      },
+      "staffBoxes": [[0, 73, 149, 130]],
+      "marks": []
+    }
+  ]
+}
