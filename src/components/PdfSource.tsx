@@ -1,7 +1,39 @@
 import { useEffect, useState } from 'react';
 import type { Locale, Project } from '../lib/types';
-import { pdfFiles } from '../lib/pdf-project';
+import { pdfFiles, unrecognizedPdfPages } from '../lib/pdf-project';
 import type { ConversionProgress, PreviewPage } from '../lib/pdf-import';
+
+export function PdfRecognitionNotice({
+  projectId,
+  auditAssetId,
+  locale,
+}: {
+  projectId: string;
+  auditAssetId: string;
+  locale: Locale;
+}) {
+  const [pages, setPages] = useState<number[]>([]);
+  useEffect(() => {
+    let active = true;
+    void unrecognizedPdfPages(projectId, auditAssetId)
+      .then((unread) => {
+        if (active) setPages(unread);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [projectId, auditAssetId]);
+  if (!pages.length) return null;
+  return (
+    <div className="score-notes" role="status">
+      {locale === 'zh'
+        ? `未能在原 PDF 的第 ${pages.join('、')} 页识别出乐谱。请查看原 PDF 确认这些页。`
+        : `No music was recognized on PDF ${pages.length === 1 ? 'page' : 'pages'} ${pages.join(', ')}. Check these pages in the original PDF.`}
+    </div>
+  );
+}
+
 export function PdfSource({
   project,
   locale,
