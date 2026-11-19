@@ -281,6 +281,42 @@ function warpedClip(pcm: PCM, clip: Clip, from: number, to: number, speed: numbe
   return { sampleRate: sr, channels: out };
 }
 
+function sameTimeMap(left: Clip['timeMap'], right: Clip['timeMap']): boolean {
+  if (left === right) return true;
+  return (
+    !!left &&
+    !!right &&
+    left.length === right.length &&
+    left.every((point, i) => point.time === right[i].time && point.source === right[i].source)
+  );
+}
+
+function continuousClips(clips: Clip[]): Clip[] {
+  const runs: Clip[] = [];
+  for (const clip of clips) {
+    const previous = runs.at(-1);
+    if (
+      previous &&
+      previous.end === clip.start &&
+      previous.assetId === clip.assetId &&
+      // Mapping a split to the score clock can round the two rates differently.
+      Math.abs(previous.rate - clip.rate) < 1e-9 &&
+      previous.gain === clip.gain &&
+      previous.fadeOut === 0 &&
+      clip.fadeIn === 0 &&
+      previous.fadeIn <= previous.end - previous.start &&
+      clip.fadeOut <= clip.end - clip.start &&
+      sameTimeMap(previous.timeMap, clip.timeMap) &&
+      Math.abs(clipSourceTime(previous, previous.end) - clipSourceTime(clip, clip.start)) < 1e-9
+    ) {
+      runs[runs.length - 1] = { ...previous, end: clip.end, fadeOut: clip.fadeOut };
+    } else {
+      runs.push(clip);
+    }
+  }
+  return runs;
+}
+
 export function renderTrack(
   track: Track,
   buffers: Map<string, PCM>,
@@ -297,7 +333,8 @@ export function renderTrack(
   if (length * channels > 150_000_000)
     throw Error('导出范围过大，请分段导出 / Export a shorter range');
   const out = Array.from({ length: channels }, () => new Float32Array(length));
-  for (const clip of track.clips) {
+  // A nondestructive split still plays as one stretch pass along the source.
+  for (const clip of continuousClips(track.clips)) {
     const raw = buffers.get(clip.assetId);
     if (!raw) throw Error('Missing audio asset');
     const start = clip.start + track.offset,
