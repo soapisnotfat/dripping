@@ -34,7 +34,7 @@ class OMRTestSet(unittest.TestCase):
                     truth = score(identifier)
                     self.assertEqual(compare_score(truth, truth)['discrepancies'], [])
 
-    def test_grace_slur_replaced_by_tie_is_the_frozen_failure(self):
+    def test_grace_slur_replaced_by_tie_reports_attack_and_notation_errors(self):
         truth = score('grace-slur')
         reading = copy.deepcopy(truth)
         grace, principal = reading.findall('part/measure[@number="2"]/note')[:2]
@@ -44,11 +44,13 @@ class OMRTestSet(unittest.TestCase):
             ET.SubElement(notation, 'tied', type=kind)
             ET.SubElement(note, 'tie', type=kind)
         discrepancies = compare_score(truth, reading)['discrepancies']
-        known = self.baseline['cases']['grace-slur']['discrepancies']
-        self.assertEqual(compare_baseline(discrepancies, known), dict(new=[], resolved=[]))
+        self.assertEqual(len(discrepancies), 7)
         self.assertEqual({row['category'] for row in discrepancies},
                          {'core-event', 'attack', 'slur', 'grace-playback-tie', 'tied'})
-        self.assertEqual(compare_baseline([], known), dict(new=[], resolved=known))
+        allowance = compare_baseline(discrepancies, [])['new']
+        self.assertEqual(len(allowance), 7)
+        self.assertEqual(compare_baseline(discrepancies, allowance), dict(new=[], resolved=[]))
+        self.assertEqual(compare_baseline([], allowance)['resolved'], allowance)
 
     def test_ordinary_slur_loss_has_unchanged_timed_events(self):
         truth = score('tie-controls')
@@ -126,11 +128,15 @@ class OMRTestSet(unittest.TestCase):
 
     def test_a_pr_can_remove_an_allowance_but_cannot_restore_it_later(self):
         manifest = json.loads((FIXTURES / 'manifest.json').read_bytes())
-        improved = copy.deepcopy(self.baseline)
-        improved['cases']['grace-slur']['discrepancies'].pop()
-        check_frozen_cases(manifest, self.baseline, manifest, improved)
+        starting = copy.deepcopy(self.baseline)
+        starting['cases']['grace-slur']['discrepancies'] = [
+            dict(category='attack', operation='missing', item={'measure': 2}, count=1),
+        ]
+        improved = copy.deepcopy(starting)
+        improved['cases']['grace-slur']['discrepancies'].clear()
+        check_frozen_cases(manifest, starting, manifest, improved)
         with self.assertRaisesRegex(ValueError, 'introduces new allowed discrepancies'):
-            check_frozen_cases(manifest, improved, manifest, self.baseline)
+            check_frozen_cases(manifest, improved, manifest, starting)
 
 
 if __name__ == '__main__':

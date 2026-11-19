@@ -1,16 +1,16 @@
 {
-  "version": "v15-notation-metadata",
-  "recognizerVersion": "v15-notation-metadata",
-  "sourceCommit": "33dd06488cc386b8ebfae929e5ea00e5a61efe74",
-  "source": "https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74",
+  "version": "v16-source-grace-slurs",
+  "recognizerVersion": "v16-source-grace-slurs",
+  "sourceCommit": "4e597fa70c4a1edb92493292859f9361274c81f0",
+  "source": "https://github.com/soapisnotfat/sheetscan/tree/4e597fa70c4a1edb92493292859f9361274c81f0",
   "license": "AGPL-3.0",
   "modelBase": "../v13-woodwind-pdf/",
   "files": {
     "Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
     "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
     "Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
-    "SOURCE.txt": "73371a89a3302061a0a6f89cd6e6059af85d49d24f6fa4d968f38d1abfca5a10",
-    "assets/omr.worker-D1Pjj4dr.js": "f0a7ebc078cda511c87e22f0c0f6a8244c21eb6993fcf171dcb41e61e30f4527",
+    "SOURCE.txt": "e84529d6506af74b3df50917779c2281c17212540704f7ab348639902050d6d2",
+    "assets/omr.worker-DoShRPtY.js": "357718d817139d2aff44e506c5c41fc09044f4f881868d7e1ad5e247d9c55cba",
     "assets/ort.worker-NabkGbRB.js": "12c459c669fb963710753cc3ac28791136f5469ab657f5cf01dbf310ba0b2b0e",
     "homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709",
     "licenses/accidental-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
@@ -28,7 +28,7 @@
     "licenses/tuplet-fonts/manifest.json": "4d57191638e3aa440f3392bca825bd78c9ac1601a235d29f1c116bff949c6dc3",
     "runtime-lock.json": "7b2d0ab5642c3117653ee4f2c606ce879aa315fc446d2b8de5d572fa884a9064",
     "runtime-notices.txt": "d8083d42e1371153826a1ca0623020fce497ce56c204e8b78c0d0ca03aaa91e6",
-    "sheetscan.js": "81abddd647d5c0b083436d91b879b688101f4a4856a33d3cc5b41574283d12a9"
+    "sheetscan.js": "5d3881d961a8100e9765e38bbd12c65dff4e2cc706116c7b628c38310182472d"
   },
   "models": [
     {
@@ -51,18 +51,18 @@
     }
   ],
   "previous": {
-    "version": "v14-static-runtime",
-    "recognizerVersion": "v13-woodwind-pdf",
-    "sourceCommit": "9649164135fd0073c026b2c5af0be186d9e978dc",
-    "source": "https://github.com/soapisnotfat/sheetscan/tree/9649164135fd0073c026b2c5af0be186d9e978dc",
+    "version": "v15-notation-metadata",
+    "recognizerVersion": "v15-notation-metadata",
+    "sourceCommit": "33dd06488cc386b8ebfae929e5ea00e5a61efe74",
+    "source": "https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74",
     "license": "AGPL-3.0",
     "modelBase": "../v13-woodwind-pdf/",
     "files": {
       "Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
       "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
       "Leipzig-LICENSE.txt": "77b3d0cfb6fa5f4784d64b9ddabffc1f8c9544b0389c4a13088e7b94defe1763",
-      "SOURCE.txt": "98b4f3cc84e9fe3448776ef8c5c1e98e79c02019890f4c600d8f41a84eebdcfb",
-      "assets/omr.worker-BpOy0LhA.js": "4b747f4d54856b8d1316437c9795a5c38304d7ba39e3d98b0fda32f237faeae3",
+      "SOURCE.txt": "73371a89a3302061a0a6f89cd6e6059af85d49d24f6fa4d968f38d1abfca5a10",
+      "assets/omr.worker-D1Pjj4dr.js": "f0a7ebc078cda511c87e22f0c0f6a8244c21eb6993fcf171dcb41e61e30f4527",
       "assets/ort.worker-NabkGbRB.js": "12c459c669fb963710753cc3ac28791136f5469ab657f5cf01dbf310ba0b2b0e",
       "homr.zip": "349b6b37ef35cea68cdeee820ca5b084cf50870073190675cfc2d6e1f384b709",
       "licenses/accidental-fonts/Bravura-LICENSE.txt": "bdca252186865f3b2c0e76da4a4e335c14ba1d37f80194fca254ddfa88e84fbf",
@@ -80,7 +80,7 @@
       "licenses/tuplet-fonts/manifest.json": "4d57191638e3aa440f3392bca825bd78c9ac1601a235d29f1c116bff949c6dc3",
       "runtime-lock.json": "7b2d0ab5642c3117653ee4f2c606ce879aa315fc446d2b8de5d572fa884a9064",
       "runtime-notices.txt": "d8083d42e1371153826a1ca0623020fce497ce56c204e8b78c0d0ca03aaa91e6",
-      "sheetscan.js": "c156586a9dd78f609a6f0c31e8cf710249f0d4f608d7dbacafd9099da160b657"
+      "sheetscan.js": "81abddd647d5c0b083436d91b879b688101f4a4856a33d3cc5b41574283d12a9"
     },
     "models": [
       {

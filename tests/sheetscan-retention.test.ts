@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 
 const sha = (value: Uint8Array | string) => createHash('sha256').update(value).digest('hex');
 
-function prepare(corruptPrevious = false) {
+function prepare({ corruptPrevious = false, coldNotices = false, corruptNotice = false } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'sheetscan-retention-'));
   const put = (path: string, bytes: Uint8Array | string) => {
     const destination = join(root, path);
@@ -17,11 +17,13 @@ function prepare(corruptPrevious = false) {
   const current = Buffer.from('current runtime bytes'),
     previous = Buffer.from('previous runtime bytes');
   const sdk = 'const worker = "data:text/javascript;base64,ZXhwb3J0IHt9";';
+  const url = 'https://example.invalid/engine.bin';
   const manifest = (bytes: Uint8Array) => ({
     assets: [
       {
         path: 'engine.bin',
-        url: 'https://example.invalid/engine.bin',
+        url,
+        group: coldNotices ? 'notice' : 'runtime',
         bytes: bytes.length,
         sha256: sha(bytes),
       },
@@ -29,9 +31,14 @@ function prepare(corruptPrevious = false) {
   });
   const currentManifest = JSON.stringify(manifest(current)),
     previousManifest = JSON.stringify(manifest(previous));
-  const files = (runtime: string) => ({
+  const notice = (bytes: Buffer, corrupt = false) =>
+      `Notices for the package\n\nengine.bin\nSource: ${url}\nSHA-256: ${sha(bytes)}\n\n${corrupt ? 'damaged notice' : bytes.toString()}\n`,
+    currentNotice = notice(current),
+    previousNotice = notice(previous, corruptNotice);
+  const files = (runtime: string, notices: string) => ({
     'sheetscan.js': sha(sdk),
     'runtime-lock.json': sha(runtime),
+    ...(coldNotices ? { 'runtime-notices.txt': sha(notices) } : {}),
   });
   put(
     'scripts/prepare-sheetscan.mjs',
@@ -46,15 +53,20 @@ function prepare(corruptPrevious = false) {
     JSON.stringify({
       version: 'v15',
       models: [],
-      files: files(currentManifest),
-      previous: { version: 'v14', models: [], files: files(previousManifest) },
+      files: files(currentManifest, currentNotice),
+      previous: { version: 'v14', models: [], files: files(previousManifest, previousNotice) },
     }),
   );
-  put(`.cache/sheetscan/runtime/${sha(current)}`, current);
-  put(
-    `.cache/sheetscan/runtime/${sha(previous)}`,
-    corruptPrevious ? Buffer.from('damaged') : previous,
-  );
+  if (coldNotices) {
+    put('vendor/sheetscan/runtime-notices.txt', currentNotice);
+    put('vendor/sheetscan/previous/runtime-notices.txt', previousNotice);
+  } else {
+    put(`.cache/sheetscan/runtime/${sha(current)}`, current);
+    put(
+      `.cache/sheetscan/runtime/${sha(previous)}`,
+      corruptPrevious ? Buffer.from('damaged') : previous,
+    );
+  }
   symlinkSync(resolve('node_modules'), join(root, 'node_modules'), 'dir');
   return { root, current, previous };
 }
@@ -88,7 +100,7 @@ it('stages runtime assets for both current and retained lazy-loading SDKs using 
 });
 
 it('rejects a corrupt retained runtime cache rather than serving it to an old SDK', () => {
-  const fixture = prepare(true);
+  const fixture = prepare({ corruptPrevious: true });
   try {
     expect(() =>
       execFileSync(process.execPath, ['scripts/prepare-sheetscan.mjs'], {
@@ -96,6 +108,35 @@ it('rejects a corrupt retained runtime cache rather than serving it to an old SD
         stdio: 'pipe',
       }),
     ).toThrow('Cached runtime checksum mismatch');
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+it('stages exact bundled notices on a cold cache using each SDK package', () => {
+  const fixture = prepare({ coldNotices: true });
+  try {
+    execFileSync(process.execPath, ['scripts/prepare-sheetscan.mjs'], { cwd: fixture.root });
+    expect(
+      readFileSync(join(fixture.root, 'public/vendor/sheetscan/v15/runtime/engine.bin')),
+    ).toEqual(fixture.current);
+    expect(
+      readFileSync(join(fixture.root, 'public/vendor/sheetscan/v14/runtime/engine.bin')),
+    ).toEqual(fixture.previous);
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+it('checks each notice against the raw runtime hash after extracting it from a verified bundle', () => {
+  const fixture = prepare({ coldNotices: true, corruptNotice: true });
+  try {
+    expect(() =>
+      execFileSync(process.execPath, ['scripts/prepare-sheetscan.mjs'], {
+        cwd: fixture.root,
+        stdio: 'pipe',
+      }),
+    ).toThrow('Runtime checksum mismatch: engine.bin');
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
   }
