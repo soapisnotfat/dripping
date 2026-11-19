@@ -69,6 +69,62 @@ describe('PCM and non-destructive edits', () => {
     expect(out.channels[0]).toEqual(signal.channels[0]);
     expect(clip.end).toBe(2);
   });
+  it.each([false, true])(
+    'renders a saved split continuously at practice speeds (warped=%s)',
+    (warped) => {
+      const source = warped
+        ? {
+            ...clip,
+            timeMap: [
+              { time: 0, source: 0 },
+              { time: 0.84, source: 0.78 },
+              { time: 2, source: 2 },
+            ],
+          }
+        : clip;
+      const divided: Clip[] = JSON.parse(JSON.stringify(splitClips([source], 0.473, 1.329)));
+      const buffers = new Map([['a', signal]]);
+      for (const speed of [0.5, 0.6, 0.75, 0.9, 1]) {
+        const whole = renderTrack({ ...track, clips: [source] }, buffers, 0.12, 1.88, sr, speed);
+        const split = renderTrack({ ...track, clips: divided }, buffers, 0.12, 1.88, sr, speed);
+        expect(
+          split.channels.every((channel, c) => channel.every((x, i) => x === whole.channels[c][i])),
+        ).toBe(true);
+      }
+    },
+  );
+  it('retains deliberate edits at otherwise adjacent clip joins', () => {
+    const [left, right] = splitClips([clip], 1, 1);
+    const buffers = new Map([['a', signal]]);
+    for (const edited of [
+      { ...right, sourceStart: 0.75 },
+      { ...right, fadeIn: 0.08 },
+      { ...right, gain: 0.5 },
+      { ...right, start: 1.1 },
+    ]) {
+      const leftOnly = renderTrack({ ...track, clips: [left] }, buffers, 0, 2, sr, 0.5);
+      const rightOnly = renderTrack({ ...track, clips: [edited] }, buffers, 0, 2, sr, 0.5);
+      const joined = renderTrack({ ...track, clips: [left, edited] }, buffers, 0, 2, sr, 0.5);
+      expect(
+        joined.channels.every((channel, c) =>
+          channel.every((x, i) => x === leftOnly.channels[c][i] + rightOnly.channels[c][i]),
+        ),
+      ).toBe(true);
+    }
+  });
+  it('keeps a split continuous after the score clock recalculates its linear rates', () => {
+    const source = { ...clip, end: 1.25, rate: 1.2 };
+    const parts = splitClips([source], 0.25, 0.8125);
+    const last = parts.at(-1)!;
+    // Same source span after re-expressing the last region on the score clock.
+    last.rate = 1.2000000000000002;
+    const buffers = new Map([['a', signal]]);
+    const whole = renderTrack({ ...track, clips: [source] }, buffers, 0, 2, sr, 0.5);
+    const split = renderTrack({ ...track, clips: parts }, buffers, 0, 2, sr, 0.5);
+    expect(
+      split.channels.every((channel, c) => channel.every((x, i) => x === whole.channels[c][i])),
+    ).toBe(true);
+  });
   it('clears a range without shifting later audio and trims non-destructively', () => {
     const out = renderTrack(
       { ...track, clips: clearClips([clip], 0.5, 1.5) },
