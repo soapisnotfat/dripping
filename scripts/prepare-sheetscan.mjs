@@ -45,6 +45,13 @@ async function download(url, label) {
         );
     }
 }
+function bundledNotice(bundle, asset) {
+  const header = `\n${asset.path}\nSource: ${asset.url}\nSHA-256: ${asset.sha256}\n\n`,
+    offset = bundle.indexOf(header);
+  if (offset < 0) throw Error('Missing bundled runtime notice: ' + asset.path);
+  const start = offset + Buffer.byteLength(header);
+  return bundle.subarray(start, start + asset.bytes);
+}
 await copyFiles(pin.files, source, target);
 // Retain exactly one prior released package for existing lazy-loading PWA tabs.
 if (pin.previous) {
@@ -91,7 +98,12 @@ if (pin.previous?.files['runtime-lock.json'])
     manifest: JSON.parse(await readFile(new URL('previous/runtime-lock.json', source), 'utf8')),
     target: new URL(pin.previous.version + '/', root),
   });
-for (const pkg of runtimePackages)
+for (const pkg of runtimePackages) {
+  // The verified notices bundle includes exact upstream bytes. This avoids
+  // building against mutable or retired upstream license URLs.
+  const notices = pkg.manifest.assets.some((asset) => asset.group === 'notice')
+    ? await readFile(new URL('runtime-notices.txt', pkg.target))
+    : null;
   for (let index = 0; index < pkg.manifest.assets.length; index += 3)
     await Promise.all(
       pkg.manifest.assets.slice(index, index + 3).map(async (asset) => {
@@ -107,7 +119,10 @@ for (const pkg of runtimePackages)
         if (bytes && (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256))
           throw Error('Cached runtime checksum mismatch: ' + asset.path);
         if (!bytes) {
-          bytes = await download(asset.url, asset.path);
+          bytes =
+            asset.group === 'notice'
+              ? bundledNotice(notices, asset)
+              : await download(asset.url, asset.path);
           if (bytes.length !== asset.bytes || sha(bytes) !== asset.sha256)
             throw Error('Runtime checksum mismatch: ' + asset.path);
           await put(cached, bytes);
@@ -115,6 +130,7 @@ for (const pkg of runtimePackages)
         await put(new URL('runtime/' + asset.path, pkg.target), bytes);
       }),
     );
+}
 await put(new URL('pin.json', target), Buffer.from(JSON.stringify(pin, null, 2) + '\n'));
 console.log(
   'Pinned SheetScan prepared:',
