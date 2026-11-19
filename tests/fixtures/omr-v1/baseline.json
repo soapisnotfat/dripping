@@ -1,0 +1,826 @@
+{
+  "version": 1,
+  "manifestSha256": "9e45d67f784addd897ff201e4755de3341c9b8d910d080fee6c26e6f334bb785",
+  "appCommit": "8ca941ad9f2f29b769aca21b33629d688c71d785",
+  "pinSha256": "88faa753c8df86a630811624121eedbe1bd227f67a7bad5643ea159ce5153807",
+  "sdkVersion": "v15-notation-metadata",
+  "sourceCommit": "33dd06488cc386b8ebfae929e5ea00e5a61efe74",
+  "models": {
+    "segnet": "6ed36640db4ef5d223098b6d5efe4eda97c66b24a2c72faab8a018c749003a8d",
+    "decoder": "99a6ac39770616bc1a20d6c409bb85fbbe21ba47f972984f9ef834fb5741b96f",
+    "encoder": "ee5767286c60dc3d567fe72b6560e7285261ede1535b4215153c199ab3057559"
+  },
+  "runtimeLockSha256": "7b2d0ab5642c3117653ee4f2c606ce879aa315fc446d2b8de5d572fa884a9064",
+  "cropModules": {
+    "printed_tuplets.py": "31fc2d7a406e9da8b5d0bdf24b7f860becadd57fd24e128fada3c67253788b04",
+    "tuplet_templates.json": "986028e5adbb4fda46e5ec87376eda6e7f6931f0abf1f039cccb419e2f55cff8",
+    "tuplet_glyphs.py": "7fb5f20d102b270f696df41b11f30f26eb6e2588cc3cc98109f9552cf2a92726",
+    "tuplet_classifier.json": "de92fb01f4ae749d7f9a675f1fd2228427cddb643b3f61ca96531ca40bf093b5"
+  },
+  "browser": "151.0.7922.34",
+  "bridge": "jspi",
+  "playwright": "1.62.0",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "cases": {
+    "grace-slur": {
+      "strictCoreEvents": {
+        "correct": 15,
+        "truth": 16,
+        "reading": 16
+      },
+      "graceEvents": {
+        "correct": 1,
+        "truth": 1,
+        "reading": 1
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "7744095adb31ca58b44a3612e40b04c089aee9d716ecc615deab3b2e50c27a14"
+        }
+      ],
+      "workerSha256": "62d17eadd67e2028e9dc20d3f1e6943341ca5e33f02d529a9aa6d53bb490ec5a",
+      "finalSha256": "8496339efe412904deabe3ad0acf5a7cef1f68954483065346be132558a2a1a7",
+      "discrepancies": [
+        {
+          "category": "attack",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "pitch": ["F", "0", "4"]
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["F", "0", "4"],
+            "playbackTies": ["stop"],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["F", "0", "4"],
+            "playbackTies": [],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "grace-playback-tie",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "staff": "1",
+            "voice": "1",
+            "onset": "0",
+            "graceOrder": 1,
+            "pitch": ["F", "0", "4"],
+            "type": "start"
+          },
+          "count": 1
+        },
+        {
+          "category": "slur",
+          "operation": "missing",
+          "item": {
+            "kind": "span",
+            "start": {
+              "part": 1,
+              "measure": 2,
+              "staff": "1",
+              "voice": "1",
+              "onset": "0",
+              "graceOrder": 1,
+              "pitch": ["F", "0", "4"]
+            },
+            "end": {
+              "part": 1,
+              "measure": 2,
+              "staff": "1",
+              "voice": "1",
+              "onset": "0",
+              "graceOrder": null,
+              "pitch": ["F", "0", "4"]
+            }
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "staff": "1",
+            "voice": "1",
+            "onset": "0",
+            "graceOrder": 1,
+            "pitch": ["F", "0", "4"],
+            "type": "start"
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "staff": "1",
+            "voice": "1",
+            "onset": "0",
+            "graceOrder": null,
+            "pitch": ["F", "0", "4"],
+            "type": "stop"
+          },
+          "count": 1
+        }
+      ]
+    },
+    "tie-controls": {
+      "strictCoreEvents": {
+        "correct": 13,
+        "truth": 15,
+        "reading": 15
+      },
+      "graceEvents": {
+        "correct": 2,
+        "truth": 2,
+        "reading": 2
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "0eda26a03a7dd7ee72d93f1439ad7cabcae5b74140e2b2a6eecac30cec9c1637"
+        }
+      ],
+      "workerSha256": "36c5075699922b71ccf25456b404756e31afe32c838c03adbf119d5d8b792108",
+      "finalSha256": "b4b144f45da43bcefea8375be4f6da34d08f7560678dfe6686dc43ee1e3a0ee7",
+      "discrepancies": [
+        {
+          "category": "attack",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "pitch": ["G", "0", "5"]
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "3",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["G", "0", "5"],
+            "playbackTies": ["start"],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "3",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["G", "0", "5"],
+            "playbackTies": [],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["G", "0", "5"],
+            "playbackTies": ["stop"],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": 0,
+            "staff": "1",
+            "onset": "0",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["G", "0", "5"],
+            "playbackTies": [],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "staff": "1",
+            "voice": "1",
+            "onset": "3",
+            "graceOrder": null,
+            "pitch": ["G", "0", "5"],
+            "type": "start"
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "staff": "1",
+            "voice": "1",
+            "onset": "0",
+            "graceOrder": null,
+            "pitch": ["G", "0", "5"],
+            "type": "stop"
+          },
+          "count": 1
+        }
+      ]
+    },
+    "tie-within-bar": {
+      "strictCoreEvents": {
+        "correct": 15,
+        "truth": 17,
+        "reading": 17
+      },
+      "graceEvents": {
+        "correct": 0,
+        "truth": 0,
+        "reading": 0
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "13f1944d60f9dbcdbe2fb194f761a27c39fca0a55023b94fbb62fd0e1872c372"
+        }
+      ],
+      "workerSha256": "db6d2904827b5dcdcf4330d6f9df16f6ca91b93ae85bc64cfd64256171bc3f73",
+      "finalSha256": "e30ba7636bae912f8fafc66b9cfd4f7461629f135d321019444f3a15e3c0dfc8",
+      "discrepancies": [
+        {
+          "category": "attack",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "2",
+            "pitch": ["D", "0", "5"]
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "1",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["D", "0", "5"],
+            "playbackTies": ["start"],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "1",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["D", "0", "5"],
+            "playbackTies": [],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "2",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["D", "0", "5"],
+            "playbackTies": ["stop"],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "core-event",
+          "operation": "extra",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": 0,
+            "staff": "1",
+            "onset": "2",
+            "duration": "1",
+            "kind": "note",
+            "pitch": ["D", "0", "5"],
+            "playbackTies": [],
+            "tupletRatio": "1"
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "staff": "1",
+            "voice": "1",
+            "onset": "1",
+            "graceOrder": null,
+            "pitch": ["D", "0", "5"],
+            "type": "start"
+          },
+          "count": 1
+        },
+        {
+          "category": "tied",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "staff": "1",
+            "voice": "1",
+            "onset": "2",
+            "graceOrder": null,
+            "pitch": ["D", "0", "5"],
+            "type": "stop"
+          },
+          "count": 1
+        }
+      ]
+    },
+    "quintuplet-score": {
+      "strictCoreEvents": {
+        "correct": 18,
+        "truth": 18,
+        "reading": 18
+      },
+      "graceEvents": {
+        "correct": 0,
+        "truth": 0,
+        "reading": 0
+      },
+      "rasters": [
+        {
+          "width": 1652,
+          "height": 2338,
+          "file": "page-1.png",
+          "sha256": "e75b7f1454d3a276a5904e0c24fc0257c81992b7ad554e63142c2eeba7cb3f07"
+        }
+      ],
+      "workerSha256": "7a7ed4bdcb136b54980e51f82c3bd8fd519ddb742f5514f89182f7c0cc09c65b",
+      "finalSha256": "3713313dd7fe4906264c3c8022d4364a4ce0d6e4d416951b36995a85b69fde39",
+      "discrepancies": [
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "0",
+            "duration": "1/2",
+            "pitch": ["C", "0", "5"],
+            "number": 1,
+            "value": "begin"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1",
+            "duration": "1/2",
+            "pitch": ["E", "0", "5"],
+            "number": 1,
+            "value": "end"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1/2",
+            "duration": "1/2",
+            "pitch": ["D", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "2",
+            "duration": "1/2",
+            "pitch": ["E", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "3/2",
+            "duration": "1/2",
+            "pitch": ["F", "0", "5"],
+            "number": 1,
+            "value": "begin"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "voice": "1",
+            "staff": "1",
+            "onset": "5/2",
+            "duration": "1/2",
+            "pitch": ["D", "0", "5"],
+            "number": 1,
+            "value": "end"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 3,
+            "voice": "1",
+            "staff": "1",
+            "onset": "0",
+            "duration": "1/2",
+            "pitch": ["G", "0", "5"],
+            "number": 1,
+            "value": "begin"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 3,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1",
+            "duration": "1/2",
+            "pitch": ["C", "0", "5"],
+            "number": 1,
+            "value": "end"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 3,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1/2",
+            "duration": "1/2",
+            "pitch": ["F", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 4,
+            "voice": "1",
+            "staff": "1",
+            "onset": "0",
+            "duration": "1/2",
+            "pitch": ["D", "0", "5"],
+            "number": 1,
+            "value": "begin"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 4,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1",
+            "duration": "1/2",
+            "pitch": ["F", "0", "5"],
+            "number": 1,
+            "value": "end"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 4,
+            "voice": "1",
+            "staff": "1",
+            "onset": "1/2",
+            "duration": "1/2",
+            "pitch": ["E", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": "1",
+            "staff": "1",
+            "onset": "0",
+            "duration": "2/5",
+            "pitch": ["C", "0", "5"],
+            "number": 1,
+            "value": "begin"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": "1",
+            "staff": "1",
+            "onset": "2/5",
+            "duration": "2/5",
+            "pitch": ["D", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": "1",
+            "staff": "1",
+            "onset": "4/5",
+            "duration": "2/5",
+            "pitch": ["E", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": "1",
+            "staff": "1",
+            "onset": "6/5",
+            "duration": "2/5",
+            "pitch": ["F", "0", "5"],
+            "number": 1,
+            "value": "continue"
+          },
+          "count": 1
+        },
+        {
+          "category": "beam",
+          "operation": "missing",
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "voice": "1",
+            "staff": "1",
+            "onset": "8/5",
+            "duration": "2/5",
+            "pitch": ["G", "0", "5"],
+            "number": 1,
+            "value": "end"
+          },
+          "count": 1
+        },
+        {
+          "category": "key",
+          "operation": "different",
+          "count": 1,
+          "item": {
+            "part": 1,
+            "measure": 1,
+            "staff": "1",
+            "onset": "0",
+            "expected": [
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
+            ],
+            "observed": null
+          }
+        },
+        {
+          "category": "key",
+          "operation": "different",
+          "count": 1,
+          "item": {
+            "part": 1,
+            "measure": 2,
+            "staff": "1",
+            "onset": "0",
+            "expected": [
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
+            ],
+            "observed": null
+          }
+        },
+        {
+          "category": "key",
+          "operation": "different",
+          "count": 1,
+          "item": {
+            "part": 1,
+            "measure": 3,
+            "staff": "1",
+            "onset": "0",
+            "expected": [
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
+            ],
+            "observed": null
+          }
+        },
+        {
+          "category": "key",
+          "operation": "different",
+          "count": 1,
+          "item": {
+            "part": 1,
+            "measure": 4,
+            "staff": "1",
+            "onset": "0",
+            "expected": [
+              ["A", "0"],
+              ["B", "0"],
+              ["C", "0"],
+              ["D", "0"],
+              ["E", "0"],
+              ["F", "0"],
+              ["G", "0"]
+            ],
+            "observed": null
+          }
+        }
+      ]
+    },
+    "tuplet-fragment": {
+      "numbers": [5],
+      "discrepancies": []
+    },
+    "tuplet-no-digit": {
+      "numbers": [],
+      "discrepancies": []
+    }
+  }
+}
