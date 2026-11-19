@@ -28,6 +28,8 @@ A reviewed demonstration can help match the backing when shared accompaniment is
 
 ## Practice and edit a passage
 
+To correct a recognized pitch, click the note and choose **Correct selected note…**, or focus the note and press **F2**. Pick its written note, accidental and octave. A complete tie changes together, and the score synth uses the new sounding pitch. The correction is undoable, and **Export → Score and source files** includes the corrected MusicXML and original PDF. Affected alignment suggestions are marked for review.
+
 Click a note, the ruler, or an audio waveform to move the playback cursor and clear the previous range. Waveform and ruler clicks follow **Snap**; turn Snap off or hold Alt to choose any exact point. Double-click an audio region to select the whole region, drag across notes or within a region to select a range, or enter start/end bars and beats above the tracks and choose **Create range**. The range editor shows the track that clip edits will affect. Enable **Loop selection** separately; selecting an edit track does not arm it for recording.
 
 Drag the selected region's left/right handles to trim it without changing the source. Snap applies to edge drags; hold Alt to bypass it. Arrow keys adjust a focused handle by one beat, or one eighth of a beat with Shift. Use **Edit selection** for splitting, fades, or punch-in recording.

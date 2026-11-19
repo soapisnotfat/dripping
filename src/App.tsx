@@ -22,8 +22,14 @@ import {
   changeScoreTempo,
   undoProject,
   changeNotationInstrument,
+  changeNotePitch,
 } from './lib/project';
-import { parseScore, type NotationInstrument } from './lib/score';
+import {
+  parseScore,
+  writtenPitchAt,
+  type NotationInstrument,
+  type WrittenPitch,
+} from './lib/score';
 import { projectDuration, positionLabel, musicalLabel, qToSeconds, secondsToQ } from './lib/time';
 import { transport } from './lib/transport';
 import { clipSelection } from './lib/timeline';
@@ -35,6 +41,7 @@ import { ScoreView, type CursorMode } from './components/ScoreView';
 import { PdfSource } from './components/PdfSource';
 import { Timeline, type Waveform } from './components/Timeline';
 import { Modal, ImportDialog, AlignmentDialog, ExportDialog } from './components/dialogs';
+import { PitchCorrectionDialog } from './components/dialogs/PitchCorrectionDialog';
 import { pdfFiles, attachPdfScore, pdfFailure } from './lib/pdf-project';
 import type { ConversionProgress } from './lib/pdf-import';
 import { InputMeter } from './components/InputMeter';
@@ -64,9 +71,15 @@ export default function App() {
   const [library, setLibrary] = useState<Project[]>([]),
     [showLibrary, setShowLibrary] = useState(false);
   const [modal, setModal] = useState<
-      'new' | 'import' | 'alignment' | 'export' | 'settings' | 'track' | null
+      'new' | 'import' | 'alignment' | 'export' | 'settings' | 'track' | 'note-pitch' | null
     >(null),
-    [trackId, setTrackId] = useState('');
+    [trackId, setTrackId] = useState(''),
+    [pitchTarget, setPitchTarget] = useState<{
+      id: string;
+      projectId: string;
+      pitch: WrittenPitch;
+      measure: string;
+    } | null>(null);
   const [position, setPosition] = useState(0),
     [playing, setPlaying] = useState(false),
     [recording, setRecording] = useState(false),
@@ -88,7 +101,7 @@ export default function App() {
   const cuePreferences = useRef({ reference, metronome });
   cuePreferences.current = { reference, metronome };
   const [waveforms, setWaveforms] = useState(new Map<string, Waveform>()),
-    [menu, setMenu] = useState<{ x: number; y: number } | null>(null),
+    [menu, setMenu] = useState<{ x: number; y: number; noteId?: string } | null>(null),
     [editingTrack, setEditingTrack] = useState('');
   const [channels, setChannels] = useState(localStorage.getItem('dripping.inputChannels') || '0'),
     [countIn, setCountIn] = useState(4),
@@ -456,6 +469,27 @@ export default function App() {
     if (!pRef.current?.score || recording || playing || busy) return;
     try {
       change(changeNotationInstrument(pRef.current, instrument));
+    } catch (error) {
+      report(String(error));
+    }
+  };
+  const correctPitch = (id: string) => {
+    const current = pRef.current;
+    if (!current?.score || !current.scoreXml || recording || playing || busy) return;
+    try {
+      const pitch = writtenPitchAt(current.scoreXml, current.score, id);
+      const note = current.score.measures
+        .flatMap((measure) => measure.notes)
+        .find((item) => item.id === id);
+      if (!pitch || !note) return;
+      setPitchTarget({
+        id,
+        projectId: current.id,
+        pitch,
+        measure: current.score.measures[note.measure].number,
+      });
+      setMenu(null);
+      setModal('note-pitch');
     } catch (error) {
       report(String(error));
     }
@@ -1390,7 +1424,8 @@ export default function App() {
                 mode={mode}
                 onSeek={seek}
                 onSelect={select}
-                onContext={(x, y) => setMenu({ x, y })}
+                onContext={(x, y, noteId) => setMenu({ x, y, noteId })}
+                onCorrectPitch={!recording && !playing && !busy ? correctPitch : undefined}
                 onError={report}
               />
             )}
@@ -1703,6 +1738,11 @@ export default function App() {
               top: clamp(menu.y - 20, 8, window.innerHeight - 370),
             }}
           >
+            {menu.noteId && (
+              <button role="menuitem" onClick={() => correctPitch(menu.noteId!)}>
+                {t('校正音高…', 'Correct pitch…')}
+              </button>
+            )}
             <strong>{t('编辑选区', 'Edit selection')}</strong>
             <label>
               {t('音轨', 'Track')}
@@ -1771,6 +1811,21 @@ export default function App() {
             setPlaying(false);
           }}
           onError={report}
+        />
+      )}
+      {modal === 'note-pitch' && pitchTarget && (
+        <PitchCorrectionDialog
+          initial={pitchTarget.pitch}
+          measure={pitchTarget.measure}
+          locale={locale}
+          onClose={() => setModal(null)}
+          onApply={(pitch) => {
+            const current = pRef.current;
+            if (!current || current.id !== pitchTarget.projectId || recording || playing || busy)
+              throw Error(t('当前无法校正音高', 'Pitch correction is unavailable'));
+            const updated = changeNotePitch(current, pitchTarget.id, pitch);
+            if (updated !== current) change(updated);
+          }}
         />
       )}
       {modal === 'export' && project && (

@@ -5,7 +5,9 @@ import {
   readScoreFile,
   setOpeningTempo,
   setNotationInstrument,
+  correctWrittenPitch,
   type NotationInstrument,
+  type WrittenPitch,
 } from './score';
 import { tempoMap, projectDuration } from './time';
 import { saveProject, getAsset, readSession, deleteSession } from './storage';
@@ -280,6 +282,42 @@ export function changeNotationInstrument(
   );
   next.redo = [];
   return next;
+}
+
+export function changeNotePitch(project: Project, noteId: string, pitch: WrittenPitch): Project {
+  if (!project.scoreXml || !project.score) throw Error('先添加乐谱 / Add a score first');
+  const corrected = correctWrittenPitch(project.scoreXml, project.score, noteId, pitch);
+  if (corrected.xml === project.scoreXml) return project;
+  const snapshot = (value: Project): EditState => ({
+    tracks: clone(value.tracks),
+    selection: clone(value.selection),
+    scoreMap: clone(value.scoreMap),
+    scoreXml: value.scoreXml,
+    partId: value.score?.partId,
+  });
+  const tracks = project.tracks.map((track): Track => {
+    const previous = track.alignment;
+    if (!previous || previous.method === 'score-tempo') return track;
+    const warning = '乐谱音高已修改，请重新确认对齐 / Score pitch changed; review alignment';
+    return {
+      ...track,
+      alignment: {
+        ...previous,
+        status: 'candidate',
+        reference: undefined,
+        assessment: undefined,
+        warnings: [...new Set([...previous.warnings, warning])],
+      },
+    };
+  });
+  const next = { ...project, scoreXml: corrected.xml, score: corrected.score, tracks, redo: [] };
+  return {
+    ...next,
+    undo: [
+      ...project.undo,
+      { label: 'correct note pitch', before: snapshot(project), after: snapshot(next) },
+    ].slice(-60),
+  };
 }
 export function addRecordingTrack(project: Project, name: string): Project {
   return editProject(project, 'add recording track', (p) => {
