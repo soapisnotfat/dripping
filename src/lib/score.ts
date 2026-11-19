@@ -404,6 +404,156 @@ export function soundingEvents(score: Score): ScoreEvent[] {
   return result;
 }
 
+export type WrittenPitch = { step: string; alter: number; octave: number };
+
+function locateWrittenNote(doc: XMLDocument, score: Score, note: ScoreNote): Element {
+  const part = children(doc.documentElement, 'part').find(
+    (item) => (item.getAttribute('id') || 'P1') === note.part,
+  );
+  const measure = part && children(part, 'measure')[note.measure];
+  const index = score.measures[note.measure].notes.indexOf(note);
+  const element = measure && children(measure, 'note')[index];
+  if (!element || !child(element, 'pitch'))
+    throw Error('无法定位音符 / Could not locate the written note');
+  return element;
+}
+
+const selectedNote = (score: Score, id: string) =>
+  score.measures.flatMap((measure) => measure.notes).find((note) => note.id === id);
+
+function readWrittenPitch(note: Element): WrittenPitch {
+  const pitch = child(note, 'pitch');
+  return { step: txt(pitch, 'step'), octave: num(pitch, 'octave', 4), alter: num(pitch, 'alter') };
+}
+
+export function writtenPitchAt(xml: string, score: Score, id: string): WrittenPitch | undefined {
+  const note = selectedNote(score, id);
+  if (note && note.writtenMidi !== null)
+    return readWrittenPitch(locateWrittenNote(parseXml(xml), score, note));
+}
+
+function tieChain(score: Score, note: ScoreNote) {
+  const lane = score.measures
+    .flatMap((measure) => measure.notes.map((member) => ({ member, q: measure.q + member.onset })))
+    .filter(({ member }) => member.voice === note.voice && member.staff === note.staff);
+  const matching = (index: number, next: boolean) => {
+    const anchor = lane[index];
+    return lane.flatMap(({ member, q }, at) => {
+      if (member.midi !== anchor.member.midi || member.writtenMidi !== anchor.member.writtenMidi)
+        return [];
+      const valid = next
+        ? at > index && member.tieStop && Math.abs(q - anchor.q - anchor.member.duration) < 1e-5
+        : at < index && member.tieStart && Math.abs(anchor.q - q - member.duration) < 1e-5;
+      return valid ? [at] : [];
+    });
+  };
+  const follow = (index: number, next: boolean) => {
+    const matches = matching(index, next);
+    if (matches.length !== 1 || matching(matches[0], !next).length !== 1)
+      throw Error('延音线关系需要确认 / This tie chain is ambiguous or incomplete');
+    return matches[0];
+  };
+  let first = lane.findIndex(({ member }) => member === note);
+  while (lane[first].member.tieStop) first = follow(first, false);
+  const linked = [lane[first].member];
+  for (let at = first; lane[at].member.tieStart;) {
+    at = follow(at, true);
+    linked.push(lane[at].member);
+  }
+  return linked;
+}
+
+const correctionAccidentals = ['flat-flat', 'flat', 'natural', 'sharp', 'double-sharp'];
+
+/** Change spelled pitch at a written address, including every endpoint of a proven tie. */
+export function correctWrittenPitch(xml: string, score: Score, id: string, pitch: WrittenPitch) {
+  if (
+    !Object.hasOwn(notesByStep, pitch.step) ||
+    !Number.isInteger(pitch.alter) ||
+    pitch.alter < -2 ||
+    pitch.alter > 2 ||
+    !Number.isInteger(pitch.octave) ||
+    pitch.octave < 0 ||
+    pitch.octave > 9
+  )
+    throw Error('无效的记谱音高 / Invalid written pitch');
+  const note = selectedNote(score, id);
+  if (!note || note.writtenMidi === null || note.midi === null)
+    throw Error('请选择有音高的音符 / Select a pitched note');
+  const doc = parseXml(xml);
+  const original = readWrittenPitch(locateWrittenNote(doc, score, note));
+  if (
+    original.step === pitch.step &&
+    original.octave === pitch.octave &&
+    original.alter === pitch.alter
+  )
+    return { xml, score };
+
+  const linked = tieChain(score, note);
+  const writtenMidi = 12 * (pitch.octave + 1) + notesByStep[pitch.step] + pitch.alter;
+  for (const member of linked) {
+    const sounding = writtenMidi + (member.midi ?? 0) - (member.writtenMidi ?? 0);
+    if (writtenMidi < 0 || writtenMidi > 127 || sounding < 0 || sounding > 127)
+      throw Error('音高超出 MIDI 范围 / Pitch exceeds the MIDI range');
+    const element = locateWrittenNote(doc, score, member);
+    const create = (name: string) =>
+      doc.createElementNS(
+        element.namespaceURI,
+        element.prefix ? element.prefix + ':' + name : name,
+      );
+    const target = child(element, 'pitch');
+    const step = child(target, 'step') || create('step');
+    step.textContent = pitch.step;
+    target.prepend(step);
+    const octave = child(target, 'octave') || create('octave');
+    octave.textContent = String(pitch.octave);
+    target.append(octave);
+    const alter = child(target, 'alter') || create('alter');
+    alter.textContent = String(pitch.alter);
+    target.insertBefore(alter, octave);
+    const printed = child(element, 'accidental');
+    if (!member.tieStop || printed) {
+      const accidental = printed || create('accidental');
+      accidental.textContent = correctionAccidentals[pitch.alter + 2];
+      if (!printed)
+        element.insertBefore(
+          accidental,
+          Array.from(element.children).find((item) =>
+            [
+              'time-modification',
+              'stem',
+              'notehead',
+              'notehead-text',
+              'staff',
+              'beam',
+              'notations',
+              'lyric',
+              'play',
+              'listen',
+            ].includes(item.localName),
+          ) || null,
+        );
+    }
+  }
+  const corrected = new XMLSerializer().serializeToString(doc);
+  const parsed = parseScore(corrected, score.partId);
+  const changed = selectedNote(parsed, id)!;
+  if (
+    tieChain(parsed, changed)
+      .map((member) => member.id)
+      .join() !== linked.map((member) => member.id).join()
+  )
+    throw Error('此音高会改变延音线连接 / This pitch would change the tie connections');
+  const linkedIds = new Set(linked.map((member) => member.id));
+  const unaffected = (version: Score) =>
+    soundingEvents(version)
+      .filter((event) => !linkedIds.has(event.id))
+      .map((event) => [event.id, event.q, event.duration, event.midi]);
+  if (JSON.stringify(unaffected(score)) !== JSON.stringify(unaffected(parsed)))
+    throw Error('此音高会改变其他音符的起音 / This pitch would change another note’s attack');
+  return { xml: corrected, score: parsed };
+}
+
 export function setOpeningTempo(xml: string, bpm: number): string {
   if (!Number.isFinite(bpm) || bpm < 20 || bpm > 400)
     throw Error('谱面速度需为 20–400 BPM / Score tempo must be 20–400 BPM');

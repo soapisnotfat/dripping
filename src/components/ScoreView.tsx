@@ -16,7 +16,8 @@ type Props = {
   mode: CursorMode;
   onSeek: (seconds: number) => void;
   onSelect: (selection: Selection | null) => void;
-  onContext: (x: number, y: number) => void;
+  onContext: (x: number, y: number, noteId?: string) => void;
+  onCorrectPitch?: (noteId: string) => void;
   onError: (error: string) => void;
 };
 
@@ -31,6 +32,7 @@ export function ScoreView({
   onSeek,
   onSelect,
   onContext,
+  onCorrectPitch,
   onError,
 }: Props) {
   const t = (zh: string, en: string) => (locale === 'zh' ? zh : en);
@@ -39,11 +41,21 @@ export function ScoreView({
     osmdRef = useRef<OpenSheetMusicDisplay | undefined>(undefined);
   const [boxes, setBoxes] = useState<NoteBox[]>([]),
     [loading, setLoading] = useState(false),
-    [width, setWidth] = useState(800);
+    [width, setWidth] = useState(800),
+    [pitchNote, setPitchNote] = useState<string | null>(null);
   const programmaticScroll = useRef(0),
     drag = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null);
   const q = secondsToQ(position, project.scoreMap),
     score = project.score;
+  const pitchedIds = useMemo(
+    () =>
+      new Set(
+        score?.measures.flatMap((measure) =>
+          measure.notes.filter((note) => note.writtenMidi !== null).map((note) => note.id),
+        ),
+      ),
+    [score],
+  );
   const engraving = useMemo(
     () => scoreEngraving(project),
     [project.scoreXml, project.scoreConversion?.engine],
@@ -296,79 +308,102 @@ export function ScoreView({
       onTouchMove={() => onFollow(false)}
     >
       <div className="score-paper">
+        {onCorrectPitch && pitchNote && pitchedIds.has(pitchNote) && (
+          <div className="score-note-tools">
+            <button type="button" onClick={() => onCorrectPitch(pitchNote)}>
+              {t('校正所选音符…', 'Correct selected note…')}
+            </button>
+          </div>
+        )}
         {loading && (
           <div className="score-loading">{t('正在排版乐谱…', 'Engraving your score…')}</div>
         )}
         <div className="score-surface">
           <div ref={host} className="engraving" />
           <div className="score-overlay" aria-label={t('互动乐谱', 'Interactive score')}>
-            {boxes.map((box) => (
-              <button
-                key={box.id}
-                data-note-id={box.id}
-                className={`score-hit ${selectedIds.has(box.id) ? 'selected' : ''}`}
-                style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
-                title={`${t('第', 'Measure')} ${score.measures[box.measure].number} ${t('小节 · 点击定位，拖动选段', '· Click to seek, drag to select')}`}
-                aria-label={`${t('第', 'Measure')} ${score.measures[box.measure].number} ${box.id}`}
-                onPointerDown={(e) => {
-                  if (e.button !== 0) return;
-                  drag.current = { id: box.id, x: e.clientX, y: e.clientY, moved: false };
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                }}
-                onPointerMove={(e) => {
-                  const d = drag.current;
-                  if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 5) return;
-                  d.moved = true;
-                  const el = document
-                    .elementFromPoint(e.clientX, e.clientY)
-                    ?.closest<HTMLElement>('[data-note-id]');
-                  if (el?.dataset.noteId) selectBetween(d.id, el.dataset.noteId);
-                }}
-                onPointerUp={(e) => {
-                  const d = drag.current;
-                  drag.current = null;
-                  if (e.currentTarget.hasPointerCapture(e.pointerId))
-                    e.currentTarget.releasePointerCapture(e.pointerId);
-                  if (d && !d.moved) {
-                    const event = eventFor(box.id);
-                    if (event) {
-                      if (e.shiftKey && project.selection) {
-                        onSelect({
-                          start: Math.min(
-                            project.selection.start,
-                            qToSeconds(event.q, project.scoreMap),
-                          ),
-                          end: Math.max(
-                            project.selection.end,
-                            qToSeconds(event.q + Math.max(0.125, event.duration), project.scoreMap),
-                          ),
-                        });
-                      } else {
+            {boxes.map((box) => {
+              const canCorrect = !!onCorrectPitch && pitchedIds.has(box.id);
+              return (
+                <button
+                  key={box.id}
+                  data-note-id={box.id}
+                  className={`score-hit ${selectedIds.has(box.id) ? 'selected' : ''}`}
+                  style={{ left: box.x, top: box.y, width: box.width, height: box.height }}
+                  title={`${t('第', 'Measure')} ${score.measures[box.measure].number} ${t('小节 · 点击定位，拖动选段', '· Click to seek, drag to select')}${canCorrect ? t(' · F2 校正音高', ' · F2 to correct pitch') : ''}`}
+                  aria-label={`${t('第', 'Measure')} ${score.measures[box.measure].number} ${box.id}`}
+                  aria-keyshortcuts={canCorrect ? 'F2' : undefined}
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    drag.current = { id: box.id, x: e.clientX, y: e.clientY, moved: false };
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onPointerMove={(e) => {
+                    const d = drag.current;
+                    if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) < 5) return;
+                    if (!d.moved) setPitchNote(null);
+                    d.moved = true;
+                    const el = document
+                      .elementFromPoint(e.clientX, e.clientY)
+                      ?.closest<HTMLElement>('[data-note-id]');
+                    if (el?.dataset.noteId) selectBetween(d.id, el.dataset.noteId);
+                  }}
+                  onPointerUp={(e) => {
+                    const d = drag.current;
+                    drag.current = null;
+                    if (e.currentTarget.hasPointerCapture(e.pointerId))
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    if (d && !d.moved) {
+                      const event = eventFor(box.id);
+                      if (event) {
+                        if (e.shiftKey && project.selection) {
+                          onSelect({
+                            start: Math.min(
+                              project.selection.start,
+                              qToSeconds(event.q, project.scoreMap),
+                            ),
+                            end: Math.max(
+                              project.selection.end,
+                              qToSeconds(
+                                event.q + Math.max(0.125, event.duration),
+                                project.scoreMap,
+                              ),
+                            ),
+                          });
+                        } else {
+                          setPitchNote(canCorrect ? box.id : null);
+                          onSelect(null);
+                          onSeek(qToSeconds(event.q, project.scoreMap));
+                        }
+                      }
+                    }
+                  }}
+                  onPointerCancel={() => (drag.current = null)}
+                  onKeyDown={(e) => {
+                    if (canCorrect && e.key === 'F2') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onCorrectPitch?.(box.id);
+                      return;
+                    }
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const event = eventFor(box.id);
+                      if (event) {
+                        setPitchNote(canCorrect ? box.id : null);
                         onSelect(null);
                         onSeek(qToSeconds(event.q, project.scoreMap));
                       }
                     }
-                  }
-                }}
-                onPointerCancel={() => (drag.current = null)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  }}
+                  onContextMenu={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
-                    const event = eventFor(box.id);
-                    if (event) {
-                      onSelect(null);
-                      onSeek(qToSeconds(event.q, project.scoreMap));
-                    }
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  if (!selectedIds.has(box.id)) selectBetween(box.id, box.id);
-                  onContext(e.clientX, e.clientY);
-                }}
-              />
-            ))}
+                    if (!selectedIds.has(box.id)) selectBetween(box.id, box.id);
+                    onContext(e.clientX, e.clientY, canCorrect ? box.id : undefined);
+                  }}
+                />
+              );
+            })}
             {cursor && mode !== 'off' && q >= 0 && q < score.totalQ && (
               <div
                 className={`score-cursor mode-${mode}`}

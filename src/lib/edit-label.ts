@@ -14,6 +14,7 @@ export function editLabel(label: string | undefined, locale: Locale): string {
     'align to score': ['对齐到谱面', 'Align to score'],
   };
   if (label === 'score tempo') return locale === 'zh' ? '谱面速度' : 'Score tempo';
+  if (label === 'correct note pitch') return locale === 'zh' ? '校正音高' : 'Correct note pitch';
   if (label === 'notation pitch') return locale === 'zh' ? '记谱音高' : 'Notation pitch';
   return labels[label]?.[locale === 'zh' ? 0 : 1] || label;
 }
