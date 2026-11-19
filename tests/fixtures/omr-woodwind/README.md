@@ -23,11 +23,19 @@ SheetScan `v17-source-beams` in Chromium 151.0.7922.34 matched 319 of 453 strict
 
 | Score | Matched events | First visible differences |
 | --- | ---: | --- |
-| Dancing in the River | 34/34 | Clef and beam differences appear in the Worker ledger. |
+| Dancing in the River | 34/34 | Six beam tag differences appear in the Worker ledger. |
 | Danza del Venado | 0/48 | The Worker omits the clef's printed octave 8 and reads each note one octave lower. |
 | Es wird scho glei dumpa | 63/63 | Source transposition differs in the notation comparison. |
-| St. Patrick's Day in the Morning | 96/96 | Printed structure and metadata differences remain in the score ledger. |
-| Charles Wallaces Q.S. | 114/114 | Source metadata and engraving differences remain in the score ledger. |
+| St. Patrick's Day in the Morning | 96/96 | Beam tags and transposition differ. |
+| Charles Wallaces Q.S. | 114/114 | Transposition differs. |
 | Homojanka Kolo | 12/98 | A leading empty measure at each page opening shifts the following measure locations. |
 
-The published baseline retains both output hashes and the exact discrepancy ledger for each case. Differences already present in the first Worker XML can be compared with final annotation. Authoring metadata that lacks an equivalent printed marking remains visible in the metadata comparison.
+The first run's [exact discrepancy ledger and output receipts](https://github.com/soapisnotfat/dripping/blob/941f98ec655e42e6dc358591461614fb5d1f8071/tests/fixtures/omr-woodwind/baseline.json) retain the pre-fix result.
+
+## Replay after the header fixes
+
+The `v18-source-headers` Worker reads all 48 strict events in Danza del Venado and all 98 in Homojanka Kolo. The latter has the original 24 measures and opening repeats at measures 1, 9 and 17. The other four scores retain their 307 matching events, for 453 of 453 on the complete set. Charles Wallaces Q.S. includes a system starting at bar 8 and checks that its number leaves the treble clef ordinary.
+
+Danza del Venado and Homojanka Kolo were examined after the initial independent run to diagnose the two failures. The authored header exercises in the [regression suite](../omr-v1/README.md) isolate each correction. The six-score replay measures these exact PDFs. More untouched sources and original engraving styles are needed to measure general woodwind fidelity.
+
+The current baseline retains the exact metadata and engraving differences and output hashes for every score. Two extra beam hooks in Homojanka Kolo are now scored at their original musical positions. Matching source note IDs show that both hooks were already present in v17 at the shifted bar numbers. Authoring metadata with no equivalent printed marking is still visible in the ledger. Compare initial Worker XML with the final XML to locate stage differences.
