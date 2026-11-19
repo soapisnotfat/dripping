@@ -38,6 +38,21 @@
       "inventory": { "measures": 4, "events": 15, "graces": 2, "slurs": 2, "ties": 2 }
     },
     {
+      "id": "tie-within-bar",
+      "family": "tied-and-repeated-notes-exercise",
+      "kind": "pdf",
+      "issues": [35],
+      "source": {
+        "file": "tie-within-bar.pdf",
+        "sha256": "7df9622e7c7ead385fcca3d6f5218b8d99d1703c545f63095b5ac99c8917ac49"
+      },
+      "truth": {
+        "file": "tie-within-bar.musicxml",
+        "sha256": "bceaad160146d1d89750226f03618ca738c0451e6c2cf0b3b11e4fed0dd80f5e"
+      },
+      "inventory": { "measures": 4, "events": 17, "graces": 0, "slurs": 0, "ties": 4 }
+    },
+    {
       "id": "quintuplet-score",
       "family": "five-in-six-eight-exercise",
       "kind": "pdf",
