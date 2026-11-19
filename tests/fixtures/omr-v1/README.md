@@ -1,6 +1,6 @@
 # OMR regression fixtures v1
 
-These are disclosed, authored tests. The manifest freezes the PDF, MusicXML and crop bytes. The musical answers come from the authored MusicXML and were fixed before conversion. The suite includes nine complete exercises and two crops.
+These are disclosed, authored tests. The manifest freezes the PDF, MusicXML and crop bytes. The musical answers come from the authored MusicXML and were fixed before conversion. The suite includes ten complete exercises and two crops.
 
 | Input | Reference checks |
 | --- | --- |
@@ -9,13 +9,14 @@ These are disclosed, authored tests. The manifest freezes the PDF, MusicXML and 
 | `grace-tie.pdf` | The same natural carry exercise in Leipzig with an explicitly authored grace-to-principal tie. The principal F has a tie stop and no new attack. |
 | `tie-controls.pdf` | 15 timed events and two ordered grace notes. A G tie crosses the first barline. The E–D slur in measure 2 and the two-grace slur into E in measure 3 are ordinary slurs. Measure 4 includes a quarter rest. |
 | `tie-within-bar.pdf` | 17 timed events. A D tie in measure 1 and a G tie in measure 3 are separate from the untied repeated D in measure 2. This separately tests ties within a bar after the cross-bar control exposed a baseline omission. |
+| `ordinary-curves.pdf` | 48 timed notes. Five genuine ties merge their second notes into the first attack. Four same-pitch slurs keep both attacks, including a pair with opposing stems. Three plain repetitions exercise the case without a curve. |
 | `quintuplet-score.pdf` | 18 timed events. Measure 2 has five eighths in the time of four, each lasting 2/5 quarter notes, then a quarter rest. A genuine 3/8 begins in measure 3. The first and second measures supply ordinary and cross-beat explicit beam groups. |
 | `beam-controls.pdf` | 28 timed events and two grace notes. The 26 explicit beam elements include mixed primary and secondary groups, hooks in both directions, a beam over an eighth rest, and two beamed grace notes. A separated run of five flagged eighth notes provides a negative control. |
 | `treble-octave.pdf` | 24 timed events across three systems. An octave treble clef raises the written pitches on the first two systems. The final system starts with a plain treble clef. |
 | `opening-repeats.pdf` | 16 timed events in four measures. Both pages begin with a forward repeat. The reference checks their position, the initial meter and the number of musical measures. |
 | `tuplet-fragment.png` and `tuplet-no-digit.png` | The 150 × 150 Bravura crop contains a fragmented 5 above a beam. The control erases `[51, 55, 69, 77)` and restores staff row 73. Both variants stay in the same source family. |
 
-The grace exercise and its variants come from `grace-natural-bare-carry` in the pinned SheetScan generator. The other scores were authored for this test set. They were engraved with Verovio 6.4.1 (`6.4.1-fbe8f46`) on A4 pages with no headers or footers. `grace-slur` and `grace-tie` use Leipzig. `opening-repeats` uses Leland and an explicit page break. The other exercises use Bravura. Chromium 151.0.7922.34 printed each SVG at A4 size. The checked-in PDF bytes are the reproducible inputs. [Generator source](https://github.com/soapisnotfat/sheetscan/blob/33dd06488cc386b8ebfae929e5ea00e5a61efe74/bench/natural_binding_cases.py) [Font notices](../../../vendor/sheetscan/licenses/tuplet-fonts)
+The grace exercise and its variants come from `grace-natural-bare-carry` in the pinned SheetScan generator. The other scores were authored for this test set. They were engraved with Verovio 6.4.1 (`6.4.1-fbe8f46`) on A4 pages with no headers or footers. `grace-slur`, `grace-tie` and `ordinary-curves` use Leipzig. `opening-repeats` uses Leland and an explicit page break. The other exercises use Bravura. Chromium 151.0.7922.34 printed each SVG at A4 size. The checked-in PDF bytes are the reproducible inputs. [Generator source](https://github.com/soapisnotfat/sheetscan/blob/33dd06488cc386b8ebfae929e5ea00e5a61efe74/bench/natural_binding_cases.py) [Font notices](../../../vendor/sheetscan/licenses/tuplet-fonts)
 
 The existing positive crop and its negative transformation come from SheetScan's source geometry regression. The crop is from an authored piano development page and exercises the glyph reader in the same area of interest. The clean flute quintuplet is an end-to-end control with its own reference. [Crop provenance and geometry](https://github.com/soapisnotfat/sheetscan/tree/33dd06488cc386b8ebfae929e5ea00e5a61efe74/bench/fixtures)
 
@@ -53,6 +54,7 @@ The original observed baseline uses Dripping `8ca941a` and its SheetScan `v15-no
 | Genuine grace tie | 16/16 | Both tie endpoints and all 15 independent attacks match. |
 | Across-bar tie and slurs | 13/15 | Both endpoints of the real G tie at the first barline are missing. The two ordinary slurs and both ordered graces match. |
 | Within-bar ties and repeats | 15/17 | The D tie in measure 1 is missing. The G tie in measure 3 and the independent strikes of D in measure 2 match. |
+| Ordinary ties, slurs and repetitions | 40/48 | V18 writes all four same-pitch slurs as ties and suppresses four independent attacks. |
 | Quintuplet and meter change | 18/18 | The five tuplet notes and both meters match. Explicit beam tags and the expected neutral-key declaration are absent. |
 | Mixed source beams | 28/28 | V15 recognizes the timed events and both graces. No explicit beam tags were exported. |
 | Upward octave clef | 8/24 | V17 omits both printed octave digits. The notes on the first two systems are an octave low. |
@@ -64,5 +66,7 @@ The `v16-source-grace-slurs` pin reads both grace slurs at 16/16 with all their 
 The `v17-source-beams` pin requires exact matches for all 43 explicit beam elements across the two beam exercises. The previously allowed beam omissions were removed. The neutral-key discrepancies in the quintuplet score remain in the baseline.
 
 The `v18-source-headers` pin requires exact matches for both header exercises. The octave exercise retains 24 timed events and the return to ordinary treble. The repeat exercise retains all 16 timed events in the original four bars.
+
+The `v19-source-curves` pin recovers the cross-bar G tie and the within-bar D tie. Both original exercises now require exact matches. The ordinary-curve exercise requires all 48 timed notes, all four written slurs and all 43 independent attacks. The conversion audit includes the source box and notehead coordinates for every curve correction.
 
 The [independent woodwind corpus](../omr-woodwind/README.md) records a separate whole-score evaluation. The original 137/160/267-event scores and paired reference answers would be needed to qualify the private-score mismatches in #33.

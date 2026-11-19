@@ -110,6 +110,7 @@ import re
 import sys
 import types
 import xml.etree.ElementTree as ET
+from bisect import bisect_left, bisect_right
 from fractions import Fraction
 
 import cv2
@@ -119,7 +120,7 @@ from printed_tuplets import read_tuplet_marks, tuplet_candidates, apply_tuplet
 from accidental_glyphs import read_accidentals
 from beam_evidence import read_beam_groups
 from source_beams import apply_source_beams
-from source_curves import read_grace_slur
+from source_curves import read_grace_slur, read_ordinary_curve
 from staff_coverage import choose_staff_region
 import source_rhythm
 
@@ -624,29 +625,39 @@ def _ink(region):
     return (region < paper - 0.3 * (paper - darkest)).astype(np.uint8) * 255
 
 
-def _has_eight_below(image, x0, x1, lines, limit, bass):
-    """Is there a small "8" under a clef (an octave clef)? lines are the staff's five
-    line positions there. An 8 is the only glyph with two small holes, one above the
-    other. It may touch the clef or the bottom line, so look for the holes, not the
-    glyph. Under a bass clef the 8 straddles the bottom line; a treble clef has loops
-    of its own there, and its 8 hangs below the tail."""
-    unit, bottom = (lines[4] - lines[0]) / 4, lines[4]
-    y0, y1 = int(bottom - (1.2 if bass else 0.3) * unit), int(min(bottom + 5 * unit, limit))
-    ink = _ink(image[y0:y1, max(int(x0), 0) : int(x1)])
+def _eight_holes(region, unit, same_glyph=False):
+    ink = _ink(region)
     contours, hierarchy = cv2.findContours(ink, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     if hierarchy is None:
         return False
-    holes = [cv2.boundingRect(c) for c, h in zip(contours, hierarchy[0]) if h[3] != -1]
-    holes = [
-        (bx + w / 2, by + h / 2)
-        for bx, by, w, h in holes  # wider holes are half notes cut by a ledger line
-        if 0.15 * unit <= w <= 0.65 * unit and 0.15 * unit <= h <= 0.65 * unit
-    ]
+    holes = []
+    for contour, links in zip(contours, hierarchy[0]):
+        x, y, w, h = cv2.boundingRect(contour)
+        if links[3] != -1 and 0.15 * unit <= w <= 0.65 * unit and 0.15 * unit <= h <= 0.65 * unit:
+            holes.append((x + w / 2, y + h / 2, links[3]))
     return any(
         abs(ax - bx) < 0.25 * unit and 0.2 * unit < by - ay < 1.1 * unit
-        for ax, ay in holes
-        for bx, by in holes
+        and (not same_glyph or a_parent == b_parent)
+        for ax, ay, a_parent in holes
+        for bx, by, b_parent in holes
     )
+
+
+def _has_eight_below(image, x0, x1, lines, limit, bass):
+    """Look for the two holes of a printed downward octave clef."""
+    unit, bottom = (lines[4] - lines[0]) / 4, lines[4]
+    y0, y1 = int(bottom - (1.2 if bass else 0.3) * unit), int(min(bottom + 5 * unit, limit))
+    return _eight_holes(image[y0:y1, max(int(x0), 0) : int(x1)], unit)
+
+
+def _has_eight_above(image, x0, x1, lines):
+    """Read the digit above the treble clef's upper loop."""
+    top = lines[0]
+    unit = (lines[4] - top) / 4
+    y0, y1 = max(0, int(top - 3.4 * unit)), int(top - 1.02 * unit)
+    if y1 <= y0:
+        return False
+    return _eight_holes(image[y0:y1, max(int(x0), 0) : int(x1)], unit, same_glyph=True)
 
 
 def _has_pitch(symbol):
@@ -659,18 +670,18 @@ def _staff_name(symbol):
 
 
 def _mark_octave_clefs(image, staff, symbols, carried):
-    """Renames clefs with an 8 below to clef_.._8vb and lowers the notes they govern.
+    """Attach the source octave to each clef and shift the pitches it governs.
     The first clef of a staff sits at its start; a later one (a clef change) is looked
-    for around where the transformer saw it. \`carried\` is how the line above ended,
-    {staff name: (lowered, clef sign)}: a line starts as the last one ended, so an 8
-    which is missed there is still known. Returns the same for this line."""
+    for around where the transformer saw it. \`carried\` holds the shift and sign
+    from the preceding staff."""
     state, started = dict(carried), set()
     for symbol in symbols:
         name = _staff_name(symbol)
         if symbol.rhythm.startswith(("note", "rest")):
             started.add(name)
-            if state.get(name, (False,))[0] and _has_pitch(symbol):
-                symbol.pitch = symbol.pitch[:-1] + str(int(symbol.pitch[-1]) - 1)
+            shift = state.get(name, (0,))[0]
+            if shift and _has_pitch(symbol):
+                symbol.pitch = symbol.pitch[0] + str(int(symbol.pitch[1:]) + shift)
         elif symbol.rhythm.startswith("clef"):
             sign = symbol.rhythm.split("_")[1][0]
             change = name in started and symbol.image_coordinates
@@ -682,11 +693,19 @@ def _mark_octave_clefs(image, staff, symbols, carried):
             unit = (lines[4] - lines[0]) / 4
             x = symbol.image_coordinates[0] if change else point.x + 1.5 * unit
             limit = point.y[5] - unit if k == 0 and len(point.y) > 5 else image.shape[0]
-            found = _has_eight_below(image, x - 2.5 * unit, x + 2.5 * unit, lines, limit, sign == "F")
-            lowered = found or (name not in started and carried.get(name) == (True, sign))
-            state[name] = (lowered, sign)
-            if lowered:
+            left, right = x - 2.5 * unit, x + 2.5 * unit
+            down = _has_eight_below(image, left, right, lines, limit, sign == "F")
+            # At a system start, bar numbers are printed left of the clef.
+            upper_left = left if change else point.x + 1.15 * unit
+            up = sign == "G" and _has_eight_above(image, upper_left, right, lines)
+            shift = int(up) - int(down)
+            if not up and not down and name not in started and carried.get(name) == (-1, sign):
+                shift = -1
+            state[name] = (shift, sign)
+            if shift < 0:
                 symbol.rhythm += "_8vb"
+            elif shift > 0:
+                symbol.rhythm += "_8va"
     return state
 
 
@@ -710,6 +729,8 @@ def _build_clef_with_octave(model_clef, attributes):
     _build_clef(model_clef, attributes)
     if model_clef.rhythm.endswith("_8vb"):
         ET.SubElement(attributes.findall("clef")[-1], "clef-octave-change").text = "-1"
+    elif model_clef.rhythm.endswith("_8va"):
+        ET.SubElement(attributes.findall("clef")[-1], "clef-octave-change").text = "1"
 
 
 def _step(chord):
@@ -837,49 +858,97 @@ def _staff_boxes(rows, to_input):
     return boxes
 
 
-def _generate_xml_with_source_curves(voices, image, boxes, stable_heads):
-    """Keep a decoded grace slur when the source supports its outer endpoints."""
+def _generate_xml_with_source_curves(voices, image, boxes, stable_heads, raw_heads):
+    """Use source curves to resolve ties between adjacent single-note events."""
     head_lookup = {}
     for x, y in stable_heads:
         head_lookup.setdefault((round(x), round(y)), []).append((x, y))
+    source_heads = sorted(tuple(head['center']) for head in raw_heads)
     original_tie_event = music_xml_generator.tie_event
-    changes = []
+    grace_slurs, ordinary_curves = [], []
 
-    def anchored_point(note):
+    def point(note):
         match = re.search(r'-p(\\d+)-(\\d+)-(\\d+)$', note.get('id', ''))
         if match:
             page, x, y = map(int, match.groups())
-            points = head_lookup.get((x, y), [])
-            if page == _page and len(points) == 1:
-                return points[0]
+            if page == _page:
+                return x, y
         return None
 
-    def grace_slur(start, stop):
-        if start.find('grace') is None or stop.find('grace') is not None:
+    def anchor(hint, unit, decoded_slur):
+        matched = head_lookup.get(hint, [])
+        if len(matched) == 1:
+            return matched[0]
+        if matched:
             return None
+        x, y = hint
+        # When the decoder already linked both notes, its attention can sit on
+        # the stems. The segmented heads and the outer curve must still agree.
+        horizontal, vertical = (.70, .88) if decoded_slur else (.40, .32)
+        first = bisect_left(source_heads, x - horizontal * unit, key=lambda head: head[0])
+        last = bisect_right(source_heads, x + horizontal * unit, key=lambda head: head[0])
+        nearby = [head for head in source_heads[first:last] if abs(head[1] - y) <= vertical * unit]
+        return nearby[0] if len(nearby) == 1 else None
+
+    def curve_between(start, stop, reader, ordinary=False, decoded_slur=False):
         pitch = music_xml_generator.get_note_pitch(start)
-        if (pitch is None or pitch != music_xml_generator.get_note_pitch(stop)
-                or not music_xml_generator.get_slur(start, 'start')
-                or not music_xml_generator.get_slur(stop, 'stop')):
+        if pitch is None or pitch != music_xml_generator.get_note_pitch(stop):
             return None
-        a, b = anchored_point(start), anchored_point(stop)
+        a, b = point(start), point(stop)
         if a is None or b is None:
             return None
-        units = []
+        if not ordinary:
+            start_heads, stop_heads = head_lookup.get(a, []), head_lookup.get(b, [])
+            if len(start_heads) != 1 or len(stop_heads) != 1:
+                return None
+            a, b = start_heads[0], stop_heads[0]
+        staffs = []
         for left, top, right, bottom, _ in boxes:
             unit = (bottom - top) / 4
             if (left <= a[0] < b[0] <= right
                     and top - 2 * unit <= min(a[1], b[1]) <= max(a[1], b[1]) <= bottom + 2 * unit):
-                units.append(unit)
-        return read_grace_slur(image, a, b, units[0]) if len(units) == 1 else None
+                staffs.append(unit)
+        if len(staffs) != 1:
+            return None
+        unit = staffs[0]
+        start_head, stop_head = (anchor(a, unit, decoded_slur), anchor(b, unit, decoded_slur)) if ordinary else (a, b)
+        if start_head is None or stop_head is None:
+            return None
+        evidence = reader(image, start_head, stop_head, unit)
+        if evidence is not None and ordinary:
+            evidence['heads'] = [[round(v, 2) for v in head] for head in (start_head, stop_head)]
+        return evidence
+
+    def add_tie(start, stop):
+        for note, kind in ((start, 'start'), (stop, 'stop')):
+            notation = note.find('notations')
+            if notation is None:
+                notation = ET.SubElement(note, 'notations')
+            music_xml_generator.add_tie(note, kind, notation)
 
     def tie_event(before, after):
         if len(before) == len(after) == 1:
             start, stop = before[0], after[0]
-            evidence = grace_slur(start, stop)
-            if evidence is not None:
-                changes.append(dict(start=start.get('id'), stop=stop.get('id'), **evidence))
-                return
+            begins = music_xml_generator.get_slur(start, 'start')
+            ends = music_xml_generator.get_slur(stop, 'stop')
+            starts_grace = start.find('grace') is not None
+            if stop.find('grace') is None:
+                if starts_grace and begins and ends:
+                    evidence = curve_between(start, stop, read_grace_slur)
+                    if evidence is not None:
+                        grace_slurs.append(dict(start=start.get('id'), stop=stop.get('id'), **evidence))
+                        return
+                if (not starts_grace and bool(begins) == bool(ends)
+                        and start.get('print-object') != 'no' and stop.get('print-object') != 'no'):
+                    evidence = curve_between(start, stop, read_ordinary_curve, ordinary=True, decoded_slur=bool(begins))
+                    if evidence and evidence['curve'] == 'slur' and begins and ends:
+                        ordinary_curves.append(dict(start=start.get('id'), stop=stop.get('id'), **evidence))
+                        return
+                    if (evidence and evidence['curve'] == 'tie' and not begins and not ends
+                            and start.find("tie[@type='start']") is None and stop.find("tie[@type='stop']") is None):
+                        add_tie(start, stop)
+                        ordinary_curves.append(dict(start=start.get('id'), stop=stop.get('id'), **evidence))
+                        return
         original_tie_event(before, after)
 
     music_xml_generator.tie_event = tie_event
@@ -887,7 +956,7 @@ def _generate_xml_with_source_curves(voices, image, boxes, stable_heads):
         xml = music_xml_generator.generate_xml(XmlGeneratorArguments(False, None, None), voices, "")
     finally:
         music_xml_generator.tie_event = original_tie_event
-    return xml, changes
+    return xml, grace_slurs, ordinary_curves
 
 
 def _read_page(path):
@@ -930,14 +999,15 @@ def _read_page(path):
                     note[key] = [round(float(v), 2) for v in to_input(note[key])]
     boxes = _staff_boxes(rows, to_input)
     stable = [note['head'] for record in _coordinate_audit for note in record['notes']]
-    xml, grace_slurs = _generate_xml_with_source_curves(voices, original, boxes, stable)
-    layout_changes = _remove_repeat_layout_placeholders(xml)
     gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
     if source_context is None:
         beam_boxes, _, _, beam_grids, beam_heads = source_rhythm.source_geometry(rows, _raw_heads, to_input)
         beam_groups = read_beam_groups(gray, beam_grids, beam_heads)
     else:
         beam_boxes, beam_groups = source_context['boxes'], source_context['beams']
+        beam_heads = source_context['rawHeads']
+    xml, grace_slurs, ordinary_curves = _generate_xml_with_source_curves(voices, original, boxes, stable, beam_heads)
+    layout_changes = _remove_repeat_layout_placeholders(xml)
     beam_changes = apply_source_beams(xml, _page, beam_groups, beam_boxes, gray < 160)
     note_points = []
     for note in xml.findall('.//note'):
@@ -1003,6 +1073,7 @@ def _read_page(path):
                           'layoutChanges': layout_changes,
                           'coordinateChanges': _coordinate_audit,
                           'graceSlurChanges': grace_slurs,
+                          'ordinaryCurveChanges': ordinary_curves,
                           'staffCoverageChanges': _coverage_audit,
                           'sourceRhythmChanges': source_context['changes'] if source_context else [],
                           'sourceRhythmDiagnostics': source_context['diagnostics'] if source_context else [],
@@ -1032,7 +1103,7 @@ def _order_children(score):
 
 
 def _remove_repeat_layout_placeholders(score):
-    """Discard only layout-only records created before a new-system repeatStart.
+    """Fold layout-only records created before a page or system repeatStart.
 
     MusicXML print/attributes belong to the next musical measure. homr can flush
     them into a zero-event measure when repeatStart follows a line break. Carry
@@ -1042,14 +1113,22 @@ def _remove_repeat_layout_placeholders(score):
     for part in score.findall('part'):
         part_changed = False
         measures = part.findall('measure')
-        for old, following in zip(measures, measures[1:]):
-            if (old.find('print') is None or not len(old)
+        for index, (old, following) in enumerate(zip(measures, measures[1:])):
+            if (not len(old)
                     or any(child.tag not in ('print', 'attributes') for child in old)
                     or old.find('.//measure-style') is not None
                     or following.find('barline/repeat[@direction="forward"]') is None):
                 continue
-            for index, child in enumerate(list(old)):
-                following.insert(index, child)
+            if old.find('print') is None:
+                if (index != 0 or old.find('attributes/divisions') is None
+                        or old.find('attributes/clef') is None or following.find('note') is None):
+                    continue
+                leading = itertools.takewhile(lambda child: child.tag not in ('note', 'forward', 'backup'), following)
+                if not any(child.tag == 'barline'
+                           and child.find('repeat[@direction="forward"]') is not None
+                           and child.find('repeat[@direction="backward"]') is None for child in leading):
+                    continue
+            following[:0] = list(old)
             part.remove(old)
             part_changed = True
             changes.append({'part': part.get('id'), 'number': old.get('number'), 'kind': 'repeat-layout-placeholder'})
@@ -1237,6 +1316,7 @@ def scan(paths, progress=lambda done, total: None, number_reader=None, printed_t
     numeric_audit['sourceRhythmDiagnostics'] = [{'page': source['page'], **change} for source in _page_sources for change in source.get('sourceRhythmDiagnostics', [])]
     numeric_audit['coordinateChanges'] = [{'page': source['page'], **change} for source in _page_sources for change in source.get('coordinateChanges', [])]
     numeric_audit['graceSlurChanges'] = [{'page': source['page'], **change} for source in _page_sources for change in source['graceSlurChanges']]
+    numeric_audit['ordinaryCurveChanges'] = [{'page': source['page'], **change} for source in _page_sources for change in source['ordinaryCurveChanges']]
     numeric_audit['sourceBeamChanges'] = [{'page': source['page'], **change} for source in _page_sources for change in source['sourceBeamChanges']]
     numeric_audit['staffCoverageChanges'] = [{'page': source['page'], **change} for source in _page_sources for change in source.get('staffCoverageChanges', [])]
     numeric_audit['repeatLocationChanges'] = _repair_forward_repeat_locations(merged)
@@ -2025,9 +2105,22 @@ def constrain(symbols, context):
                     'sourceOnsetOrderChecked': bool(counterpart),
                     'maxAttentionDistanceUnits': proposal['maxAttentionDistanceUnits'], 'edits': changed})
     return [replacements.get(id(symbol), symbol) for symbol in symbols]
-`,N=`"""Locate a printed grace slur using independently attached noteheads."""
+`,N=`"""Locate printed curves using independently attached noteheads."""
 import cv2
 import numpy as np
+
+
+def _curve_ink(image, left, top, right, bottom, unit):
+    if left < 0 or top < 0 or right > image.shape[1] or bottom > image.shape[0]:
+        return None
+    pad = round(3 * unit)
+    wide = image[top:bottom, max(left - pad, 0):right + pad]
+    ink = (cv2.cvtColor(wide, cv2.COLOR_BGR2GRAY) if wide.ndim == 3 else wide) < 160
+    staff_rows = ink.mean(axis=1) > .76
+    offset = min(pad, left)
+    crop = ink[:, offset:offset + right - left].copy()
+    crop[staff_rows] = False
+    return crop
 
 
 def read_grace_slur(image, start, stop, unit):
@@ -2048,15 +2141,9 @@ def read_grace_slur(image, start, stop, unit):
     right = round(x_stop + .58 * unit) + 1
     top = round(y - 2.65 * unit)
     bottom = round(y + 2.65 * unit) + 1
-    if left < 0 or top < 0 or right > image.shape[1] or bottom > image.shape[0]:
+    crop = _curve_ink(image, left, top, right, bottom, unit)
+    if crop is None:
         return None
-    pad = round(3 * unit)
-    wide = image[top:bottom, max(left - pad, 0):right + pad]
-    ink = (cv2.cvtColor(wide, cv2.COLOR_BGR2GRAY) if wide.ndim == 3 else wide) < 160
-    staff_rows = ink.mean(axis=1) > .76
-    offset = min(pad, left)
-    crop = ink[:, offset:offset + right - left].copy()
-    crop[staff_rows] = False
     rows = np.arange(top, bottom)
     kernel = np.ones((max(3, round(.21 * unit) | 1), 1), np.uint8)
     candidates = []
@@ -2086,6 +2173,69 @@ def read_grace_slur(image, start, stop, unit):
                     'box': [x_left, top + row, x_right + 1, top + row + height],
                     'side': 'above' if sign < 0 else 'below',
                 })
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def read_ordinary_curve(image, start, stop, unit):
+    """Distinguish an inner tie from a higher slur that reaches the note centres."""
+    x_start, y_start = start
+    x_stop, y_stop = stop
+    distance = x_stop - x_start
+    if (unit < 6 or not 2.55 * unit <= distance <= 9 * unit
+            or abs(y_stop - y_start) > .25 * unit):
+        return None
+
+    y = (y_start + y_stop) / 2
+    left, right = round(x_start - .9 * unit), round(x_stop + .9 * unit) + 1
+    top, bottom = round(y - 3.55 * unit), round(y + 3.55 * unit) + 1
+    crop = _curve_ink(image, left, top, right, bottom, unit)
+    if crop is None:
+        return None
+    rows = np.arange(top, bottom)
+    kernel = np.ones((max(3, round(.21 * unit) | 1), 1), np.uint8)
+    candidates = []
+    for sign in (-1, 1):
+        offsets = (rows - y) * sign
+        side = crop & (offsets[:, None] >= max(1, .08 * unit))
+        mask = cv2.morphologyEx(side.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
+        _, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+        for index, component in enumerate(stats[1:], 1):
+            x, row, width, height, _ = map(int, component)
+            x_left, x_right = left + x, left + x + width - 1
+            if width < max(.43 * distance, 1.25 * unit) or row == 0 or row + height == len(rows):
+                continue
+            left_inset, right_inset = (x_left - x_start) / unit, (x_stop - x_right) / unit
+            near, far = sorted((left_inset, right_inset))
+            inside = .48 <= near and far <= 1.62 and height <= 1.10 * unit
+            reaches_centres = (-.44 <= near and (far <= .76 or (near <= .30 and far <= 1.12))
+                               and width >= .74 * distance and height <= 2.5 * unit)
+            if not inside and not reaches_centres:
+                continue
+            ys, xs = np.nonzero((labels == index) & side)
+            span = (xs - x) / (width - 1)
+            regions = (span <= .20, (span > .20) & (span <= .40), (span > .40) & (span <= .60),
+                       (span > .60) & (span <= .80), span > .80)
+            if not all(region.any() for region in regions):
+                continue
+            start_height, left_arc, middle, right_arc, stop_height = [
+                float(np.median(offsets[ys[region]])) / unit for region in regions
+            ]
+            low_tip, high_tip = sorted((start_height, stop_height))
+            if middle - high_tip < .12 or left_arc < start_height + .03 or right_arc < stop_height + .03:
+                continue
+            if (inside and .18 <= low_tip and high_tip <= .76 and high_tip - low_tip <= .27
+                    and middle <= 1.25 and max(left_arc, right_arc) <= middle + .08):
+                curve = 'tie'
+            elif (reaches_centres and 1.09 <= low_tip and high_tip <= 2.85
+                    and high_tip - low_tip <= .75 and max(left_arc, right_arc) <= middle + .24):
+                curve = 'slur'
+            else:
+                continue
+            candidates.append({
+                'curve': curve,
+                'box': [x_left, top + row, x_right + 1, top + row + height],
+                'side': 'above' if sign < 0 else 'below',
+            })
     return candidates[0] if len(candidates) == 1 else None
 `,P=`"""Experimental source-only notehead/stem/beam geometry; no rhythm edits.
 

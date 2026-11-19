@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "manifestSha256": "2a9acb392c963789093dc4a538702cbf9dfd1e7dc5b359603891498ec1acdb93",
+  "manifestSha256": "4b89aa7e53ee64988d0f1ef48500c1dde84ae79ef7b90e4369629ed111958883",
   "appCommit": "8ca941ad9f2f29b769aca21b33629d688c71d785",
   "pinSha256": "88faa753c8df86a630811624121eedbe1bd227f67a7bad5643ea159ce5153807",
   "sdkVersion": "v15-notation-metadata",
@@ -66,119 +66,7 @@
       ],
       "workerSha256": "36c5075699922b71ccf25456b404756e31afe32c838c03adbf119d5d8b792108",
       "finalSha256": "b4b144f45da43bcefea8375be4f6da34d08f7560678dfe6686dc43ee1e3a0ee7",
-      "discrepancies": [
-        {
-          "category": "attack",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "pitch": ["G", "0", "5"]
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "3",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["G", "0", "5"],
-            "playbackTies": ["start"],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "3",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["G", "0", "5"],
-            "playbackTies": [],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["G", "0", "5"],
-            "playbackTies": ["stop"],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "voice": 0,
-            "staff": "1",
-            "onset": "0",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["G", "0", "5"],
-            "playbackTies": [],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "staff": "1",
-            "voice": "1",
-            "onset": "3",
-            "graceOrder": null,
-            "pitch": ["G", "0", "5"],
-            "type": "start"
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 2,
-            "staff": "1",
-            "voice": "1",
-            "onset": "0",
-            "graceOrder": null,
-            "pitch": ["G", "0", "5"],
-            "type": "stop"
-          },
-          "count": 1
-        }
-      ]
+      "discrepancies": []
     },
     "tie-within-bar": {
       "strictCoreEvents": {
@@ -201,119 +89,7 @@
       ],
       "workerSha256": "db6d2904827b5dcdcf4330d6f9df16f6ca91b93ae85bc64cfd64256171bc3f73",
       "finalSha256": "e30ba7636bae912f8fafc66b9cfd4f7461629f135d321019444f3a15e3c0dfc8",
-      "discrepancies": [
-        {
-          "category": "attack",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "2",
-            "pitch": ["D", "0", "5"]
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "1",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["D", "0", "5"],
-            "playbackTies": ["start"],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "1",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["D", "0", "5"],
-            "playbackTies": [],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "2",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["D", "0", "5"],
-            "playbackTies": ["stop"],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "core-event",
-          "operation": "extra",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "voice": 0,
-            "staff": "1",
-            "onset": "2",
-            "duration": "1",
-            "kind": "note",
-            "pitch": ["D", "0", "5"],
-            "playbackTies": [],
-            "tupletRatio": "1"
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "staff": "1",
-            "voice": "1",
-            "onset": "1",
-            "graceOrder": null,
-            "pitch": ["D", "0", "5"],
-            "type": "start"
-          },
-          "count": 1
-        },
-        {
-          "category": "tied",
-          "operation": "missing",
-          "item": {
-            "part": 1,
-            "measure": 1,
-            "staff": "1",
-            "voice": "1",
-            "onset": "2",
-            "graceOrder": null,
-            "pitch": ["D", "0", "5"],
-            "type": "stop"
-          },
-          "count": 1
-        }
-      ]
+      "discrepancies": []
     },
     "quintuplet-score": {
       "strictCoreEvents": {
@@ -552,6 +328,30 @@
       ],
       "workerSha256": "14341fa3d888996caa1c79d07be41f22823a43fc507488345d91721f30307e36",
       "finalSha256": "681718436a9282300c020ddae48d444ce534a62b5f29619e36cc20533bb450a8",
+      "discrepancies": []
+    },
+    "ordinary-curves": {
+      "observedSdk": "v18-source-headers",
+      "strictCoreEvents": {
+        "correct": 40,
+        "truth": 48,
+        "reading": 48
+      },
+      "graceEvents": {
+        "correct": 0,
+        "truth": 0,
+        "reading": 0
+      },
+      "rasters": [
+        {
+          "file": "page-1.png",
+          "sha256": "a39bdd2fdaf9fe922617fc4b169bc87d55a1cec129b1087243618f52dd95e5bf",
+          "width": 1652,
+          "height": 2338
+        }
+      ],
+      "workerSha256": "b873184ffe8b92ebc87ab535440aaacdce66180811253ab8d112dc03a5293a51",
+      "finalSha256": "e3e3c54b57f8cc5e3dde045f1617dafc34014d7384d660dedfeb0abe5ddf546b",
       "discrepancies": []
     }
   }

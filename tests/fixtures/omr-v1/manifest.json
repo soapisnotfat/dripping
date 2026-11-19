@@ -225,6 +225,27 @@
         "slurs": 0,
         "ties": 0
       }
+    },
+    {
+      "id": "ordinary-curves",
+      "family": "ordinary-curve-exercise",
+      "kind": "pdf",
+      "issues": [29],
+      "source": {
+        "file": "ordinary-curves.pdf",
+        "sha256": "85ff6fdba30b3b0e33c521fc3e9b798ebce7b9ea3d7553c4973dfc294666eea1"
+      },
+      "truth": {
+        "file": "ordinary-curves.musicxml",
+        "sha256": "86fbe1fbf642c3531bf1bcf7f552765eba8894dfda1c8af6bb7f2b40148699ec"
+      },
+      "inventory": {
+        "measures": 12,
+        "events": 48,
+        "graces": 0,
+        "slurs": 4,
+        "ties": 10
+      }
     }
   ]
 }
